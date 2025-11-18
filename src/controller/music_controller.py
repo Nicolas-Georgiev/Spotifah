@@ -13,13 +13,16 @@ class MusicController:
             pygame.mixer.music.play()
             print(f"🎵 Reproduciendo: {track}")
 
-    def pause(self):
+    @staticmethod
+    def pause():
         pygame.mixer.music.pause()
 
-    def resume(self):
+    @staticmethod
+    def resume():
         pygame.mixer.music.unpause()
 
-    def stop(self):
+    @staticmethod
+    def stop():
         pygame.mixer.music.stop()
 
     def next_track(self):
