@@ -4,3 +4,5 @@ moviepy
 pydub
 mutagen
 requests
+yt-dlp 
+spotdl
