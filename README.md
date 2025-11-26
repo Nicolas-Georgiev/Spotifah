@@ -151,12 +151,6 @@ Ekho/
 - [ ] Auto-generación de playlists
 - [ ] Descubrimiento musical inteligente
 
-### 🚧 v5.0 - Funciones Avanzadas
-- [ ] Sincronización en la nube
-- [ ] Aplicación móvil
-- [ ] API pública
-- [ ] Plugins de terceros
-
 ## 🐛 Solución de Problemas
 
 ### Conversor YouTube
