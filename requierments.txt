@@ -1,6 +1,8 @@
+
 pygame>=2.1.0
 pytubefix
-moviepy
+moviepy==1.0.3
 pydub
 mutagen
 requests
+eyed3

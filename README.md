@@ -69,27 +69,30 @@ Ekho/
 ├── src/
 │   ├── controller/
 │   │   ├── youtube2mp3_controller.py    # Conversor YouTube
-│   │   ├── music_controller.py          # Reproductor
-│   │   └── ai_controller.py             # Asistente IA (futuro)
+│   │   ├── metadata_controller.py       # Control de metadatos
+│   │   └── music_controller.py          # Reproductor
 │   ├── model/
 │   │   ├── youtube2mp3_model.py         # Conversión YouTube con portadas
-│   │   ├── music_library.py            # Biblioteca musical
-│   │   └── base_converter.py           # Base para convertidores futuros
+│   │   ├── metadata_reader.py           # Lectura de metadatos de audio
+│   │   ├── music_library.py             # Biblioteca musical
+│   │   └── base_converter.py            # Base para convertidores futuros
 │   ├── view/
 │   │   ├── youtube2mp3_view.py          # UI Conversor
-│   │   ├── player_ui.py                # UI Reproductor
+│   │   ├── metadata_view.py             # UI Metadatos
+│   │   ├── player_ui.py                 # UI Reproductor
 │   │   └── main_ui.py                   # UI Principal (futuro)
-│   ├── run_converter.py                # Script principal del conversor
+│   ├── run_converter.py                 # Script principal del conversor
+│   ├── run_metadata.py                  # Script principal de metadatos
 │   └── main.py                          # Aplicación principal (futuro)
 ├── data/
-│   └── music/                           # 🎵 Biblioteca musical (MP3 con metadatos)
+│   └── music/                           # Biblioteca musical (MP3 con metadatos)
 ├── assets/
 │   └── icons/                           # Recursos gráficos
-├── converter.py                         # 🚀 Acceso directo al conversor
-├── install_dependencies.py             # 📦 Instalador automático de dependencias
-├── ver_metadatos.py                    # 🔍 Visualizador de metadatos MP3
-├── requierments.txt                     # 📋 Lista de dependencias
-└── README.md                            # 📖 Documentación del proyecto
+├── converter.py                         # Acceso directo al conversor
+├── metadata.py                          # Analizador de metadatos
+├── install_dependencies.py              # Instalador automático de dependencias
+├── requierments.txt                     # Lista de dependencias
+└── README.md                            # Documentación del proyecto
 ```
 
 ## 🎯 Funcionalidades por Módulo
