@@ -63,11 +63,3 @@ class YouTube2MP3Controller:
                 
         self.view.show_goodbye()
 
-
-def main():
-    controller = YouTube2MP3Controller()
-    controller.run()
-
-
-if __name__ == "__main__":
-    main()

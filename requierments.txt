@@ -1,8 +1,26 @@
 
-pygame>=2.1.0
-pytubefix
-moviepy==1.0.3
-pydub
-mutagen
+# === DEPENDENCIAS CORE (OBLIGATORIAS) ===
+# Biblioteca para manejo de requests HTTP (descargas de imágenes/thumbnails)
 requests
+
+# Biblioteca de metadatos de audio (añadir tags ID3 a archivos MP3)
+mutagen
+
+# === DEPENDENCIAS PARA CONVERSOR DE YOUTUBE ===
+# Librería mejorada para descargar videos de YouTube
+pytubefix
+
+# Conversión de formatos de audio/video (M4A -> MP3, etc.)
+moviepy==1.0.3
+
+# Biblioteca alternativa para metadatos (fallback de mutagen)
 eyed3
+
+# === DEPENDENCIAS PARA CONVERSOR DE SPOTIFY ===
+# Herramienta avanzada para descargas de YouTube (usado por el conversor de Spotify)
+yt-dlp>=2023.1.0
+
+# === NOTAS DE INSTALACIÓN ===
+# Para SOLO YouTube: pip install requests mutagen pytubefix moviepy
+# Para SOLO Spotify: pip install requests mutagen yt-dlp eyed3
+# Para TODO: pip install -r requirements.txt

@@ -59,8 +59,8 @@ class ConverterFactory:
             from youtube2mp3_model import YouTube2MP3Converter
             return YouTube2MP3Converter()
         elif platform == BaseConverter.ORIGIN_SPOTIFY:
-            # TODO: Implementar SpotifyConverter en el futuro
-            raise NotImplementedError("Spotify converter no implementado aún")
+            from spotify2mp3_model import Spotify2MP3Converter
+            return Spotify2MP3Converter()
         elif platform == BaseConverter.ORIGIN_SOUNDCLOUD:
             # TODO: Implementar SoundCloudConverter en el futuro
             raise NotImplementedError("SoundCloud converter no implementado aún")
@@ -72,6 +72,6 @@ class ConverterFactory:
         """Retorna lista de plataformas soportadas actualmente"""
         return [
             BaseConverter.ORIGIN_YOUTUBE,
-            # BaseConverter.ORIGIN_SPOTIFY,  # Futuro
+            BaseConverter.ORIGIN_SPOTIFY,
             # BaseConverter.ORIGIN_SOUNDCLOUD,  # Futuro
         ]

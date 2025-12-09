@@ -12,11 +12,12 @@ Ekho es una aplicación avanzada que centraliza toda tu música en una sola plat
 - ✅ Interfaz moderna y personalizable
 
 ### 🔄 **Conversor Universal** 
-- ✅ **Descarga de audio desde YouTube** (Actualmente disponible)
+- ✅ **Descarga de audio desde YouTube** (Disponible)
+- ✅ **Conversión desde Spotify a MP3** (Nuevo!)
 - ✅ Conversión real a formato MP3 de alta calidad
 - ✅ Extracción e incrustación automática de portadas
 - ✅ Metadatos automáticos con identificación de origen
-- 🚧 Próximamente: Spotify, SoundCloud, Bandcamp
+- 🚧 Próximamente: SoundCloud, Bandcamp
 
 ### 🤖 **Asistente IA**
 - 🚧 Análisis de hábitos de escucha
@@ -42,12 +43,50 @@ pip install -r requierments.txt
 
 ### Conversor de YouTube a MP3
 ```bash
-# Ejecutar conversor
-python converter.py
+# Ejecutar conversor de YouTube
+python run_converter.py
 
-# O desde src/
-cd src && python run_converter.py
+# Ejecutar conversor de Spotify
+python run_spotify_converter.py
+
+# Conversor universal (detecta automáticamente la plataforma)
+python main_converter.py
 ```
+
+### Configuración para Spotify
+Para usar el conversor de Spotify, necesitas configurar credenciales de la API:
+
+**🚀 Configuración rápida:**
+```bash
+python setup_spotify.py
+```
+
+**🔧 Configuración manual:**
+
+1. **Obtén credenciales de Spotify:**
+   - Ve a [Spotify for Developers](https://developer.spotify.com/dashboard)
+   - Crea una nueva aplicación
+   - Obtén tu Client ID y Client Secret
+
+2. **Configura variables de entorno:**
+   ```powershell
+   # Windows (PowerShell)
+   $env:SPOTIFY_CLIENT_ID="tu_client_id"
+   $env:SPOTIFY_CLIENT_SECRET="tu_client_secret"
+   
+   # Windows (CMD)
+   set SPOTIFY_CLIENT_ID=tu_client_id
+   set SPOTIFY_CLIENT_SECRET=tu_client_secret
+   
+   # Linux/macOS
+   export SPOTIFY_CLIENT_ID="tu_client_id"
+   export SPOTIFY_CLIENT_SECRET="tu_client_secret"
+   ```
+
+3. **URLs soportadas:**
+   - `https://open.spotify.com/track/4iV5W9uYEdYUVa79Axb7Rh`
+   - `spotify:track:4iV5W9uYEdYUVa79Axb7Rh`
+   - ✅ URLs con parámetros (`?si=...`) se limpian automáticamente
 
 **Proceso:** URL de YouTube → Descarga audio + portada → Conversión a MP3 → Metadatos + portada incrustada
 
@@ -101,7 +140,7 @@ Ekho/
 | Característica | Estado | Descripción |
 |----------------|--------|-------------|
 | YouTube → MP3 | ✅ Activo | Descarga y conversión con portadas |
-| Spotify → MP3 | 🚧 Desarrollo | Próximamente |
+| Spotify → MP3 | ✅ Activo | Busca en YouTube usando metadatos de Spotify |
 | SoundCloud → MP3 | 🚧 Planificado | En roadmap |
 
 ### 🎵 Reproductor (En desarrollo)
@@ -121,10 +160,11 @@ Ekho/
 ## 🔧 Detalles Técnicos del Conversor
 
 ### Metadatos incluidos:
-- 📝 **Título:** Nombre del video
-- 👤 **Artista:** Canal/creador
-- 🖼️ **Portada:** Thumbnail incrustada
-- 💬 **Comentarios:** "Origen: YouTube/Spotify/Soundcloud" (identificación de plataforma fuente)
+- 📝 **Título:** Nombre de la pista (YouTube) o información de Spotify
+- 👤 **Artista:** Canal/creador (YouTube) o artista real (Spotify)
+- 🖼️ **Portada:** Thumbnail (YouTube) o artwork oficial (Spotify)
+- 💬 **Origen:** Identificación de plataforma fuente
+- 🎵 **Album:** Información del álbum (Spotify)
 
 ### Calidad y formato:
 - **Audio:** 192kbps MP3 estándar
@@ -140,7 +180,7 @@ Ekho/
 - [ ] Controles multimedia
 
 ### 🚧 v3.0 - Múltiples Convertidores
-- [ ] Conversor de Spotify
+- [x] Conversor de Spotify (✅ Completado)
 - [ ] Conversor de SoundCloud
 - [ ] Conversor de Bandcamp
 - [ ] Descarga de playlists
@@ -160,6 +200,15 @@ python install_dependencies.py
 
 # Problemas de conversión
 pip install moviepy mutagen
+```
+
+### Conversor Spotify
+```bash
+# Instalar dependencias específicas
+pip install spotipy yt-dlp
+
+# Configurar credenciales (ver sección de configuración arriba)
+# Problemas de búsqueda: verificar conexión a YouTube
 ```
 
 ### Reproductor (Próximamente)

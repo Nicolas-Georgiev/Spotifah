@@ -30,7 +30,8 @@ METADATA_TYPE = None
 
 try:
     from mutagen.mp3 import MP3
-    from mutagen.id3 import ID3, APIC, TIT2, TPE1, TALB
+    from mutagen.id3 import ID3
+    from mutagen.id3._frames import APIC, TIT2, TPE1, TALB
     HAS_METADATA = True
     METADATA_TYPE = "mutagen"
     print("✅ Usando mutagen para metadatos de audio")
