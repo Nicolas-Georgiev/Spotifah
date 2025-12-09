@@ -354,6 +354,11 @@ class YouTube2MP3Converter:
         """Descarga y convierte el video de YouTube a MP3 con portada"""
         try:
             print(f"🔄 Descargando: {url}")
+            
+            # Auto-detect source from URL
+            source = "youtube" if "youtube" in url.lower() or "youtu.be" in url.lower() else "unknown"
+            print(f"📍 Fuente detectada: {source}")
+            
             video_info = self.download_video(url)
             print(f"📁 Archivo descargado: {video_info['file_path']}")
             
@@ -389,7 +394,7 @@ class YouTube2MP3Converter:
                                 video_info['title'], 
                                 video_info['author'],
                                 thumbnail_filename,
-                                origin="YouTube"
+                                origin=source
                             )
                             
                             if success:
@@ -410,7 +415,7 @@ class YouTube2MP3Converter:
                                 mp3_file, 
                                 video_info['title'], 
                                 video_info['author'],
-                                origin="YouTube"
+                                origin=source
                             )
                     else:
                         print("❌ No se pudo descargar la portada")
@@ -419,7 +424,7 @@ class YouTube2MP3Converter:
                             mp3_file, 
                             video_info['title'], 
                             video_info['author'],
-                            origin="YouTube"
+                            origin=source
                         )
                         
                 except Exception as e:

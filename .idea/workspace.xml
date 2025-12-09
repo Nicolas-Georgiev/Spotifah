@@ -4,27 +4,8 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="f4652334-008c-4d44-9743-6d303371712b" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/.name" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/Spotifah.iml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/copilot.data.migration.agent.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/copilot.data.migration.ask.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/copilot.data.migration.ask2agent.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/copilot.data.migration.edit.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/runConfigurations/youtube2mp3_controller.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/converter.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/install_dependencies.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/model/base_converter.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/run_converter.py" afterDir="false" />
+    <list default="true" id="f4652334-008c-4d44-9743-6d303371712b" name="Changes" comment="Conversor Youtube&gt;MP3 y README actualizado">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/documentation/info.md" beforeDir="false" afterPath="$PROJECT_DIR$/documentation/info.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/requierments.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requierments.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/controller/music_controller.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/controller/music_controller.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -60,27 +41,27 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "ASKED_SHARE_PROJECT_CONFIGURATION_FILES": "true",
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "Python.converter.executor": "Run",
-    "Python.install_dependencies.executor": "Run",
-    "Python.run_converter.executor": "Run",
-    "Python.ver_metadatos.executor": "Run",
-    "Python.youtube2mp3_controller.executor": "Run",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
-    "git-widget-placeholder": "conversor",
-    "ignore.virus.scanning.warn.message": "true",
-    "kotlin-language-version-configured": "true",
-    "last_opened_file_path": "C:/Users/albag/Documents/2o/TRABAJO INTERMODULAR/Spotifah",
-    "run.code.analysis.last.selected.profile": "pProject Default",
-    "settings.editor.selected.configurable": "com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ASKED_SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;Python.converter.executor&quot;: &quot;Run&quot;,
+    &quot;Python.install_dependencies.executor&quot;: &quot;Run&quot;,
+    &quot;Python.run_converter.executor&quot;: &quot;Run&quot;,
+    &quot;Python.ver_metadatos.executor&quot;: &quot;Run&quot;,
+    &quot;Python.youtube2mp3_controller.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;conversor&quot;,
+    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/albag/Documents/2o/TRABAJO INTERMODULAR/Spotifah&quot;,
+    &quot;run.code.analysis.last.selected.profile&quot;: &quot;pProject Default&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable&quot;
   }
-}]]></component>
+}</component>
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
@@ -97,7 +78,35 @@
       <option name="presentableId" value="Default" />
       <updated>1760985409808</updated>
     </task>
+    <task id="LOCAL-00001" summary="Conversor Youtube&gt;MP3 y README actualizado">
+      <option name="closed" value="true" />
+      <created>1763474893253</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1763474893253</updated>
+    </task>
+    <task id="LOCAL-00002" summary="Conversor Youtube&gt;MP3 y README actualizado">
+      <option name="closed" value="true" />
+      <created>1763474965783</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1763474965783</updated>
+    </task>
+    <task id="LOCAL-00003" summary="Conversor Youtube&gt;MP3 y README actualizado">
+      <option name="closed" value="true" />
+      <created>1763475048072</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1763475048072</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
     <servers />
+  </component>
+  <component name="UnknownFeatures">
+    <option featureType="com.intellij.configurationType" implementationName="PythonConfigurationType" />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
     <option name="TAB_STATES">
@@ -109,6 +118,10 @@
         </entry>
       </map>
     </option>
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="Conversor Youtube&gt;MP3 y README actualizado" />
+    <option name="LAST_COMMIT_MESSAGE" value="Conversor Youtube&gt;MP3 y README actualizado" />
   </component>
   <component name="github-copilot-workspace">
     <instructionFileLocations>

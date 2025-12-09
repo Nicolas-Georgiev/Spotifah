@@ -1,8 +1,0 @@
-pygame>=2.1.0
-pytubefix
-moviepy
-pydub
-mutagen
-requests
-yt-dlp 
-spotdl
