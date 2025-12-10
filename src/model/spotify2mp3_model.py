@@ -57,45 +57,96 @@ except ImportError:
     HAS_YT_DLP = False
     print("⚠️ yt-dlp no disponible. Instala: pip install yt-dlp")
 
-print("✅ Usando métodos alternativos para acceso a Spotify (sin API oficial)")
+# Importar spotdl para metadatos de Spotify (OBLIGATORIO)
+try:
+    from spotdl import Spotdl
+    from spotdl.utils.config import get_config
+    HAS_SPOTDL = True
+    print("✅ Usando spotdl para metadatos de Spotify (REQUERIDO)")
+except ImportError:
+    HAS_SPOTDL = False
+    print("🚨 ERROR: spotdl no disponible - ES OBLIGATORIO")
+    print("   📦 INSTALAR: pip install spotdl")
+    print("   ❌ El conversor de Spotify NO funcionará sin spotdl")
+
+if not HAS_SPOTDL:
+    print("\n🚨 CONFIGURACIÓN INCOMPLETA:")
+    print("   spotdl es REQUERIDO para funcionalidad de Spotify")
+    print("   Sin spotdl, solo funcionará el conversor de YouTube")
+
+print("✅ Sistema optimizado: spotdl (OBLIGATORIO) + métodos alternativos como respaldo")
 
 
 class SpotifyInfoExtractor:
-    """Extrae información de Spotify usando métodos alternativos"""
+    """Extrae información de Spotify usando spotdl como método principal y métodos alternativos como fallback"""
     
     def __init__(self):
+        # SpotDL es OBLIGATORIO
+        if not HAS_SPOTDL:
+            raise ImportError("🚨 spotdl es REQUERIDO pero no está instalado. Ejecuta: pip install spotdl")
+        
+        # Configurar spotdl
+        try:
+            # Configurar spotdl con configuración básica válida
+            self.spotdl = Spotdl(client_id=None, client_secret=None, 
+                               user_auth=False)
+            self.use_spotdl = True
+            print("✅ SpotDL configurado exitosamente (MODO PRINCIPAL)")
+        except Exception as e:
+            print(f"🚨 Error CRÍTICO configurando SpotDL: {e}")
+            print("   El conversor de Spotify NO funcionará")
+            raise
+        
+        # Configurar sesión para métodos de respaldo (solo en caso de fallo de SpotDL)
         self.session = requests.Session()
         self.session.headers.update({
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         })
 
     def get_track_info(self, spotify_url: str):
-        """Obtiene información de una pista usando métodos alternativos"""
+        """Obtiene información de una pista usando el mejor método disponible"""
         track_id = self._extract_spotify_id(spotify_url)
         if not track_id:
             return None
         
+        # Método PRINCIPAL: SpotDL (más confiable)
+        if self.use_spotdl:
+            track_info = self._get_info_from_spotdl(spotify_url)
+            if track_info and track_info.get('artist') != 'Unknown Artist':
+                print("✅ Metadatos obtenidos via SpotDL")
+                return track_info
+            else:
+                print("⚠️ SpotDL falló, usando métodos alternativos...")
+        
+        # MÉTODOS ALTERNATIVOS (fallback)
+        print("🔄 Usando métodos alternativos para extracción...")
+        
         # Método 1: Página principal de Spotify
         track_info = self._get_info_from_main_page(track_id)
         if track_info and track_info.get('artist') != 'Unknown Artist':
+            print("✅ Metadatos obtenidos via página principal")
             return track_info
         
         # Método 2: OEmbed público de Spotify
         track_info = self._get_info_from_oembed(track_id)
         if track_info:
+            print("✅ Metadatos obtenidos via OEmbed")
             return track_info
         
         # Método 3: Embed de Spotify
         track_info = self._get_info_from_embed(track_id)
         if track_info:
+            print("✅ Metadatos obtenidos via Embed")
             return track_info
         
         # Método 4: APIs públicas alternativas
         track_info = self._search_alternative_apis(track_id)
         if track_info:
+            print("✅ Metadatos obtenidos via APIs alternativas")
             return track_info
         
-        # Método 5: Información mínima
+        # Método 5: Información mínima (último recurso)
+        print("⚠️ Usando información mínima como último recurso")
         return {
             'name': f'Track {track_id[:8]}',
             'artist': 'Unknown Artist',
@@ -104,6 +155,44 @@ class SpotifyInfoExtractor:
             'duration': 180,
             'track_id': track_id
         }
+
+    def _get_info_from_spotdl(self, spotify_url: str):
+        """Método PRINCIPAL: Extraer información usando SpotDL"""
+        try:
+            # Buscar la canción usando SpotDL
+            songs = self.spotdl.search([spotify_url])
+            
+            if not songs or len(songs) == 0:
+                print("⚠️ SpotDL: No se encontraron resultados")
+                return None
+            
+            song = songs[0]  # Tomar el primer resultado
+            
+            # Extraer metadatos
+            track_info = {
+                'name': song.name or 'Unknown Title',
+                'artist': ', '.join(song.artists) if song.artists else 'Unknown Artist', 
+                'album': song.album_name or 'Unknown Album',
+                'image_url': song.cover_url or '',
+                'duration': int(song.duration or 180),
+                'track_id': self._extract_spotify_id(spotify_url),
+                'isrc': song.isrc or '',
+                'release_date': song.date or '',
+                'genres': song.genres or []
+            }
+            
+            # Validar que tenemos información útil
+            if (track_info['name'] != 'Unknown Title' and 
+                track_info['artist'] != 'Unknown Artist' and
+                len(track_info['artist']) > 1):
+                return track_info
+            else:
+                print("⚠️ SpotDL: Metadatos incompletos")
+                return None
+                
+        except Exception as e:
+            print(f"⚠️ Error en SpotDL: {e}")
+            return None
 
     def _extract_spotify_id(self, url: str):
         """Extrae el ID de Spotify de la URL"""

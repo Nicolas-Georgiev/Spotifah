@@ -1,5 +1,3 @@
-<<<<<<< HEAD
-
 # === DEPENDENCIAS CORE (OBLIGATORIAS) ===
 # Biblioteca para manejo de requests HTTP (descargas de imágenes/thumbnails)
 requests
@@ -18,12 +16,14 @@ moviepy==1.0.3
 eyed3
 
 # === DEPENDENCIAS PARA CONVERSOR DE SPOTIFY ===
-# Herramienta avanzada para descargas de YouTube (usado por el conversor de Spotify)
+# Herramienta avanzada para descargas de YouTube
 yt-dlp>=2023.1.0
+
+# Extracción de metadatos de Spotify (reemplaza scraping manual)
+spotdl
 
 # === NOTAS DE INSTALACIÓN ===
 # Para SOLO YouTube: pip install requests mutagen pytubefix moviepy
-# Para SOLO Spotify: pip install requests mutagen yt-dlp eyed3
+# Para SOLO Spotify: pip install requests mutagen yt-dlp eyed3 spotdl
 # Para TODO: pip install -r requirements.txt
-=======
->>>>>>> acd4e2d4d763225e26ca55d0412e76637f93a358
+# FFmpeg es OPCIONAL - yt-dlp incluye conversión integrada

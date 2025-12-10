@@ -18,19 +18,15 @@ def check_ffmpeg():
         return False
 
 def install_ffmpeg():
-    """Verifica FFmpeg (opcional para mejor calidad)"""
-    print("\n🎬 Verificando FFmpeg (opcional)...")
+    """Verifica e instala FFmpeg (OBLIGATORIO para máxima calidad)"""
+    print("\n🎬 Verificando FFmpeg (OBLIGATORIO)...")
     
     if check_ffmpeg():
         print("   ✅ FFmpeg instalado - Máxima calidad de conversión")
         return True
     
-    print("   ⚠️ FFmpeg no encontrado (pero NO es necesario)")
-    print("   💡 yt-dlp ya incluye conversión de audio básica")
-    print("   💡 Los conversores funcionarán perfectamente sin FFmpeg")
-    print()
-    print("   🔧 ¿Quieres instalar FFmpeg para calidad mejorada?")
-    print("   📋 INSTALACIÓN OPCIONAL DE FFmpeg:")
+    print("   ❌ FFmpeg NO ENCONTRADO - Es OBLIGATORIO para funcionalidad completa")
+    print("   🚨 INSTALACIÓN REQUERIDA DE FFmpeg:")
     print("   " + "="*45)
     print("   🚀 MÉTODO AUTOMÁTICO (recomendado):")
     print("      winget install Gyan.FFmpeg")
@@ -43,10 +39,10 @@ def install_ffmpeg():
     print("      5. Reinicia terminal y ejecuta: ffmpeg -version")
     print("   " + "="*45)
     print()
-    print("   ✅ CONTINUAR SIN FFmpeg: Los conversores funcionan perfectamente")
-    print("   💡 FFmpeg solo añade opciones avanzadas de calidad")
+    print("   ❌ SIN FFmpeg: Funcionalidad LIMITADA y calidad REDUCIDA")
+    print("   🚨 INSTALAR FFmpeg para funcionalidad COMPLETA")
     
-    return False  # No es crítico, así que retornamos False pero no es un error
+    return False  # FFmpeg es REQUERIDO
 
 def install_package(package_name):
     """Instala un paquete usando pip"""
@@ -83,7 +79,8 @@ def main():
         ("mutagen", "mutagen"),
         ("requests", "requests"),
         ("eyed3", "eyed3"),
-        ("yt-dlp>=2023.1.0", "yt_dlp")
+        ("yt-dlp>=2023.1.0", "yt_dlp"),
+        ("spotdl", "spotdl")
     ]
     
     missing_packages = []
@@ -174,36 +171,54 @@ def main():
         print(f"   ❌ yt-dlp: ERROR ({e})")
         ytdlp_ok = False
     
-    print("\n=== RESULTADO ===")
-    if moviepy_ok and pytubefix_ok and mutagen_ok and eyed3_ok and ytdlp_ok:
-        print("🎉 ¡Todas las dependencias están listas!")
-        print("✅ Los conversores de YouTube y Spotify funcionarán perfectamente")
-        print("💡 Spotify usará métodos alternativos (sin API oficial)")
-        if ffmpeg_ok:
-            print("🔥 FFmpeg disponible - Máxima calidad de conversión")
-        else:
-            print("💡 Sin FFmpeg - Calidad estándar via yt-dlp (suficiente)")
-    elif moviepy_ok and pytubefix_ok and mutagen_ok:
-        print("✅ Conversor de YouTube listo")
-        print("⚠️ Para Spotify completo: pip install eyed3 yt-dlp")
-        if not ffmpeg_ok:
-            print("💡 Sin FFmpeg - Usando conversión estándar")
-    elif moviepy_ok and pytubefix_ok:
-        print("⚠️ Conversión funcional, sin soporte completo de metadatos")
-        print("💡 Para funcionalidad completa: pip install mutagen eyed3 yt-dlp")
-    elif pytubefix_ok:
-        print("⚠️ Descarga funcional de YouTube, conversión limitada")
-        print("💡 Para conversión completa: pip install moviepy mutagen eyed3 yt-dlp")
-    else:
-        print("❌ Faltan dependencias críticas")
-        print("💡 Ejecuta: pip install pytubefix moviepy mutagen eyed3 yt-dlp")
+    # Test específico de spotdl (OBLIGATORIO)
+    try:
+        from spotdl import Spotdl
+        print("   ✅ spotdl: FUNCIONAL (REQUERIDO para Spotify)")
+        spotdl_ok = True
+    except Exception as e:
+        print(f"   ❌ spotdl: FALTA - OBLIGATORIO ({e})")
+        print("   🚨 spotdl es REQUERIDO para metadatos confiables de Spotify")
+        spotdl_ok = False
     
-    if not ffmpeg_ok:
-        print("\n💡 NOTA SOBRE FFmpeg (OPCIONAL):")
-        print("   ✅ Los conversores funcionan perfectamente sin FFmpeg")
-        print("   ✅ yt-dlp ya incluye conversión de audio integrada")
-        print("   🔧 FFmpeg solo añade opciones avanzadas de calidad")
-        print("   💻 Instala FFmpeg solo si quieres máxima calidad")
+    print("\n=== RESULTADO ===")
+    if moviepy_ok and pytubefix_ok and mutagen_ok and eyed3_ok and ytdlp_ok and spotdl_ok and ffmpeg_ok:
+        print("🎉 ¡TODAS LAS DEPENDENCIAS ESTÁN COMPLETAS!")
+        print("✅ Los conversores de YouTube y Spotify funcionarán a MÁXIMA CAPACIDAD")
+        print("🔥 FFmpeg disponible - Máxima calidad de conversión")
+        print("🔥 SpotDL disponible - Metadatos perfectos de Spotify")
+        print("💡 Configuración ÓPTIMA alcanzada")
+    elif moviepy_ok and pytubefix_ok and mutagen_ok and eyed3_ok and ytdlp_ok:
+        print("⚠️ Dependencias básicas listas pero FALTAN COMPONENTES CRÍTICOS")
+        if not spotdl_ok:
+            print("❌ FALTA spotdl: pip install spotdl")
+        if not ffmpeg_ok:
+            print("❌ FALTA FFmpeg: Instalar desde https://www.gyan.dev/ffmpeg/builds/")
+    elif moviepy_ok and pytubefix_ok and mutagen_ok:
+        print("⚠️ Conversor de YouTube parcial")
+        print("❌ Para Spotify completo OBLIGATORIO: pip install eyed3 yt-dlp spotdl")
+        if not ffmpeg_ok:
+            print("❌ FFmpeg REQUERIDO para calidad completa")
+    elif moviepy_ok and pytubefix_ok:
+        print("⚠️ Funcionalidad MUY LIMITADA - Faltan dependencias críticas")
+        print("❌ OBLIGATORIO: pip install mutagen eyed3 yt-dlp spotdl + FFmpeg")
+    elif pytubefix_ok:
+        print("⚠️ Solo descarga básica de YouTube disponible")
+        print("❌ CRÍTICO: pip install moviepy mutagen eyed3 yt-dlp spotdl + FFmpeg")
+    else:
+        print("❌ CONFIGURACIÓN INCOMPLETA - Dependencias críticas faltantes")
+        print("🚨 EJECUTAR: pip install pytubefix moviepy mutagen eyed3 yt-dlp spotdl")
+        print("🚨 ADEMÁS: Instalar FFmpeg desde https://www.gyan.dev/ffmpeg/builds/")
+    
+    if not ffmpeg_ok or not spotdl_ok:
+        print("\n🚨 DEPENDENCIAS CRÍTICAS FALTANTES:")
+        if not ffmpeg_ok:
+            print("   ❌ FFmpeg REQUERIDO para conversión de máxima calidad")
+            print("   🔧 Sin FFmpeg: Calidad reducida y limitaciones de formato")
+        if not spotdl_ok:
+            print("   ❌ SpotDL REQUERIDO para metadatos confiables de Spotify")
+            print("   🔧 Sin SpotDL: Metadatos incompletos o incorrectos")
+        print("   💻 Ambos componentes son OBLIGATORIOS para funcionalidad completa")
 
 if __name__ == "__main__":
     main()
