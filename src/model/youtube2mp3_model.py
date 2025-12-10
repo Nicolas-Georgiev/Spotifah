@@ -79,8 +79,8 @@ class YouTube2MP3Converter:
             if not preferred_stream:
                 preferred_stream = audio_streams.first()
             
-            print(f"Descargando stream: {preferred_stream.mime_type} - {preferred_stream.abr}")
-            out_file = preferred_stream.download(output_path=downloads_dir)
+            print(f"Descargando stream: {preferred_stream.mime_type} - {preferred_stream.abr}") # type: ignore
+            out_file = preferred_stream.download(output_path=downloads_dir) # type: ignore
             
             # Retornar tanto el archivo como la información del video
             video_info = {
@@ -136,7 +136,7 @@ class YouTube2MP3Converter:
             if METADATA_TYPE == "mutagen":
                 # Usar mutagen - con verificación de archivo válido
                 from mutagen.mp3 import MP3
-                from mutagen.id3 import ID3, APIC, TIT2, TPE1, TXXX
+                from mutagen.id3 import ID3, APIC, TIT2, TPE1, TXXX # type: ignore
                 
                 try:
                     # Cargar el archivo MP3 con validación
@@ -167,14 +167,14 @@ class YouTube2MP3Converter:
                     audio_file.add_tags()
                 
                 # Añadir metadatos básicos (solo título y artista)
-                audio_file.tags.add(TIT2(encoding=3, text=title))
-                audio_file.tags.add(TPE1(encoding=3, text=artist))
+                audio_file.tags.add(TIT2(encoding=3, text=title)) # type: ignore
+                audio_file.tags.add(TPE1(encoding=3, text=artist)) # type: ignore
                 
                 # Añadir origen en el campo de comentarios estándar
-                from mutagen.id3 import COMM
+                from mutagen.id3 import COMM # type: ignore
                 comment_text = f"Origen: {origin}"
-                audio_file.tags.add(COMM(
-                    encoding=3,
+                audio_file.tags.add(COMM( # type: ignore
+                    encoding=3, 
                     lang='spa',
                     desc='',
                     text=[comment_text]
@@ -186,7 +186,7 @@ class YouTube2MP3Converter:
                         with open(thumbnail_path, 'rb') as img:
                             image_data = img.read()
                             if len(image_data) > 0:
-                                audio_file.tags.add(APIC(
+                                audio_file.tags.add(APIC( # type: ignore
                                     encoding=3,  # UTF-8
                                     mime='image/jpeg',  # MIME type
                                     type=3,  # Cover (front)
@@ -229,19 +229,19 @@ class YouTube2MP3Converter:
                     
                     # Añadir origen en comentarios
                     comment_text = f"Origen: {origin}"
-                    audio_file.tag.comments.set(comment_text)
+                    audio_file.tag.comments.set(comment_text) # type: ignore
                     
                     # Añadir portada
                     if thumbnail_path and os.path.exists(thumbnail_path):
                         try:
                             with open(thumbnail_path, 'rb') as img:
                                 image_data = img.read()
-                                audio_file.tag.images.set(3, image_data, 'image/jpeg')
+                                audio_file.tag.images.set(3, image_data, 'image/jpeg') # type: ignore
                                 print(f"✅ Portada incrustada ({len(image_data)} bytes)")
                         except Exception as img_error:
                             print(f"⚠️ Error añadiendo portada: {img_error}")
                     
-                    audio_file.tag.save()
+                    audio_file.tag.save() # type: ignore
                     print(f"✅ Metadatos añadidos correctamente (Origen: {origin})")
                     return True
                     

@@ -3,6 +3,8 @@ import os
 import re
 import json
 import requests
+import tempfile
+import datetime
 from .base_converter import BaseConverter
 
 # Intentar múltiples bibliotecas de audio para conversión
@@ -32,7 +34,7 @@ METADATA_TYPE = None
 
 try:
     from mutagen.mp3 import MP3
-    from mutagen.id3 import ID3, APIC, TIT2, TPE1, TALB
+    from mutagen.id3 import ID3, APIC, TIT2, TPE1, TALB # type: ignore
     HAS_METADATA = True
     METADATA_TYPE = "mutagen"
     print("✅ Usando mutagen para metadatos de audio")
@@ -83,19 +85,37 @@ class SpotifyInfoExtractor:
     def __init__(self):
         # SpotDL es OBLIGATORIO
         if not HAS_SPOTDL:
-            raise ImportError("🚨 spotdl es REQUERIDO pero no está instalado. Ejecuta: pip install spotdl")
-        
-        # Configurar spotdl
-        try:
-            # Configurar spotdl con configuración básica válida
-            self.spotdl = Spotdl(client_id=None, client_secret=None, 
-                               user_auth=False)
-            self.use_spotdl = True
-            print("✅ SpotDL configurado exitosamente (MODO PRINCIPAL)")
-        except Exception as e:
-            print(f"🚨 Error CRÍTICO configurando SpotDL: {e}")
-            print("   El conversor de Spotify NO funcionará")
-            raise
+            print("🚨 spotdl no está disponible, usando solo métodos alternativos")
+            self.use_spotdl = False
+            self.spotdl = None
+        else:
+            # Configurar spotdl con credenciales por defecto
+            try:
+                # Intentar obtener configuración existente
+                try:
+                    config = get_config() # type: ignore
+                    client_id = config.get('client_id')
+                    client_secret = config.get('client_secret')
+                except Exception:
+                    # Si no hay configuración, usar valores por defecto
+                    client_id = None
+                    client_secret = None
+                
+                # Crear instancia de Spotdl
+                if client_id and client_secret:
+                    self.spotdl = Spotdl(client_id=client_id, client_secret=client_secret) # type: ignore
+                else:
+                    # Usar configuración por defecto de spotdl (sin parámetros)
+                    self.spotdl = Spotdl() # type: ignore
+                
+                self.use_spotdl = True
+                print("✅ SpotDL configurado exitosamente (MODO PRINCIPAL)")
+                
+            except Exception as e:
+                print(f"⚠️ Error configurando SpotDL: {e}")
+                print("   Usando métodos alternativos como respaldo")
+                self.use_spotdl = False
+                self.spotdl = None
         
         # Configurar sesión para métodos de respaldo (solo en caso de fallo de SpotDL)
         self.session = requests.Session()
@@ -160,7 +180,7 @@ class SpotifyInfoExtractor:
         """Método PRINCIPAL: Extraer información usando SpotDL"""
         try:
             # Buscar la canción usando SpotDL
-            songs = self.spotdl.search([spotify_url])
+            songs = self.spotdl.search([spotify_url]) # type: ignore
             
             if not songs or len(songs) == 0:
                 print("⚠️ SpotDL: No se encontraron resultados")
@@ -168,11 +188,34 @@ class SpotifyInfoExtractor:
             
             song = songs[0]  # Tomar el primer resultado
             
-            # Extraer metadatos
+            # Obtener letra si está disponible
+            lyrics = ""
+            try:
+                if hasattr(song, 'lyrics') and song.lyrics:
+                    lyrics = song.lyrics
+                else:
+                    # Intentar obtener letra usando spotdl
+                    from spotdl.utils.lrc import generate_lrc
+                    lyrics = generate_lrc(song, None) or "" # type: ignore
+            except Exception as e:
+                print(f"⚠️ No se pudo obtener la letra: {e}")
+                lyrics = ""
+            
+            # Extraer metadatos completos
             track_info = {
+                'titulo': song.name or 'Título Desconocido',
+                'artista': ', '.join(song.artists) if song.artists else 'Artista Desconocido',
+                'album': song.album_name or 'Álbum Desconocido',
+                'duracion_seg': int(song.duration or 180),
+                'genero': ', '.join(song.genres) if song.genres else 'Género Desconocido',
+                'plataforma_origen': 'Spotify',
+                'url_origen': spotify_url,
+                'ruta_local': '',  # Se llenará cuando se descargue
+                'caratula_url': song.cover_url or '',
+                'letra': lyrics.strip() if lyrics else 'Letra no disponible',
+                # Campos adicionales para compatibilidad
                 'name': song.name or 'Unknown Title',
-                'artist': ', '.join(song.artists) if song.artists else 'Unknown Artist', 
-                'album': song.album_name or 'Unknown Album',
+                'artist': ', '.join(song.artists) if song.artists else 'Unknown Artist',
                 'image_url': song.cover_url or '',
                 'duration': int(song.duration or 180),
                 'track_id': self._extract_spotify_id(spotify_url),
@@ -181,10 +224,15 @@ class SpotifyInfoExtractor:
                 'genres': song.genres or []
             }
             
+            # Guardar metadatos en archivo temporal
+            self._save_metadata_to_temp_file(track_info, 
+                                           clear_previous=False, 
+                                           is_batch=getattr(self, '_is_batch_download', False))
+            
             # Validar que tenemos información útil
-            if (track_info['name'] != 'Unknown Title' and 
-                track_info['artist'] != 'Unknown Artist' and
-                len(track_info['artist']) > 1):
+            if (track_info['titulo'] != 'Título Desconocido' and 
+                track_info['artista'] != 'Artista Desconocido' and
+                len(track_info['artista']) > 1):
                 return track_info
             else:
                 print("⚠️ SpotDL: Metadatos incompletos")
@@ -193,8 +241,140 @@ class SpotifyInfoExtractor:
         except Exception as e:
             print(f"⚠️ Error en SpotDL: {e}")
             return None
+            
+    def _save_metadata_to_temp_file(self, metadata, clear_previous=False, is_batch=False):
+        """Guarda los metadatos en un archivo fijo para integración con base de datos"""
+        try:
+            # Directorio fijo en la raíz del proyecto
+            project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+            metadata_dir = os.path.join(project_root, 'data', 'metadata')
+            os.makedirs(metadata_dir, exist_ok=True)
+            
+            # Archivo fijo con nombre constante
+            filename = "spotify_metadata.json"
+            filepath = os.path.join(metadata_dir, filename)
+            
+            # Preparar datos del track actual
+            track_data = {
+                'titulo': metadata.get('titulo', ''),
+                'artista': metadata.get('artista', ''),
+                'album': metadata.get('album', ''),
+                'duracion_seg': metadata.get('duracion_seg', 0),
+                'genero': metadata.get('genero', ''),
+                'plataforma_origen': metadata.get('plataforma_origen', 'Spotify'),
+                'url_origen': metadata.get('url_origen', ''),
+                'ruta_local': metadata.get('ruta_local', ''),
+                'caratula_url': metadata.get('caratula_url', ''),
+                'letra': metadata.get('letra', ''),
+                'track_id': metadata.get('track_id', ''),
+                'isrc': metadata.get('isrc', ''),
+                'fecha_extraccion': datetime.datetime.now().isoformat(),
+                'release_date': metadata.get('release_date', ''),
+                'genres_list': metadata.get('genres', [])
+            }
+            
+            # Cargar datos existentes o crear nueva estructura
+            if clear_previous or not os.path.exists(filepath):
+                # Limpiar y empezar de nuevo
+                metadata_to_save = {
+                    'ultima_actualizacion': datetime.datetime.now().isoformat(),
+                    'tipo_descarga': 'album' if is_batch else 'cancion_individual',
+                    'total_tracks': 1,
+                    'tracks': [track_data],
+                    'track_actual': track_data  # Para compatibilidad
+                }
+                print("🧹 Contenido anterior eliminado - Nueva sesión de descarga iniciada")
+            else:
+                # Cargar existente y agregar
+                try:
+                    with open(filepath, 'r', encoding='utf-8') as f:
+                        metadata_to_save = json.load(f)
+                except Exception:
+                    metadata_to_save = {
+                        'ultima_actualizacion': datetime.datetime.now().isoformat(),
+                        'tipo_descarga': 'cancion_individual',
+                        'total_tracks': 0,
+                        'tracks': [],
+                        'track_actual': {}
+                    }
+                
+                # Si es una nueva sesión de descarga (álbum/playlist), limpiar
+                if is_batch and not hasattr(self, '_batch_session_started'):
+                    metadata_to_save['tracks'] = []
+                    metadata_to_save['tipo_descarga'] = 'album'
+                    self._batch_session_started = True
+                    print("🧹 Iniciando descarga de álbum/playlist - Contenido limpiado")
+                
+                # Agregar nuevo track
+                metadata_to_save['tracks'].append(track_data)
+                metadata_to_save['track_actual'] = track_data
+                metadata_to_save['ultima_actualizacion'] = datetime.datetime.now().isoformat()
+                metadata_to_save['total_tracks'] = len(metadata_to_save['tracks'])
+            
+            # Guardar en archivo JSON
+            with open(filepath, 'w', encoding='utf-8') as f:
+                json.dump(metadata_to_save, f, ensure_ascii=False, indent=2)
+            
+            track_num = len(metadata_to_save['tracks'])
+            print(f"💾 Metadatos guardados ({track_num}/{metadata_to_save['total_tracks']}): {filepath}")
+            return filepath
+            
+        except Exception as e:
+            print(f"⚠️ Error guardando metadatos: {e}")
+            return None
+    
+    def get_metadata_file_path(self):
+        """Retorna la ruta del archivo de metadatos fijo"""
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        metadata_dir = os.path.join(project_root, 'data', 'metadata')
+        return os.path.join(metadata_dir, 'spotify_metadata.json')
+    
+    def get_current_metadata(self):
+        """Obtiene los metadatos actuales del archivo fijo"""
+        try:
+            filepath = self.get_metadata_file_path()
+            if os.path.exists(filepath):
+                with open(filepath, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    return data.get('track_actual', {})
+            return {}
+        except Exception as e:
+            print(f"⚠️ Error leyendo metadatos: {e}")
+            return {}
+    
+    def get_all_tracks_metadata(self):
+        """Obtiene todos los tracks de la sesión actual"""
+        try:
+            filepath = self.get_metadata_file_path()
+            if os.path.exists(filepath):
+                with open(filepath, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    return data.get('tracks', [])
+            return []
+        except Exception as e:
+            print(f"⚠️ Error leyendo tracks: {e}")
+            return []
+    
+    def get_download_session_info(self):
+        """Obtiene información de la sesión de descarga actual"""
+        try:
+            filepath = self.get_metadata_file_path()
+            if os.path.exists(filepath):
+                with open(filepath, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    return {
+                        'tipo': data.get('tipo_descarga', 'individual'),
+                        'total_tracks': data.get('total_tracks', 0),
+                        'ultima_actualizacion': data.get('ultima_actualizacion', ''),
+                        'tracks_count': len(data.get('tracks', []))
+                    }
+            return {}
+        except Exception as e:
+            print(f"⚠️ Error leyendo info de sesión: {e}")
+            return {}
 
-    def _extract_spotify_id(self, url: str):
+    @staticmethod
+    def _extract_spotify_id(url: str):
         """Extrae el ID de Spotify de la URL"""
         patterns = [
             r"https://open\.spotify\.com/(?:intl-\w+/)?track/([a-zA-Z0-9]+)",
@@ -329,7 +509,8 @@ class SpotifyInfoExtractor:
             print(f"⚠️ Página principal falló: {e}")
         return None
     
-    def _extract_album_from_html(self, html):
+    @staticmethod
+    def _extract_album_from_html(html):
         """Extrae información del álbum del HTML"""
         album_patterns = [
             r'"album"[^}]*?"name"\s*:\s*"([^"]+)"',
@@ -349,7 +530,8 @@ class SpotifyInfoExtractor:
                     return album
         return 'Unknown Album'
     
-    def _extract_image_from_html(self, html):
+    @staticmethod
+    def _extract_image_from_html(html):
         """Extrae URL de imagen del HTML"""
         image_patterns = [
             r'<meta\s+property="og:image"\s+content="([^"]+)"',
@@ -479,7 +661,8 @@ class SpotifyInfoExtractor:
             pass
         return None
 
-    def _parse_meta_tags(self, html_content: str, track_id: str):
+    @staticmethod
+    def _parse_meta_tags(html_content: str, track_id: str):
         """Parsea meta tags del HTML"""
         try:
             patterns = {
@@ -548,8 +731,11 @@ class SpotifyInfoExtractor:
 
 
 class Spotify2MP3Converter(BaseConverter):
+    ORIGIN_SPOTIFY = "spotify"
+    
     def __init__(self):
         super().__init__(self.ORIGIN_SPOTIFY)
+        self.current_track_id = None
         self.info_extractor = SpotifyInfoExtractor()
 
     def get_supported_urls(self):
@@ -585,7 +771,8 @@ class Spotify2MP3Converter(BaseConverter):
         
         raise ValueError(f"URL de Spotify no válida: {url}")
 
-    def _get_type_from_pattern(self, pattern):
+    @staticmethod
+    def _get_type_from_pattern(pattern):
         """Determina el tipo de contenido basado en el patrón"""
         if "track" in pattern:
             return "track"
@@ -622,9 +809,6 @@ class Spotify2MP3Converter(BaseConverter):
         if not HAS_YT_DLP:
             raise ImportError("yt-dlp no está disponible. Instala con: pip install yt-dlp")
 
-        # Estrategias de búsqueda mejoradas
-        search_queries = []
-        
         # Si tenemos información específica, usarla
         if track_name and not track_name.startswith("Track ") and artist_name and artist_name != "Unknown Artist":
             search_queries = [
@@ -656,7 +840,7 @@ class Spotify2MP3Converter(BaseConverter):
             try:
                 print(f"🔍 Buscando: {search_query}")
                 
-                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl: # type: ignore
                     info = ydl.extract_info(search_query, download=False)
                     if info and 'entries' in info and info['entries']:
                         # Filtrar resultados para encontrar el mejor match
@@ -678,7 +862,8 @@ class Spotify2MP3Converter(BaseConverter):
         
         raise Exception("No se encontraron resultados en YouTube")
 
-    def _select_best_youtube_result(self, entries, track_name, artist_name):
+    @staticmethod
+    def _select_best_youtube_result(entries, track_name, artist_name):
         """Selecciona el mejor resultado de YouTube basado en criterios"""
         if not entries:
             return None
@@ -738,7 +923,8 @@ class Spotify2MP3Converter(BaseConverter):
         
         return entries[0]  # Fallback al primer resultado
 
-    def download_from_youtube(self, youtube_url, output_path, track_info):
+    @staticmethod
+    def download_from_youtube(youtube_url, output_path):
         """Descarga audio desde YouTube usando yt-dlp"""
         if not HAS_YT_DLP:
             raise ImportError("yt-dlp no está disponible. Instala con: pip install yt-dlp")
@@ -758,7 +944,7 @@ class Spotify2MP3Converter(BaseConverter):
         }
         
         try:
-            with yt_dlp_module.YoutubeDL(ydl_opts) as ydl:
+            with yt_dlp_module.YoutubeDL(ydl_opts) as ydl: # type: ignore
                 ydl.download([youtube_url])
                 
                 # Encontrar el archivo descargado
@@ -771,7 +957,8 @@ class Spotify2MP3Converter(BaseConverter):
         except Exception as e:
             raise Exception(f"Error al descargar desde YouTube: {e}")
 
-    def download_album_art(self, image_url, save_path):
+    @staticmethod
+    def download_album_art(image_url, save_path):
         """Descarga la portada del álbum"""
         try:
             response = requests.get(image_url, stream=True, timeout=10)
@@ -803,19 +990,20 @@ class Spotify2MP3Converter(BaseConverter):
         except Exception as e:
             print(f"⚠️ Error al añadir metadatos: {e}")
 
-    def _add_metadata_mutagen(self, file_path, track_info, album_art_path):
+    @staticmethod
+    def _add_metadata_mutagen(file_path, track_info, album_art_path):
         """Añade metadatos usando mutagen"""
-        audio = MP3(file_path, ID3=ID3)
+        audio = MP3(file_path, ID3=ID3) # type: ignore
         
         # Añadir tags básicos
-        audio.tags.add(TIT2(encoding=3, text=track_info['name']))
-        audio.tags.add(TPE1(encoding=3, text=", ".join(track_info['artists'])))
-        audio.tags.add(TALB(encoding=3, text=track_info['album']))
+        audio.tags.add(TIT2(encoding=3, text=track_info['name'])) # type: ignore
+        audio.tags.add(TPE1(encoding=3, text=", ".join(track_info['artists']))) # type: ignore
+        audio.tags.add(TALB(encoding=3, text=track_info['album'])) # type: ignore
         
         # Añadir portada si está disponible
         if album_art_path and os.path.exists(album_art_path):
             with open(album_art_path, 'rb') as img:
-                audio.tags.add(APIC(
+                audio.tags.add(APIC( # type: ignore
                     encoding=3,
                     mime='image/jpeg',
                     type=3,
@@ -825,24 +1013,25 @@ class Spotify2MP3Converter(BaseConverter):
         
         audio.save()
 
-    def _add_metadata_eyed3(self, file_path, track_info, album_art_path):
+    @staticmethod
+    def _add_metadata_eyed3(file_path, track_info, album_art_path):
         """Añade metadatos usando eyed3"""
-        audiofile = eyed3.load(file_path)
-        if audiofile.tag is None:
-            audiofile.initTag()
+        audiofile = eyed3.load(file_path) # type: ignore
+        if audiofile.tag is None: # type: ignore
+            audiofile.initTag() # type: ignore
         
-        audiofile.tag.title = track_info['name']
-        audiofile.tag.artist = ", ".join(track_info['artists'])
-        audiofile.tag.album = track_info['album']
+        audiofile.tag.title = track_info['name'] # type: ignore
+        audiofile.tag.artist = ", ".join(track_info['artists']) # type: ignore
+        audiofile.tag.album = track_info['album'] # type: ignore
         
         # Añadir portada si está disponible
         if album_art_path and os.path.exists(album_art_path):
             with open(album_art_path, 'rb') as img:
-                audiofile.tag.images.set(3, img.read(), 'image/jpeg')
+                audiofile.tag.images.set(3, img.read(), 'image/jpeg') # type: ignore
         
-        audiofile.tag.save()
+        audiofile.tag.save() # type: ignore
 
-    def convert(self, spotify_url):
+    def convert(self, spotify_url): # type: ignore
         """Convierte una URL de Spotify a MP3"""
         # Crear carpeta de descargas si no existe
         downloads_dir = os.path.join(os.path.dirname(__file__), "..", "..", "data", "music")
@@ -854,7 +1043,7 @@ class Spotify2MP3Converter(BaseConverter):
                 track_id, _ = self.extract_spotify_id(spotify_url)
                 self.current_track_id = track_id  # Guardar para búsquedas de YouTube
             except:
-                self.current_track_id = None
+                pass
             
             # 1. Obtener información de la pista de Spotify
             print("🔍 Obteniendo información de Spotify...")
@@ -873,8 +1062,7 @@ class Spotify2MP3Converter(BaseConverter):
             print("⬇️ Descargando desde YouTube...")
             mp3_path = self.download_from_youtube(
                 youtube_info['url'], 
-                downloads_dir, 
-                track_info
+                downloads_dir
             )
             
             # 4. Descargar portada del álbum
@@ -889,7 +1077,11 @@ class Spotify2MP3Converter(BaseConverter):
             print("🏷️ Añadiendo metadatos...")
             self.add_metadata_to_mp3(mp3_path, track_info, album_art_path)
             
-            # 6. Limpiar archivo temporal de portada
+            # 6. Actualizar metadatos temporales con la ruta local
+            print("📝 Actualizando metadatos temporales...")
+            self._update_metadata_with_local_path(track_info, mp3_path)
+            
+            # 7. Limpiar archivo temporal de portada
             if album_art_path and os.path.exists(album_art_path):
                 os.remove(album_art_path)
             
@@ -909,7 +1101,90 @@ class Spotify2MP3Converter(BaseConverter):
         except Exception as e:
             raise Exception(f"Error en la conversión: {e}")
 
-    def _sanitize_filename(self, filename):
+    def _update_metadata_with_local_path(self, track_info, local_path):
+        """Actualiza los metadatos con la ruta local del archivo descargado"""
+        try:
+            filepath = self.info_extractor.get_metadata_file_path()
+            if not os.path.exists(filepath):
+                print("⚠️ Archivo de metadatos no encontrado")
+                return
+            
+            # Leer archivo existente
+            with open(filepath, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            
+            track_id = track_info.get('track_id', '')
+            
+            # Actualizar en track_actual si coincide
+            if data.get('track_actual', {}).get('track_id') == track_id:
+                data['track_actual']['ruta_local'] = os.path.abspath(local_path)
+                data['track_actual']['archivo_actualizado'] = datetime.datetime.now().isoformat()
+            
+            # Actualizar en la lista de tracks
+            if 'tracks' in data:
+                for i, track in enumerate(data['tracks']):
+                    if track.get('track_id') == track_id:
+                        data['tracks'][i]['ruta_local'] = os.path.abspath(local_path)
+                        data['tracks'][i]['archivo_actualizado'] = datetime.datetime.now().isoformat()
+                        break
+            
+            data['ultima_actualizacion'] = datetime.datetime.now().isoformat()
+            
+            # Guardar archivo actualizado
+            with open(filepath, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            
+            print(f"✅ Metadatos actualizados con ruta local: {local_path}")
+                        
+        except Exception as e:
+            print(f"⚠️ Error en actualización de metadatos: {e}")
+    
+    def start_download_session(self, is_batch=False):
+        """Inicia una nueva sesión de descarga, limpiando contenido anterior"""
+        try:
+            if is_batch:
+                self._batch_session_started = False  # Reset para permitir limpieza
+                print("🎵 Iniciando descarga de álbum/playlist...")
+            else:
+                print("🎵 Iniciando descarga de canción individual...")
+                
+            # Crear archivo vacío o limpiar existente
+            filepath = self.info_extractor.get_metadata_file_path()
+            empty_structure = {
+                'ultima_actualizacion': datetime.datetime.now().isoformat(),
+                'tipo_descarga': 'album' if is_batch else 'cancion_individual',
+                'total_tracks': 0,
+                'tracks': [],
+                'track_actual': {}
+            }
+            
+            project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+            metadata_dir = os.path.join(project_root, 'data', 'metadata')
+            os.makedirs(metadata_dir, exist_ok=True)
+            
+            with open(filepath, 'w', encoding='utf-8') as f:
+                json.dump(empty_structure, f, ensure_ascii=False, indent=2)
+                
+            print(f"✅ Sesión iniciada - Archivo limpiado: {filepath}")
+            
+        except Exception as e:
+            print(f"⚠️ Error iniciando sesión: {e}")
+    
+    def finish_download_session(self):
+        """Finaliza la sesión de descarga"""
+        try:
+            if hasattr(self, '_batch_session_started'):
+                delattr(self, '_batch_session_started')
+            
+            session_info = self.info_extractor.get_download_session_info()
+            print(f"🎉 Sesión completada: {session_info.get('tracks_count', 0)} tracks procesados")
+            print(f"📁 Tipo: {session_info.get('tipo', 'individual')}")
+            
+        except Exception as e:
+            print(f"⚠️ Error finalizando sesión: {e}")
+
+    @staticmethod
+    def _sanitize_filename(filename):
         """Limpia el nombre de archivo de caracteres no válidos"""
         # Remover caracteres no válidos para nombres de archivo
         invalid_chars = '<>:"/\\|?*'
