@@ -5,176 +5,81 @@ import json
 import requests
 import tempfile
 import datetime
-from .base_converter import BaseConverter
+from model.conversor_model import BaseModel
 
-# Intentar múltiples bibliotecas de audio para conversión
-HAS_CONVERSION = False
-CONVERTER_TYPE = None
-
+# Bibliotecas esenciales simplificadas
 try:
     from moviepy.editor import AudioFileClip
-    HAS_CONVERSION = True
-    CONVERTER_TYPE = "moviepy"
-    print("✅ Usando moviepy para conversión de audio")
+    print("✅ Usando moviepy para conversión de audio de Spotify")
 except ImportError:
-    try:
-        from pydub import AudioSegment
-        HAS_CONVERSION = True
-        CONVERTER_TYPE = "pydub"
-        print("✅ Usando pydub para conversión de audio")
-    except ImportError:
-        HAS_CONVERSION = False
-        print("⚠️ No hay bibliotecas de conversión disponibles. Solo cambio de extensión.")
-        print("   Instala moviepy: pip install moviepy")
-        print("   O instala pydub: pip install pydub")
-
-# Intentar importar bibliotecas para metadatos de audio
-HAS_METADATA = False
-METADATA_TYPE = None
+    print("⚠️ moviepy no disponible. Instala: pip install moviepy")
+    raise ImportError("moviepy es requerido para conversión")
 
 try:
     from mutagen.mp3 import MP3
     from mutagen.id3 import ID3, APIC, TIT2, TPE1, TALB # type: ignore
-    HAS_METADATA = True
-    METADATA_TYPE = "mutagen"
-    print("✅ Usando mutagen para metadatos de audio")
+    print("✅ Usando mutagen para metadatos de audio de Spotify")
 except ImportError:
-    try:
-        import eyed3
-        HAS_METADATA = True
-        METADATA_TYPE = "eyed3"
-        print("✅ Usando eyed3 para metadatos de audio")
-    except ImportError:
-        HAS_METADATA = False
-        print("⚠️ Sin bibliotecas de metadatos. Las portadas no se incrustarán.")
-        print("   Instala mutagen: pip install mutagen")
-        print("   O instala eyed3: pip install eyed3")
+    print("⚠️ mutagen no disponible. Instala: pip install mutagen")
+    raise ImportError("mutagen es requerido para metadatos")
 
-# Importar yt-dlp para descargar desde YouTube
+# Bibliotecas obligatorias
 try:
     import yt_dlp
-    HAS_YT_DLP = True
     print("✅ Usando yt-dlp para descargas desde YouTube")
 except ImportError:
-    HAS_YT_DLP = False
     print("⚠️ yt-dlp no disponible. Instala: pip install yt-dlp")
+    raise ImportError("yt-dlp es requerido para descargas")
 
-# Importar spotdl para metadatos de Spotify (OBLIGATORIO)
 try:
     from spotdl import Spotdl
     from spotdl.utils.config import get_config
-    HAS_SPOTDL = True
-    print("✅ Usando spotdl para metadatos de Spotify (REQUERIDO)")
+    print("✅ Usando spotdl para metadatos y descarga de Spotify")
 except ImportError:
-    HAS_SPOTDL = False
     print("🚨 ERROR: spotdl no disponible - ES OBLIGATORIO")
     print("   📦 INSTALAR: pip install spotdl")
-    print("   ❌ El conversor de Spotify NO funcionará sin spotdl")
-
-if not HAS_SPOTDL:
-    print("\n🚨 CONFIGURACIÓN INCOMPLETA:")
-    print("   spotdl es REQUERIDO para funcionalidad de Spotify")
-    print("   Sin spotdl, solo funcionará el conversor de YouTube")
-
-print("✅ Sistema optimizado: spotdl (OBLIGATORIO) + métodos alternativos como respaldo")
-
+    raise ImportError("spotdl es requerido para el funcionamiento")
 
 class SpotifyInfoExtractor:
     """Extrae información de Spotify usando spotdl como método principal y métodos alternativos como fallback"""
     
     def __init__(self):
-        # SpotDL es OBLIGATORIO
-        if not HAS_SPOTDL:
-            print("🚨 spotdl no está disponible, usando solo métodos alternativos")
-            self.use_spotdl = False
-            self.spotdl = None
-        else:
-            # Configurar spotdl con credenciales por defecto
+        # Configurar spotdl (OBLIGATORIO)
+        try:
+            # Intentar obtener configuración existente
             try:
-                # Intentar obtener configuración existente
-                try:
-                    config = get_config() # type: ignore
-                    client_id = config.get('client_id')
-                    client_secret = config.get('client_secret')
-                except Exception:
-                    # Si no hay configuración, usar valores por defecto
-                    client_id = None
-                    client_secret = None
-                
-                # Crear instancia de Spotdl
-                if client_id and client_secret:
-                    self.spotdl = Spotdl(client_id=client_id, client_secret=client_secret) # type: ignore
-                else:
-                    # Usar configuración por defecto de spotdl (sin parámetros)
-                    self.spotdl = Spotdl() # type: ignore
-                
-                self.use_spotdl = True
-                print("✅ SpotDL configurado exitosamente (MODO PRINCIPAL)")
-                
-            except Exception as e:
-                print(f"⚠️ Error configurando SpotDL: {e}")
-                print("   Usando métodos alternativos como respaldo")
-                self.use_spotdl = False
-                self.spotdl = None
-        
-        # Configurar sesión para métodos de respaldo (solo en caso de fallo de SpotDL)
-        self.session = requests.Session()
-        self.session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-        })
+                config = get_config() # type: ignore
+                client_id = config.get('client_id')
+                client_secret = config.get('client_secret')
+            except Exception:
+                client_id = None
+                client_secret = None
+            
+            # Crear instancia de Spotdl
+            if client_id and client_secret:
+                self.spotdl = Spotdl(client_id=client_id, client_secret=client_secret) # type: ignore
+            else:
+                self.spotdl = Spotdl() # type: ignore
+            
+            print("✅ SpotDL configurado exitosamente")
+            
+        except Exception as e:
+            print(f"🚨 Error configurando SpotDL: {e}")
+            raise RuntimeError("SpotDL es obligatorio para el funcionamiento")
 
     def get_track_info(self, spotify_url: str):
-        """Obtiene información de una pista usando el mejor método disponible"""
+        """Obtiene información de una pista usando SpotDL únicamente"""
         track_id = self._extract_spotify_id(spotify_url)
         if not track_id:
             return None
         
-        # Método PRINCIPAL: SpotDL (más confiable)
-        if self.use_spotdl:
-            track_info = self._get_info_from_spotdl(spotify_url)
-            if track_info and track_info.get('artist') != 'Unknown Artist':
-                print("✅ Metadatos obtenidos via SpotDL")
-                return track_info
-            else:
-                print("⚠️ SpotDL falló, usando métodos alternativos...")
-        
-        # MÉTODOS ALTERNATIVOS (fallback)
-        print("🔄 Usando métodos alternativos para extracción...")
-        
-        # Método 1: Página principal de Spotify
-        track_info = self._get_info_from_main_page(track_id)
-        if track_info and track_info.get('artist') != 'Unknown Artist':
-            print("✅ Metadatos obtenidos via página principal")
+        # USAR SOLO SPOTDL (simplificado)
+        track_info = self._get_info_from_spotdl(spotify_url)
+        if track_info and track_info.get('artista') != 'Artista Desconocido':
+            print("✅ Metadatos obtenidos via SpotDL")
             return track_info
-        
-        # Método 2: OEmbed público de Spotify
-        track_info = self._get_info_from_oembed(track_id)
-        if track_info:
-            print("✅ Metadatos obtenidos via OEmbed")
-            return track_info
-        
-        # Método 3: Embed de Spotify
-        track_info = self._get_info_from_embed(track_id)
-        if track_info:
-            print("✅ Metadatos obtenidos via Embed")
-            return track_info
-        
-        # Método 4: APIs públicas alternativas
-        track_info = self._search_alternative_apis(track_id)
-        if track_info:
-            print("✅ Metadatos obtenidos via APIs alternativas")
-            return track_info
-        
-        # Método 5: Información mínima (último recurso)
-        print("⚠️ Usando información mínima como último recurso")
-        return {
-            'name': f'Track {track_id[:8]}',
-            'artist': 'Unknown Artist',
-            'album': 'Unknown Album',
-            'image_url': '',
-            'duration': 180,
-            'track_id': track_id
-        }
+        else:
+            raise RuntimeError(f"No se pudieron obtener metadatos de Spotify para: {spotify_url}")
 
     def _get_info_from_spotdl(self, spotify_url: str):
         """Método PRINCIPAL: Extraer información usando SpotDL"""
@@ -391,7 +296,7 @@ class SpotifyInfoExtractor:
         """Método 1: Extraer información de la página principal de Spotify"""
         try:
             main_url = f"https://open.spotify.com/track/{track_id}"
-            response = self.session.get(main_url, timeout=15)
+            response = self.session.get(main_url, timeout=15) # type: ignore
             
             if response.status_code == 200:
                 html = response.text
@@ -549,7 +454,7 @@ class SpotifyInfoExtractor:
         """Método 2: Usar endpoint OEmbed público de Spotify"""
         try:
             oembed_url = f"https://open.spotify.com/oembed?url=https://open.spotify.com/track/{track_id}"
-            response = self.session.get(oembed_url, timeout=10)
+            response = self.session.get(oembed_url, timeout=10) # type: ignore
             
             if response.status_code == 200:
                 data = response.json()
@@ -593,7 +498,7 @@ class SpotifyInfoExtractor:
         """Método 2: Extraer de página embed de Spotify"""
         try:
             embed_url = f"https://open.spotify.com/embed/track/{track_id}"
-            response = self.session.get(embed_url, timeout=10)
+            response = self.session.get(embed_url, timeout=10) # type: ignore
             
             if response.status_code == 200:
                 html = response.text
@@ -711,7 +616,7 @@ class SpotifyInfoExtractor:
             # iTunes Search API
             url = "https://itunes.apple.com/search"
             params = {'term': track_id, 'media': 'music', 'entity': 'song', 'limit': 1}
-            response = self.session.get(url, params=params, timeout=5)
+            response = self.session.get(url, params=params, timeout=5) # type: ignore
             
             if response.status_code == 200:
                 data = response.json()
@@ -730,7 +635,7 @@ class SpotifyInfoExtractor:
         return None
 
 
-class Spotify2MP3Converter(BaseConverter):
+class Spotify2MP3Converter(BaseModel):
     ORIGIN_SPOTIFY = "spotify"
     
     def __init__(self):
@@ -806,8 +711,6 @@ class Spotify2MP3Converter(BaseConverter):
 
     def search_on_youtube(self, track_name, artist_name):
         """Busca la pista en YouTube usando yt-dlp con múltiples estrategias"""
-        if not HAS_YT_DLP:
-            raise ImportError("yt-dlp no está disponible. Instala con: pip install yt-dlp")
 
         # Si tenemos información específica, usarla
         if track_name and not track_name.startswith("Track ") and artist_name and artist_name != "Unknown Artist":
@@ -926,9 +829,6 @@ class Spotify2MP3Converter(BaseConverter):
     @staticmethod
     def download_from_youtube(youtube_url, output_path):
         """Descarga audio desde YouTube usando yt-dlp"""
-        if not HAS_YT_DLP:
-            raise ImportError("yt-dlp no está disponible. Instala con: pip install yt-dlp")
-
         import yt_dlp as yt_dlp_module
         from typing import Any, Dict
 
@@ -976,60 +876,38 @@ class Spotify2MP3Converter(BaseConverter):
             return None
 
     def add_metadata_to_mp3(self, file_path, track_info, album_art_path=None):
-        """Añade metadatos al archivo MP3"""
-        if not HAS_METADATA:
-            print("⚠️ Sin bibliotecas de metadatos disponibles")
-            return
-
+        """Añade metadatos al archivo MP3 usando mutagen"""
         try:
-            if METADATA_TYPE == "mutagen":
-                self._add_metadata_mutagen(file_path, track_info, album_art_path)
-            elif METADATA_TYPE == "eyed3":
-                self._add_metadata_eyed3(file_path, track_info, album_art_path)
+            print("🏷️ Añadiendo metadatos con mutagen...")
+            
+            audio = MP3(file_path, ID3=ID3) # type: ignore
+            
+            # Añadir tags básicos usando la nueva estructura de metadatos
+            titulo = track_info.get('titulo', track_info.get('name', ''))
+            artista = track_info.get('artista', ', '.join(track_info.get('artists', [])))
+            album = track_info.get('album', track_info.get('album', {}).get('name', '') if isinstance(track_info.get('album'), dict) else track_info.get('album', ''))
+            
+            audio.tags.add(TIT2(encoding=3, text=titulo)) # type: ignore
+            audio.tags.add(TPE1(encoding=3, text=artista)) # type: ignore
+            audio.tags.add(TALB(encoding=3, text=album)) # type: ignore
+            
+            # Añadir portada si está disponible
+            if album_art_path and os.path.exists(album_art_path):
+                with open(album_art_path, 'rb') as img:
+                    audio.tags.add(APIC( # type: ignore
+                        encoding=3,
+                        mime='image/jpeg',
+                        type=3,
+                        desc='Cover',
+                        data=img.read()
+                    ))
+                print("🖼️ Portada agregada")
+            
+            audio.save()
+            print("✅ Metadatos guardados")
                 
         except Exception as e:
             print(f"⚠️ Error al añadir metadatos: {e}")
-
-    @staticmethod
-    def _add_metadata_mutagen(file_path, track_info, album_art_path):
-        """Añade metadatos usando mutagen"""
-        audio = MP3(file_path, ID3=ID3) # type: ignore
-        
-        # Añadir tags básicos
-        audio.tags.add(TIT2(encoding=3, text=track_info['name'])) # type: ignore
-        audio.tags.add(TPE1(encoding=3, text=", ".join(track_info['artists']))) # type: ignore
-        audio.tags.add(TALB(encoding=3, text=track_info['album'])) # type: ignore
-        
-        # Añadir portada si está disponible
-        if album_art_path and os.path.exists(album_art_path):
-            with open(album_art_path, 'rb') as img:
-                audio.tags.add(APIC( # type: ignore
-                    encoding=3,
-                    mime='image/jpeg',
-                    type=3,
-                    desc='Cover',
-                    data=img.read()
-                ))
-        
-        audio.save()
-
-    @staticmethod
-    def _add_metadata_eyed3(file_path, track_info, album_art_path):
-        """Añade metadatos usando eyed3"""
-        audiofile = eyed3.load(file_path) # type: ignore
-        if audiofile.tag is None: # type: ignore
-            audiofile.initTag() # type: ignore
-        
-        audiofile.tag.title = track_info['name'] # type: ignore
-        audiofile.tag.artist = ", ".join(track_info['artists']) # type: ignore
-        audiofile.tag.album = track_info['album'] # type: ignore
-        
-        # Añadir portada si está disponible
-        if album_art_path and os.path.exists(album_art_path):
-            with open(album_art_path, 'rb') as img:
-                audiofile.tag.images.set(3, img.read(), 'image/jpeg') # type: ignore
-        
-        audiofile.tag.save() # type: ignore
 
     def convert(self, spotify_url): # type: ignore
         """Convierte una URL de Spotify a MP3"""
@@ -1075,7 +953,7 @@ class Spotify2MP3Converter(BaseConverter):
             
             # 5. Añadir metadatos de Spotify
             print("🏷️ Añadiendo metadatos...")
-            self.add_metadata_to_mp3(mp3_path, track_info, album_art_path)
+            self.add_metadata_simple(mp3_path, track_info, album_art_path) # type: ignore
             
             # 6. Actualizar metadatos temporales con la ruta local
             print("📝 Actualizando metadatos temporales...")

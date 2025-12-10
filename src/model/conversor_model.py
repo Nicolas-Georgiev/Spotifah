@@ -4,7 +4,7 @@ Clase base para conversores de diferentes plataformas
 Facilita la expansión a otras plataformas manteniendo consistencia en metadatos
 """
 
-class BaseConverter:
+class BaseModel:
     """Clase base para todos los convertidores de audio"""
     
     # Constantes de origen para mantener consistencia
@@ -38,13 +38,13 @@ class BaseConverter:
         url_lower = url.lower()
         
         if 'youtube.com' in url_lower or 'youtu.be' in url_lower:
-            return BaseConverter.ORIGIN_YOUTUBE
+            return BaseModel.ORIGIN_YOUTUBE
         elif 'spotify.com' in url_lower:
-            return BaseConverter.ORIGIN_SPOTIFY
+            return BaseModel.ORIGIN_SPOTIFY
         elif 'soundcloud.com' in url_lower:
-            return BaseConverter.ORIGIN_SOUNDCLOUD
+            return BaseModel.ORIGIN_SOUNDCLOUD
         else:
-            return BaseConverter.ORIGIN_UNKNOWN
+            return BaseModel.ORIGIN_UNKNOWN
 
 
 class ConverterFactory:
@@ -53,15 +53,15 @@ class ConverterFactory:
     @staticmethod
     def create_converter(url):
         """Crea el conversor apropiado basado en la URL"""
-        platform = BaseConverter.detect_platform(url)
+        platform = BaseModel.detect_platform(url)
         
-        if platform == BaseConverter.ORIGIN_YOUTUBE:
+        if platform == BaseModel.ORIGIN_YOUTUBE:
             from youtube2mp3_model import YouTube2MP3Converter
             return YouTube2MP3Converter()
-        elif platform == BaseConverter.ORIGIN_SPOTIFY:
+        elif platform == BaseModel.ORIGIN_SPOTIFY:
             from spotify2mp3_model import Spotify2MP3Converter
             return Spotify2MP3Converter()
-        elif platform == BaseConverter.ORIGIN_SOUNDCLOUD:
+        elif platform == BaseModel.ORIGIN_SOUNDCLOUD:
             # TODO: Implementar SoundCloudConverter en el futuro
             raise NotImplementedError("SoundCloud converter no implementado aún")
         else:
@@ -71,7 +71,7 @@ class ConverterFactory:
     def get_supported_platforms():
         """Retorna lista de plataformas soportadas actualmente"""
         return [
-            BaseConverter.ORIGIN_YOUTUBE,
-            BaseConverter.ORIGIN_SPOTIFY,
-            # BaseConverter.ORIGIN_SOUNDCLOUD,  # Futuro
+            BaseModel.ORIGIN_YOUTUBE,
+            BaseModel.ORIGIN_SPOTIFY,
+            # BaseModel.ORIGIN_SOUNDCLOUD,  # Futuro
         ]

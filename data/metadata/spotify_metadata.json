@@ -1,43 +1,7 @@
 {
-  "ultima_actualizacion": "2025-12-10T17:43:39.940037",
+  "ultima_actualizacion": "2025-12-10T18:06:48.994654",
   "tipo_descarga": "cancion_individual",
-  "total_tracks": 1,
-  "tracks": [
-    {
-      "titulo": "Never Gonna Give You Up",
-      "artista": "Rick Astley",
-      "album": "Whenever You Need Somebody",
-      "duracion_seg": 213,
-      "genero": "Género Desconocido",
-      "plataforma_origen": "Spotify",
-      "url_origen": "https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC",
-      "ruta_local": "C:\\individual\\Never Gonna Give You Up.mp3",
-      "caratula_url": "https://i.scdn.co/image/ab67616d0000b273255e131abc1410833be95673",
-      "letra": "Letra no disponible",
-      "track_id": "4uLU6hMCjMI75M1A2tKUQC",
-      "isrc": "GBARL9300135",
-      "fecha_extraccion": "2025-12-10T17:43:39.930137",
-      "release_date": "1987-11-12",
-      "genres_list": [],
-      "archivo_actualizado": "2025-12-10T17:43:39.940033"
-    }
-  ],
-  "track_actual": {
-    "titulo": "Never Gonna Give You Up",
-    "artista": "Rick Astley",
-    "album": "Whenever You Need Somebody",
-    "duracion_seg": 213,
-    "genero": "Género Desconocido",
-    "plataforma_origen": "Spotify",
-    "url_origen": "https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC",
-    "ruta_local": "C:\\individual\\Never Gonna Give You Up.mp3",
-    "caratula_url": "https://i.scdn.co/image/ab67616d0000b273255e131abc1410833be95673",
-    "letra": "Letra no disponible",
-    "track_id": "4uLU6hMCjMI75M1A2tKUQC",
-    "isrc": "GBARL9300135",
-    "fecha_extraccion": "2025-12-10T17:43:39.930137",
-    "release_date": "1987-11-12",
-    "genres_list": [],
-    "archivo_actualizado": "2025-12-10T17:43:39.939986"
-  }
+  "total_tracks": 0,
+  "tracks": [],
+  "track_actual": {}
 }

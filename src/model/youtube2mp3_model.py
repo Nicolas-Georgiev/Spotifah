@@ -11,13 +11,13 @@ try:
     from moviepy.editor import AudioFileClip
     HAS_CONVERSION = True
     CONVERTER_TYPE = "moviepy"
-    print("✅ Usando moviepy para conversión de audio")
+    print("✅ Usando moviepy para conversión de audio de YouTube")
 except ImportError:
     try:
         from pydub import AudioSegment
         HAS_CONVERSION = True
         CONVERTER_TYPE = "pydub"
-        print("✅ Usando pydub para conversión de audio")
+        print("✅ Usando pydub para conversión de audio de YouTube")
     except ImportError:
         HAS_CONVERSION = False
         print("⚠️ No hay bibliotecas de conversión disponibles. Solo cambio de extensión.")
@@ -34,7 +34,7 @@ try:
     from mutagen.id3._frames import APIC, TIT2, TPE1, TALB
     HAS_METADATA = True
     METADATA_TYPE = "mutagen"
-    print("✅ Usando mutagen para metadatos de audio")
+    print("✅ Usando mutagen para metadatos de audio de YouTube")
 except ImportError:
     try:
         import eyed3
