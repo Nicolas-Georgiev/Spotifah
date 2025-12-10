@@ -1,0 +1,36 @@
+[
+    {
+        "name": "Weirdo",
+        "artists": [
+            "Frostydasnowmann"
+        ],
+        "artist": "Frostydasnowmann",
+        "genres": [],
+        "disc_number": 1,
+        "disc_count": 1,
+        "album_name": "MiLLion DoLLa MiSSion",
+        "album_artist": "Frostydasnowmann",
+        "duration": 232,
+        "year": 2017,
+        "date": "2017-01-20",
+        "track_number": 13,
+        "tracks_count": 13,
+        "song_id": "3kNbCO3lqen4DCjux5ERE8",
+        "explicit": true,
+        "publisher": "Gurb Nation",
+        "url": "https://open.spotify.com/track/3kNbCO3lqen4DCjux5ERE8",
+        "isrc": "USUYG1331425",
+        "cover_url": "https://i.scdn.co/image/ab67616d0000b273d1629df6d0e0a81342ab22da",
+        "copyright_text": "2017 Gurb Nation",
+        "download_url": null,
+        "lyrics": null,
+        "popularity": 19,
+        "album_id": "0BE2CAtYwPKpaFEwMX6fLm",
+        "list_name": null,
+        "list_url": null,
+        "list_position": null,
+        "list_length": null,
+        "artist_id": "2Bb57H1EnnHxtpSyOAJF8l",
+        "album_type": "album"
+    }
+]
