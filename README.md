@@ -11,13 +11,19 @@ Ekho es una aplicación avanzada que centraliza toda tu música en una sola plat
 - ✅ Integración con cuentas de Spotify
 - ✅ Interfaz moderna y personalizable
 
-### 🔄 **Conversor Universal** 
-- ✅ **Descarga de audio desde YouTube** (Disponible)
-- ✅ **Conversión desde Spotify a MP3** (Nuevo!)
+### 🔄 **Conversor Universal (ARQUITECTURA SIMPLIFICADA)** 
+- ✅ **Descarga de audio desde YouTube**
+- ✅ **Conversión desde Spotify a MP3**
+- ✅ **Sistema optimizado**: Solo bibliotecas esenciales
+  - 🎯 `spotdl` - Metadatos de Spotify y descarga
+  - 🎯 `yt-dlp` - Búsqueda y descarga desde YouTube
+  - 🎯 `moviepy` - Conversión de audio (única)
+  - 🎯 `mutagen` - Metadatos MP3 (única)
 - ✅ Conversión real a formato MP3 de alta calidad
 - ✅ Extracción e incrustación automática de portadas
 - ✅ Metadatos automáticos con identificación de origen
-- 🚧 Próximamente: SoundCloud, Bandcamp
+- ✅ **Guardado automático**: Archivo fijo para integración con BD
+- 🚧 Próximamente: SoundCloud
 
 ### 🤖 **Asistente IA**
 - 🚧 Análisis de hábitos de escucha
@@ -41,94 +47,90 @@ pip install -r requierments.txt
 
 ## 🚀 Uso
 
-### Conversor de YouTube a MP3
+### Conversor Universal (Punto de Entrada Único)
 ```bash
-# Ejecutar conversor de YouTube
-python run_converter.py
+# Ejecutar aplicación principal con menú interactivo
+python src/conversores.py
 
-# Ejecutar conversor de Spotify
-python run_spotify_converter.py
-
-# Conversor universal (detecta automáticamente la plataforma)
-python main_converter.py
+# La aplicación presenta un menú para seleccionar:
+# 1. Spotify a MP3 - Metadatos completos con SpotDL
+# 2. YouTube a MP3 - Descarga directa optimizada
 ```
 
-### Configuración para Spotify
-Para usar el conversor de Spotify, necesitas configurar credenciales de la API:
+### Configuración Automática
+El sistema está completamente simplificado y no requiere configuración manual:
 
-**🚀 Configuración rápida:**
-```bash
-python setup_spotify.py
-```
+**✅ SpotDL configuración automática:**
+- Usa credenciales por defecto integradas
+- No necesita API keys ni configuración
+- Funciona inmediatamente tras la instalación
 
-**🔧 Configuración manual:**
+**✅ FFmpeg incluido:**
+- Instalación automática con las dependencias
+- No requiere configuración adicional
 
-1. **Obtén credenciales de Spotify:**
-   - Ve a [Spotify for Developers](https://developer.spotify.com/dashboard)
-   - Crea una nueva aplicación
-   - Obtén tu Client ID y Client Secret
-
-2. **Configura variables de entorno:**
-   ```powershell
-   # Windows (PowerShell)
-   $env:SPOTIFY_CLIENT_ID="tu_client_id"
-   $env:SPOTIFY_CLIENT_SECRET="tu_client_secret"
-   
-   # Windows (CMD)
-   set SPOTIFY_CLIENT_ID=tu_client_id
-   set SPOTIFY_CLIENT_SECRET=tu_client_secret
-   
-   # Linux/macOS
-   export SPOTIFY_CLIENT_ID="tu_client_id"
-   export SPOTIFY_CLIENT_SECRET="tu_client_secret"
-   ```
-
-3. **URLs soportadas:**
-   - `https://open.spotify.com/track/4iV5W9uYEdYUVa79Axb7Rh`
-   - `spotify:track:4iV5W9uYEdYUVa79Axb7Rh`
-   - ✅ URLs con parámetros (`?si=...`) se limpian automáticamente
-
-**Proceso:** URL de YouTube → Descarga audio + portada → Conversión a MP3 → Metadatos + portada incrustada
+**✅ Arquitectura MVC robusta:**
+- Punto de entrada único: `src/conversores.py`
+- Separación clara de responsabilidades
+- Bibliotecas esenciales sin redundancias
 
 ### 🎵 Reproductor Musical
 ```bash
-# Próximamente
+# Próximamente - Integración con biblioteca de música convertida
 python player.py
 ```
 
-### 🤖 Asistente IA
+### 🤖 Asistente IA  
 ```bash
-# En desarrollo
+# En desarrollo - Recomendaciones basadas en música convertida
 python ai_assistant.py
 ```
 
-## 📁 Estructura del Proyecto
+## 📁 Estructura del Proyecto Simplificada
 ```
 Ekho/
 ├── src/
-│   ├── controller/
-│   │   ├── youtube2mp3_controller.py    # Conversor YouTube
-│   │   ├── metadata_controller.py       # Control de metadatos
-│   │   └── music_controller.py          # Reproductor
-│   ├── model/
-│   │   ├── youtube2mp3_model.py         # Conversión YouTube con portadas
-│   │   ├── metadata_reader.py           # Lectura de metadatos de audio
-│   │   ├── music_library.py             # Biblioteca musical
-│   │   └── base_converter.py            # Base para convertidores futuros
-│   ├── view/
-│   │   ├── youtube2mp3_view.py          # UI Conversor
-│   │   ├── metadata_view.py             # UI Metadatos
-│   │   ├── player_ui.py                 # UI Reproductor
-│   │   └── main_ui.py                   # UI Principal (futuro)
-│   ├── run_converter.py                 # Script principal del conversor
-│   ├── run_metadata.py                  # Script principal de metadatos
-│   └── main.py                          # Aplicación principal (futuro)
+│   ├── conversores.py                   # 🚀 PUNTO DE ENTRADA ÚNICO
+│   ├── controller/                      # 🎛️ Controladores MVC
+│   │   ├── base_controller.py           #   Controlador base abstracto
+│   │   ├── main_controller.py           #   Controlador principal con menú
+│   │   ├── spotify2mp3_controller.py    #   Controlador Spotify
+│   │   └── youtube2mp3_controller.py    #   Controlador YouTube
+│   ├── model/                           # 📊 Modelos (Lógica de negocio)
+│   │   ├── spotify2mp3_model.py         #   Modelo Spotify (SpotDL + yt-dlp)
+│   │   ├── youtube2mp3_model.py         #   Modelo YouTube (PyTubefix)
+│   │   └── base_converter.py            #   Conversor base
+│   ├── view/                            # 👁️ Vistas (Interfaz usuario)
+│   │   ├── base_view.py                 #   Vista base abstracta
+│   │   ├── spotify2mp3_view.py          #   Vista Spotify
+│   │   └── youtube2mp3_view.py          #   Vista YouTube
 ├── data/
-│   └── music/                           # Biblioteca musical (MP3 con metadatos)
-├── assets/
-│   └── icons/                           # Recursos gráficos
-├── converter.py                         # Acceso directo al conversor
-├── metadata.py                          # Analizador de metadatos
+│   ├── music/                           # 🎵 Música convertida (MP3)
+│   ├── metadata/                        # 📋 Metadatos para BD
+│   │   └── spotify_metadata.json        #   Archivo fijo metadatos
+│   └── temp/                            # 🗂️ Archivos temporales
+├── install_dependencies.py              # 📦 Instalador dependencias
+├── requirements.txt                     # 📝 Lista dependencias simplificadas
+└── README.md                            # 📖 Documentación
+```
+
+## 🎯 Arquitectura MVC Robusta
+
+### 🎛️ **Controladores** (Comunicadores Model-View)
+- **`MainController`**: Menú principal y gestión de aplicación
+- **`Spotify2MP3Controller`**: Coordinador conversión Spotify
+- **`YouTube2MP3Controller`**: Coordinador conversión YouTube
+- **`BaseController`**: Interfaz común y manejo de errores
+
+### 📊 **Modelos** (Lógica de Negocio)  
+- **`Spotify2MP3Converter`**: SpotDL + yt-dlp + moviepy + mutagen
+- **`YouTube2MP3Converter`**: PyTubefix + moviepy + mutagen
+- **Sin bibliotecas redundantes**: Solo esenciales
+
+### 👁️ **Vistas** (Interfaz de Usuario)
+- **`SpotifyView`**: Interfaz conversión Spotify  
+- **`YouTubeView`**: Interfaz conversión YouTube
+- **`BaseView`**: Interfaz común y mensajes consistentes
 ├── install_dependencies.py              # Instalador automático de dependencias
 ├── requierments.txt                     # Lista de dependencias
 └── README.md                            # Documentación del proyecto
@@ -202,13 +204,21 @@ python install_dependencies.py
 pip install moviepy mutagen
 ```
 
-### Conversor Spotify
+### Conversor Spotify (SIMPLIFICADO)
 ```bash
-# Instalar dependencias específicas
-pip install spotipy yt-dlp
+# Sistema simplificado - instalar bibliotecas esenciales
+pip install spotdl yt-dlp moviepy mutagen requests
 
-# Configurar credenciales (ver sección de configuración arriba)
-# Problemas de búsqueda: verificar conexión a YouTube
+# ⚠️ FFmpeg requerido por spotdl y moviepy
+# Windows: Descargar desde https://ffmpeg.org/
+# Linux: sudo apt install ffmpeg
+# macOS: brew install ffmpeg
+
+# Arquitectura simplificada:
+# ✅ spotdl: Metadatos de Spotify + descarga integrada
+# ✅ yt-dlp: Búsqueda y descarga desde YouTube  
+# ✅ moviepy: Conversión de audio (única biblioteca)
+# ✅ mutagen: Metadatos MP3 (única biblioteca)
 ```
 
 ### Reproductor (Próximamente)
