@@ -1,0 +1,28 @@
+# === BIBLIOTECAS ESENCIALES ===
+
+# Biblioteca para requests HTTP (descargas, API calls)
+requests
+
+# Compatibilidad spotdl en Python 3.14 (provee pkg_resources)
+setuptools<81
+
+# === CONVERSIÓN DE AUDIO ===
+# Conversión de formatos de audio/video (única biblioteca de conversión)
+moviepy==1.0.3
+
+# Metadatos de audio MP3 (única biblioteca de metadatos)
+mutagen
+
+# === SPOTIFY Y YOUTUBE ===
+# SpotDL: Extracción de metadatos de Spotify y descarga (OBLIGATORIO)
+spotdl
+
+# yt-dlp: Búsqueda y descarga desde YouTube (OBLIGATORIO)
+yt-dlp>=2023.1.0
+
+# === BIBLIOTECAS COMPLEMENTARIAS ===
+# PyTubefix: Para funcionalidades adicionales de YouTube si es necesario
+pytubefix
+
+# === NOTAS ===
+# FFmpeg: Requerido por spotdl y moviepy (instalar: winget install Gyan.FFmpeg)
