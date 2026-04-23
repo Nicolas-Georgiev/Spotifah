@@ -3,6 +3,7 @@
 
 import os
 import sys
+import subprocess
 from abc import ABC, abstractmethod
 from typing import Any, Optional, Dict
 
@@ -112,6 +113,7 @@ class ConversorController:
         print("\n📋 CONVERTIDORES DISPONIBLES:")
         print("  1️⃣  Spotify a MP3")
         print("  2️⃣  YouTube a MP3")
+        print("  3️⃣  Estado del sistema")
         print("  0️⃣  Salir")
         print("="*70)
     
@@ -122,10 +124,10 @@ class ConversorController:
                 print("\nSelecciona una opción (1-2, 0 para salir): ", end='', flush=True)
                 choice = input().strip()
                 
-                if choice in ['1', '2', '0']:
+                if choice in ['1', '2', '3', '0']:
                     return choice
                 else:
-                    print("❌ Opción no válida. Por favor selecciona 1, 2 o 0.")
+                    print("❌ Opción no válida. Por favor selecciona 1, 2, 3 o 0.")
                     
             except EOFError:
                 print("\n❌ EOF detectado - finalizando programa")
@@ -147,7 +149,9 @@ class ConversorController:
             ('yt_dlp', 'yt-dlp para descargas de YouTube'),
             ('moviepy', 'MoviePy para conversión de audio'),
             ('mutagen', 'Mutagen para metadatos MP3'),
-            ('requests', 'Requests para descargas HTTP')
+            ('requests', 'Requests para descargas HTTP'),
+            ('pytubefix', 'PyTubefix para flujo de YouTube'),
+            ('pkg_resources', 'setuptools/pkg_resources para compatibilidad spotdl')
         ]
         
         for dep, description in dependencies:
@@ -172,6 +176,21 @@ class ConversorController:
                 print(f"  ✅ {description}: {full_path}")
             else:
                 print(f"  ❌ {description}: NO EXISTE")
+
+        print("\n🎬 FFMPEG:")
+        if self._is_ffmpeg_available():
+            print("  ✅ FFmpeg disponible")
+        else:
+            print("  ❌ FFmpeg no encontrado en PATH")
+            print("  💡 Instalar en Windows: winget install Gyan.FFmpeg")
+
+    @staticmethod
+    def _is_ffmpeg_available() -> bool:
+        try:
+            result = subprocess.run(['ffmpeg', '-version'], capture_output=True, text=True)
+            return result.returncode == 0
+        except FileNotFoundError:
+            return False
     
     def run(self) -> None:
         """Ejecutar el flujo principal"""
@@ -195,10 +214,15 @@ class ConversorController:
                         self.controllers['youtube'].run()
                     except Exception as e:
                         print(f"❌ Error en conversor de YouTube: {e}")
+                elif choice == '3':
+                    self.show_system_status()
                 
                 # Pausa antes de volver al menú
                 print("\n⏸️  Presiona Enter para continuar...", end='', flush=True)
-                input()
+                try:
+                    input()
+                except (EOFError, KeyboardInterrupt):
+                    print()
                 
         except KeyboardInterrupt:
             print("\n\n⏹️  Programa terminado por el usuario. ¡Hasta luego!")

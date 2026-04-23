@@ -32,13 +32,19 @@ except ImportError:
     raise ImportError("yt-dlp es requerido para descargas")
 
 try:
-    from spotdl import Spotdl
-    from spotdl.utils.config import get_config
-    print("✅ Usando spotdl para metadatos y descarga de Spotify")
+    from spotdl.search.song_gatherer import from_spotify_url as spotdl_from_spotify_url
+    SPOTDL_API_MODE = "song_gatherer"
+    print("✅ Usando spotdl.search.song_gatherer para metadatos de Spotify")
 except ImportError:
-    print("🚨 ERROR: spotdl no disponible - ES OBLIGATORIO")
-    print("   📦 INSTALAR: pip install spotdl")
-    raise ImportError("spotdl es requerido para el funcionamiento")
+    try:
+        from spotdl import Spotdl
+        from spotdl.utils.config import get_config
+        SPOTDL_API_MODE = "legacy_spotdl_class"
+        print("✅ Usando API legacy de spotdl para metadatos de Spotify")
+    except ImportError:
+        print("🚨 ERROR: spotdl no disponible - ES OBLIGATORIO")
+        print("   📦 INSTALAR: pip install spotdl")
+        raise ImportError("spotdl es requerido para el funcionamiento")
 
 class SpotifyInfoExtractor:
     """Extrae información de Spotify usando spotdl como método principal y métodos alternativos como fallback"""
@@ -46,21 +52,23 @@ class SpotifyInfoExtractor:
     def __init__(self):
         # Configurar spotdl (OBLIGATORIO)
         try:
-            # Intentar obtener configuración existente
-            try:
-                config = get_config() # type: ignore
-                client_id = config.get('client_id')
-                client_secret = config.get('client_secret')
-            except Exception:
-                client_id = None
-                client_secret = None
-            
-            # Crear instancia de Spotdl
-            if client_id and client_secret:
-                self.spotdl = Spotdl(client_id=client_id, client_secret=client_secret) # type: ignore
+            if SPOTDL_API_MODE == "legacy_spotdl_class":
+                # Compatibilidad con versiones antiguas de SpotDL
+                try:
+                    config = get_config() # type: ignore
+                    client_id = config.get('client_id')
+                    client_secret = config.get('client_secret')
+                except Exception:
+                    client_id = None
+                    client_secret = None
+
+                if client_id and client_secret:
+                    self.spotdl = Spotdl(client_id=client_id, client_secret=client_secret) # type: ignore
+                else:
+                    self.spotdl = Spotdl() # type: ignore
             else:
-                self.spotdl = Spotdl() # type: ignore
-            
+                self.spotdl = None
+
             print("✅ SpotDL configurado exitosamente")
             
         except Exception as e:
@@ -84,49 +92,55 @@ class SpotifyInfoExtractor:
     def _get_info_from_spotdl(self, spotify_url: str):
         """Método PRINCIPAL: Extraer información usando SpotDL"""
         try:
-            # Buscar la canción usando SpotDL
-            songs = self.spotdl.search([spotify_url]) # type: ignore
-            
-            if not songs or len(songs) == 0:
-                print("⚠️ SpotDL: No se encontraron resultados")
-                return None
-            
-            song = songs[0]  # Tomar el primer resultado
-            
-            # Obtener letra si está disponible
-            lyrics = ""
-            try:
-                if hasattr(song, 'lyrics') and song.lyrics:
-                    lyrics = song.lyrics
-                else:
-                    # Intentar obtener letra usando spotdl
-                    from spotdl.utils.lrc import generate_lrc
-                    lyrics = generate_lrc(song, None) or "" # type: ignore
-            except Exception as e:
-                print(f"⚠️ No se pudo obtener la letra: {e}")
-                lyrics = ""
+            # Resolver metadatos con API de SpotDL compatible con múltiples versiones
+            if SPOTDL_API_MODE == "song_gatherer":
+                song = spotdl_from_spotify_url(spotify_url) # type: ignore
+                if song is None:
+                    print("⚠️ SpotDL: No se encontraron resultados")
+                    return None
+            else:
+                songs = self.spotdl.search([spotify_url]) # type: ignore
+                if not songs or len(songs) == 0:
+                    print("⚠️ SpotDL: No se encontraron resultados")
+                    return None
+                song = songs[0]
+
+            song_name = getattr(song, 'name', None) or getattr(song, 'song_name', None)
+            song_artists = getattr(song, 'artists', None) or getattr(song, 'contributing_artists', None) or []
+            song_cover_url = getattr(song, 'cover_url', None) or getattr(song, 'album_cover_url', None) or ''
+            song_album_name = getattr(song, 'album_name', None)
+            song_duration = getattr(song, 'duration', None)
+            song_genres = getattr(song, 'genres', None) or []
+            song_isrc = getattr(song, 'isrc', None) or ''
+            song_release_date = getattr(song, 'date', None) or getattr(song, 'album_release', None) or ''
+            lyrics = (getattr(song, 'lyrics', None) or '').strip()
+
+            if isinstance(song_artists, str):
+                artists_value = song_artists
+            else:
+                artists_value = ', '.join(song_artists) if song_artists else 'Artista Desconocido'
             
             # Extraer metadatos completos
             track_info = {
-                'titulo': song.name or 'Título Desconocido',
-                'artista': ', '.join(song.artists) if song.artists else 'Artista Desconocido',
-                'album': song.album_name or 'Álbum Desconocido',
-                'duracion_seg': int(song.duration or 180),
-                'genero': ', '.join(song.genres) if song.genres else 'Género Desconocido',
+                'titulo': song_name or 'Título Desconocido',
+                'artista': artists_value,
+                'album': song_album_name or 'Álbum Desconocido',
+                'duracion_seg': int(song_duration or 180),
+                'genero': ', '.join(song_genres) if song_genres else 'Género Desconocido',
                 'plataforma_origen': 'Spotify',
                 'url_origen': spotify_url,
                 'ruta_local': '',  # Se llenará cuando se descargue
-                'caratula_url': song.cover_url or '',
+                'caratula_url': song_cover_url,
                 'letra': lyrics.strip() if lyrics else 'Letra no disponible',
                 # Campos adicionales para compatibilidad
-                'name': song.name or 'Unknown Title',
-                'artist': ', '.join(song.artists) if song.artists else 'Unknown Artist',
-                'image_url': song.cover_url or '',
-                'duration': int(song.duration or 180),
+                'name': song_name or 'Unknown Title',
+                'artist': artists_value if artists_value else 'Unknown Artist',
+                'image_url': song_cover_url,
+                'duration': int(song_duration or 180),
                 'track_id': self._extract_spotify_id(spotify_url),
-                'isrc': song.isrc or '',
-                'release_date': song.date or '',
-                'genres': song.genres or []
+                'isrc': song_isrc,
+                'release_date': str(song_release_date) if song_release_date else '',
+                'genres': song_genres
             }
             
             # Guardar metadatos en archivo temporal

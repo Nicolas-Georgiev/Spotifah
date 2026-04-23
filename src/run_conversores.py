@@ -34,21 +34,11 @@ def main():
         print(f"\n❌ Error de importación: {e}")
         print("\n🔧 SOLUCIONES POSIBLES:")
         print("1. Verificar que todas las dependencias estén instaladas:")
-        print("   pip install -r requirements.txt")
-        print("\n2. Instalar dependencias manualmente:")
-        print("   pip install spotdl yt-dlp moviepy mutagen requests")
-        print("\n3. Verificar que FFmpeg esté instalado:")
-        print("   Windows: Descargar desde https://ffmpeg.org/")
+        print("   python install_dependencies.py")
+        print("\n2. Verificar que FFmpeg esté instalado:")
+        print("   Windows: winget install Gyan.FFmpeg")
         print("   Linux: sudo apt install ffmpeg")
         print("   macOS: brew install ffmpeg")
-        print("\n4. Verificar estructura de archivos:")
-        print("   - controller/main_controller.py")
-        print("   - controller/spotify2mp3_controller.py") 
-        print("   - controller/youtube2mp3_controller.py")
-        print("   - model/spotify2mp3_model.py")
-        print("   - model/youtube2mp3_model.py")
-        print("   - view/spotify2mp3_view.py")
-        print("   - view/youtube2mp3_view.py")
         
     except KeyboardInterrupt:
         print("\n\n👋 Programa interrumpido por el usuario. ¡Hasta luego!")
@@ -63,7 +53,6 @@ def main():
         print("1. Verificar que todas las dependencias estén correctamente instaladas")
         print("2. Ejecutar el instalador de dependencias: python install_dependencies.py")
         print("3. Verificar que FFmpeg esté disponible en el PATH del sistema")
-        print("4. Comprobar permisos de escritura en las carpetas del proyecto")
 
 
 if __name__ == "__main__":

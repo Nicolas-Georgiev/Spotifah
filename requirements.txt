@@ -1,7 +1,10 @@
-# === SISTEMA SIMPLIFICADO - BIBLIOTECAS ESENCIALES ===
+# === BIBLIOTECAS ESENCIALES ===
 
 # Biblioteca para requests HTTP (descargas, API calls)
 requests
+
+# Compatibilidad spotdl en Python 3.14 (provee pkg_resources)
+setuptools<81
 
 # === CONVERSIÓN DE AUDIO ===
 # Conversión de formatos de audio/video (única biblioteca de conversión)
@@ -22,5 +25,4 @@ yt-dlp>=2023.1.0
 pytubefix
 
 # === NOTAS ===
-# FFmpeg: Requerido por spotdl y moviepy (instalar desde: https://ffmpeg.org/)
-# Sistema simplificado: spotdl (metadatos) + yt-dlp (descarga) + moviepy (conversión) + mutagen (tags)
+# FFmpeg: Requerido por spotdl y moviepy (instalar: winget install Gyan.FFmpeg)

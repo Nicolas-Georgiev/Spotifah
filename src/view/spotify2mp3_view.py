@@ -94,7 +94,7 @@ class SpotifyView(BaseView):
             "   • spotify:track:ID",
             "",
             "🔧 DEPENDENCIAS REQUERIDAS:",
-            "   pip install spotdl yt-dlp moviepy mutagen requests",
+            "   pip install \"setuptools<81\" pytubefix spotdl yt-dlp moviepy mutagen requests",
             "",
             "⚙️ FFMPEG REQUERIDO:",
             "   Windows: Descargar desde https://ffmpeg.org/",
