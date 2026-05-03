@@ -54,13 +54,44 @@ class SpotifyInfoExtractor:
         try:
             if SPOTDL_API_MODE == "legacy_spotdl_class":
                 # Compatibilidad con versiones antiguas de SpotDL
-                try:
-                    config = get_config() # type: ignore
-                    client_id = config.get('client_id')
-                    client_secret = config.get('client_secret')
-                except Exception:
-                    client_id = None
-                    client_secret = None
+                # Priorizar variables de entorno, luego .env, finalmente la configuración interna de spotdl
+                client_id = os.getenv('SPOTDL_CLIENT_ID') or os.getenv('SPOTIFY_CLIENT_ID') or os.getenv('CLIENT_ID')
+                client_secret = os.getenv('SPOTDL_CLIENT_SECRET') or os.getenv('SPOTIFY_CLIENT_SECRET') or os.getenv('CLIENT_SECRET')
+
+                # Intentar cargar desde .env en la raíz del proyecto si no están en el entorno
+                if not client_id or not client_secret:
+                    try:
+                        project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+                        dotenv_path = os.path.join(project_root, '.env')
+                        if os.path.exists(dotenv_path):
+                            with open(dotenv_path, 'r', encoding='utf-8') as f:
+                                for line in f:
+                                    line = line.strip()
+                                    if not line or line.startswith('#') or '=' not in line:
+                                        continue
+                                    k, v = line.split('=', 1)
+                                    k = k.strip()
+                                    v = v.strip().strip('"').strip("'")
+                                    if k in ('SPOTDL_CLIENT_ID', 'SPOTDL_CLIENT_SECRET', 'SPOTIFY_CLIENT_ID', 'SPOTIFY_CLIENT_SECRET', 'CLIENT_ID', 'CLIENT_SECRET'):
+                                        if 'CLIENT_ID' in k and not client_id:
+                                            client_id = v
+                                        if 'CLIENT_SECRET' in k and not client_secret:
+                                            client_secret = v
+                    except Exception:
+                        # No bloquear si falla la lectura del .env
+                        pass
+
+                # Finalmente intentar obtener configuración interna de spotdl si aún faltan
+                if not client_id or not client_secret:
+                    try:
+                        config = get_config() # type: ignore
+                        if not client_id:
+                            client_id = config.get('client_id')
+                        if not client_secret:
+                            client_secret = config.get('client_secret')
+                    except Exception:
+                        # dejar como None si no hay config
+                        pass
 
                 if client_id and client_secret:
                     self.spotdl = Spotdl(client_id=client_id, client_secret=client_secret) # type: ignore
