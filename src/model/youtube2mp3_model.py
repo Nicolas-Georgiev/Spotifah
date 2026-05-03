@@ -1,7 +1,21 @@
 # youtube2mp3_model.py
 import os
+import json
+import datetime
 import requests
 from pytubefix import YouTube
+
+# Adaptador de BD — importación segura
+try:
+    import sys as _sys
+    _src = os.path.dirname(__file__)
+    if _src not in _sys.path:
+        _sys.path.insert(0, _src)
+    from model.db_adapter import upsert_cancion, registrar_descarga
+    _DB_ADAPTER_OK = True
+except Exception as _db_e:
+    print(f"⚠️ youtube2mp3_model: db_adapter no disponible ({_db_e})")
+    _DB_ADAPTER_OK = False
 
 # Intentar múltiples bibliotecas de audio para conversión
 HAS_CONVERSION = False
@@ -82,13 +96,32 @@ class YouTube2MP3Converter:
             print(f"Descargando stream: {preferred_stream.mime_type} - {preferred_stream.abr}") # type: ignore
             out_file = preferred_stream.download(output_path=downloads_dir) # type: ignore
             
-            # Retornar tanto el archivo como la información del video
+            # Extraer todos los metadatos disponibles de YouTube
+            keywords = []
+            try:
+                keywords = yt.keywords or []
+            except Exception:
+                pass
+
+            publish_date = None
+            try:
+                if yt.publish_date:
+                    publish_date = yt.publish_date.isoformat()
+            except Exception:
+                pass
+
             video_info = {
-                'file_path': out_file,
-                'title': yt.title,
-                'author': yt.author,
+                'file_path':     out_file,
+                'title':         yt.title,
+                'author':        yt.author,
                 'thumbnail_url': yt.thumbnail_url,
-                'length': yt.length
+                'length':        yt.length,
+                'video_id':      yt.video_id,
+                'channel_url':   yt.channel_url,
+                'description':   (yt.description or '').strip(),
+                'keywords':      keywords,
+                'publish_date':  publish_date,
+                'views':         yt.views,
             }
             
             return video_info
@@ -115,7 +148,8 @@ class YouTube2MP3Converter:
             return False
 
     @staticmethod
-    def add_metadata_to_mp3(mp3_path, title, artist, thumbnail_path=None, origin="YouTube"):
+    def add_metadata_to_mp3(mp3_path, title, artist, thumbnail_path=None, origin="YouTube",
+                             album="", year="", genre="", comment=""):
         """Añade metadatos al archivo MP3 incluyendo la portada y origen"""
         try:
             if not HAS_METADATA:
@@ -166,15 +200,21 @@ class YouTube2MP3Converter:
                 if audio_file.tags is None:
                     audio_file.add_tags()
                 
-                # Añadir metadatos básicos (solo título y artista)
-                audio_file.tags.add(TIT2(encoding=3, text=title)) # type: ignore
-                audio_file.tags.add(TPE1(encoding=3, text=artist)) # type: ignore
-                
-                # Añadir origen en el campo de comentarios estándar
-                from mutagen.id3 import COMM # type: ignore
-                comment_text = f"Origen: {origin}"
-                audio_file.tags.add(COMM( # type: ignore
-                    encoding=3, 
+                # Añadir metadatos completos
+                from mutagen.id3 import COMM, TALB, TDRC, TCON  # type: ignore
+                audio_file.tags.add(TIT2(encoding=3, text=title))   # type: ignore  # Título
+                audio_file.tags.add(TPE1(encoding=3, text=artist))  # type: ignore  # Artista
+                if album:
+                    audio_file.tags.add(TALB(encoding=3, text=album))   # type: ignore  # Álbum
+                if year:
+                    audio_file.tags.add(TDRC(encoding=3, text=str(year)))  # type: ignore  # Año
+                if genre:
+                    audio_file.tags.add(TCON(encoding=3, text=genre))   # type: ignore  # Género
+
+                # Comentario con origen y descripción
+                comment_text = comment if comment else f"Origen: {origin}"
+                audio_file.tags.add(COMM(  # type: ignore
+                    encoding=3,
                     lang='spa',
                     desc='',
                     text=[comment_text]
@@ -223,12 +263,18 @@ class YouTube2MP3Converter:
                     if audio_file.tag is None:
                         audio_file.initTag()
                     
-                    # Solo añadir título y artista
+                    # Añadir metadatos completos
                     audio_file.tag.title = title
                     audio_file.tag.artist = artist
-                    
-                    # Añadir origen en comentarios
-                    comment_text = f"Origen: {origin}"
+                    if album:
+                        audio_file.tag.album = album
+                    if year:
+                        audio_file.tag.recording_date = eyed3.core.Date(int(year[:4]))
+                    if genre:
+                        audio_file.tag.genre = genre
+
+                    # Comentario con origen y descripción
+                    comment_text = comment if comment else f"Origen: {origin}"
                     audio_file.tag.comments.set(comment_text) # type: ignore
                     
                     # Añadir portada
@@ -351,6 +397,61 @@ class YouTube2MP3Converter:
             traceback.print_exc()
             return file_path
 
+    def _save_metadata_to_json(self, video_info: dict, mp3_path: str) -> None:
+        """Guarda los metadatos de YouTube en data/metadata/youtube_metadata.json,
+        con la misma estructura que spotify_metadata.json."""
+        try:
+            project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+            metadata_dir = os.path.join(project_root, 'data', 'metadata')
+            os.makedirs(metadata_dir, exist_ok=True)
+            filepath = os.path.join(metadata_dir, 'youtube_metadata.json')
+
+            keywords = video_info.get('keywords') or []
+            genre_str = ', '.join(keywords[:5]) if keywords else ''
+
+            track_data = {
+                'titulo':           video_info.get('title', ''),
+                'artista':          video_info.get('author', ''),
+                'album':            '',
+                'duracion_seg':     video_info.get('length') or 0,
+                'genero':           genre_str,
+                'plataforma_origen': 'YouTube',
+                'url_origen':       video_info.get('url_origen', ''),
+                'ruta_local':       mp3_path,
+                'caratula_url':     video_info.get('thumbnail_url', ''),
+                'letra':            '',
+                'video_id':         video_info.get('video_id', ''),
+                'channel_url':      video_info.get('channel_url', ''),
+                'description':      video_info.get('description', ''),
+                'keywords':         keywords,
+                'publish_date':     video_info.get('publish_date', ''),
+                'views':            video_info.get('views', 0),
+                'fecha_extraccion': datetime.datetime.now().isoformat(),
+            }
+
+            # Cargar existente o crear nuevo
+            if os.path.exists(filepath):
+                try:
+                    with open(filepath, 'r', encoding='utf-8') as f:
+                        data = json.load(f)
+                except Exception:
+                    data = {'tracks': []}
+            else:
+                data = {'tracks': []}
+
+            data['tracks'].append(track_data)
+            data['track_actual'] = track_data
+            data['ultima_actualizacion'] = datetime.datetime.now().isoformat()
+            data['total_tracks'] = len(data['tracks'])
+            data['tipo_descarga'] = 'cancion_individual'
+
+            with open(filepath, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+
+            print(f"💾 Metadatos YouTube guardados: {filepath}")
+        except Exception as e:
+            print(f"⚠️ Error guardando metadatos YouTube: {e}")
+
     def convert(self, url):
         """Descarga y convierte el video de YouTube a MP3 con portada"""
         try:
@@ -361,6 +462,7 @@ class YouTube2MP3Converter:
             print(f"📍 Fuente detectada: {source}")
             
             video_info = self.download_video(url)
+            video_info['url_origen'] = url  # guardar URL original para metadatos
             print(f"📁 Archivo descargado: {video_info['file_path']}")
             
             print(f"🔄 Convirtiendo a MP3...")
@@ -375,35 +477,39 @@ class YouTube2MP3Converter:
             if not os.path.exists(mp3_file) or os.path.getsize(mp3_file) == 0:
                 print("❌ Error: El archivo MP3 no se creó correctamente")
                 return mp3_file
-            
+
+            # Preparar campos extra para los tags ID3
+            keywords = video_info.get('keywords') or []
+            genre_str = ', '.join(keywords[:5]) if keywords else ''
+            publish_date = video_info.get('publish_date') or ''
+            year_str = publish_date[:4] if publish_date and len(publish_date) >= 4 else ''
+            description = video_info.get('description', '')
+            comment_str = description[:200] if description else f"Origen: {source}"
+
             # Descargar y agregar portada si las bibliotecas están disponibles
             if HAS_METADATA and video_info['thumbnail_url']:
                 try:
                     print("🖼️ Procesando portada...")
-                    # Crear nombre para la thumbnail
                     thumbnail_filename = os.path.splitext(mp3_file)[0] + "_thumbnail.jpg"
                     
-                    # Descargar thumbnail
                     if self.download_thumbnail(video_info['thumbnail_url'], thumbnail_filename):
-                        # Verificar que la thumbnail se descargó correctamente
                         if os.path.exists(thumbnail_filename) and os.path.getsize(thumbnail_filename) > 0:
                             print("📸 Portada descargada, añadiendo metadatos...")
-                            
-                            # Agregar metadatos incluyendo la portada y origen
                             success = self.add_metadata_to_mp3(
-                                mp3_file, 
-                                video_info['title'], 
+                                mp3_file,
+                                video_info['title'],
                                 video_info['author'],
                                 thumbnail_filename,
-                                origin=source
+                                origin=source,
+                                album=video_info.get('author', ''),
+                                year=year_str,
+                                genre=genre_str,
+                                comment=comment_str,
                             )
-                            
                             if success:
                                 print("✅ Metadatos y portada añadidos correctamente")
                             else:
                                 print("⚠️ Metadatos añadidos sin portada")
-                                
-                            # Eliminar archivo de thumbnail temporal
                             try:
                                 os.remove(thumbnail_filename)
                                 print("🗑️ Thumbnail temporal eliminada")
@@ -411,33 +517,50 @@ class YouTube2MP3Converter:
                                 pass
                         else:
                             print("❌ Error: Thumbnail descargada pero vacía o inválida")
-                            # Agregar metadatos sin portada
                             self.add_metadata_to_mp3(
-                                mp3_file, 
-                                video_info['title'], 
-                                video_info['author'],
-                                origin=source
+                                mp3_file, video_info['title'], video_info['author'],
+                                origin=source, album=video_info.get('author', ''),
+                                year=year_str, genre=genre_str, comment=comment_str,
                             )
                     else:
                         print("❌ No se pudo descargar la portada")
-                        # Agregar metadatos sin portada pero con origen
                         self.add_metadata_to_mp3(
-                            mp3_file, 
-                            video_info['title'], 
-                            video_info['author'],
-                            origin=source
+                            mp3_file, video_info['title'], video_info['author'],
+                            origin=source, album=video_info.get('author', ''),
+                            year=year_str, genre=genre_str, comment=comment_str,
                         )
-                        
                 except Exception as e:
                     print(f"⚠️ Error con metadatos/portada: {e}")
                     print("🎵 El archivo MP3 se creó correctamente sin metadatos")
             else:
                 if not HAS_METADATA:
                     print("💡 Tip: Instala 'mutagen' para agregar portadas a tus MP3")
-                    print("   Comando: pip install mutagen")
                 elif not video_info.get('thumbnail_url'):
                     print("⚠️ No se encontró URL de portada en el video")
-            
+
+            # ── Guardar JSON de metadatos ──────────────────────────────────
+            mp3_abs = os.path.normpath(os.path.abspath(mp3_file))
+            self._save_metadata_to_json(video_info, mp3_abs)
+
+            # ── Guardar en BD ──────────────────────────────────────────────
+            if _DB_ADAPTER_OK:
+                try:
+                    metadata_bd = {
+                        'titulo':           video_info.get('title', ''),
+                        'artista':          video_info.get('author', ''),
+                        'duracion_seg':     video_info.get('length') or None,
+                        'genero':           genre_str or None,
+                        'plataforma_origen': 'YouTube',
+                        'url_origen':       url,
+                        'ruta_local':       mp3_abs,
+                        'caratula_url':     video_info.get('thumbnail_url') or None,
+                    }
+                    id_cancion = upsert_cancion(metadata_bd)
+                    registrar_descarga(id_cancion, formato='mp3')
+                except Exception as _bd_err:
+                    print(f"⚠️ No se pudo guardar en BD: {_bd_err}")
+            # ───────────────────────────────────────────────────────────────
+
             return mp3_file
             
         except Exception as e:

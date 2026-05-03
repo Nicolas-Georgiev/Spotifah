@@ -114,6 +114,7 @@ class ConversorController:
         print("  1️⃣  Spotify a MP3")
         print("  2️⃣  YouTube a MP3")
         print("  3️⃣  Estado del sistema")
+        print("  4️⃣  Ver canciones en la base de datos")
         print("  0️⃣  Salir")
         print("="*70)
     
@@ -124,10 +125,10 @@ class ConversorController:
                 print("\nSelecciona una opción (1-2, 0 para salir): ", end='', flush=True)
                 choice = input().strip()
                 
-                if choice in ['1', '2', '3', '0']:
+                if choice in ['1', '2', '3', '4', '0']:
                     return choice
                 else:
-                    print("❌ Opción no válida. Por favor selecciona 1, 2, 3 o 0.")
+                    print("\u274c Opci\u00f3n no v\u00e1lida. Por favor selecciona 1, 2, 3, 4 o 0.")
                     
             except EOFError:
                 print("\n❌ EOF detectado - finalizando programa")
@@ -216,6 +217,9 @@ class ConversorController:
                         print(f"❌ Error en conversor de YouTube: {e}")
                 elif choice == '3':
                     self.show_system_status()
+                elif choice == '4':
+                    from run_conversores import mostrar_canciones
+                    mostrar_canciones()
                 
                 # Pausa antes de volver al menú
                 print("\n⏸️  Presiona Enter para continuar...", end='', flush=True)

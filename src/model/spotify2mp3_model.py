@@ -7,6 +7,14 @@ import tempfile
 import datetime
 from model.conversor_model import BaseModel
 
+# Adaptador de BD — importación segura para no bloquear si la BD no está disponible
+try:
+    from model.db_adapter import upsert_cancion, registrar_descarga
+    _DB_ADAPTER_OK = True
+except Exception as _db_e:
+    print(f"⚠️ spotify2mp3_model: db_adapter no disponible ({_db_e})")
+    _DB_ADAPTER_OK = False
+
 # Bibliotecas esenciales simplificadas
 try:
     from moviepy.editor import AudioFileClip
@@ -998,7 +1006,7 @@ class Spotify2MP3Converter(BaseModel):
             
             # 5. Añadir metadatos de Spotify
             print("🏷️ Añadiendo metadatos...")
-            self.add_metadata_simple(mp3_path, track_info, album_art_path) # type: ignore
+            self.add_metadata_to_mp3(mp3_path, track_info, album_art_path)
             
             # 6. Actualizar metadatos temporales con la ruta local
             print("📝 Actualizando metadatos temporales...")
@@ -1008,17 +1016,46 @@ class Spotify2MP3Converter(BaseModel):
             if album_art_path and os.path.exists(album_art_path):
                 os.remove(album_art_path)
             
-            # 7. Renombrar archivo con formato estándar
+            # 8. Renombrar archivo con formato estándar
             safe_title = self._sanitize_filename(track_info['name'])
             safe_artist = self._sanitize_filename(track_info['artists'][0])
             new_filename = f"{safe_artist} - {safe_title}.mp3"
             new_path = os.path.join(downloads_dir, new_filename)
             
             if mp3_path != new_path:
-                os.rename(mp3_path, new_path)
-                mp3_path = new_path
+                try:
+                    os.rename(mp3_path, new_path)
+                    mp3_path = new_path
+                except Exception:
+                    pass  # si falla el rename, usar ruta anterior
             
             print(f"✅ Conversión completada: {mp3_path}")
+
+            # ── Guardar en BD ──────────────────────────────────────────────
+            if _DB_ADAPTER_OK:
+                try:
+                    # album puede ser str o dict según la versión de spotdl
+                    _album = track_info.get('album', '')
+                    if isinstance(_album, dict):
+                        _album = _album.get('name', '')
+                    _artistas = track_info.get('artists', [''])
+                    _artista = _artistas[0] if _artistas else ''
+                    metadata_bd = {
+                        'titulo':            track_info.get('name', ''),
+                        'artista':           _artista,
+                        'album':             _album,
+                        'duracion_seg':      (track_info.get('duration_ms') or 0) // 1000,
+                        'plataforma_origen': 'Spotify',
+                        'url_origen':        spotify_url,
+                        'ruta_local':        os.path.abspath(mp3_path),
+                        'caratula_url':      track_info['images'][0]['url'] if track_info.get('images') else None,
+                    }
+                    id_cancion = upsert_cancion(metadata_bd)
+                    registrar_descarga(id_cancion, formato='mp3')
+                except Exception as _bd_err:
+                    print(f"⚠️ No se pudo guardar en BD: {_bd_err}")
+            # ───────────────────────────────────────────────────────────────
+
             return mp3_path
             
         except Exception as e:
