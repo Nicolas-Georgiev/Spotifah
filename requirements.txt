@@ -24,5 +24,16 @@ yt-dlp>=2023.1.0
 # PyTubefix: Para funcionalidades adicionales de YouTube si es necesario
 pytubefix
 
+# === REPRODUCTOR ===
+# PyGame: Reproducción de audio local
+pygame
+
+# === DESKTOP APP (PyWebView) ===
+# PyWebView: Ventana nativa para la UI web
+pywebview>=5.0
+
+# PyInstaller: Empaquetado a ejecutable
+pyinstaller>=6.0
+
 # === NOTAS ===
 # FFmpeg: Requerido por spotdl y moviepy (instalar: winget install Gyan.FFmpeg)
