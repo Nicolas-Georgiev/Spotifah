@@ -2,44 +2,74 @@
 chcp 65001 >nul
 title EKHO - Build
 
-if not exist web\index.html (
-    echo ERROR: No se encuentra web\index.html
-    echo.
-    echo Copia el build de Lovable (dist\ ^<---^> web\) antes de empaquetar.
-    echo Ejemplo: xcopy /E /I dist\ web\
+echo ====================================
+echo  EKHO - Build de produccion
+echo ====================================
+echo.
+
+:: Verificar que PyInstaller esta instalado
+pip show pyinstaller >nul 2>&1
+if %errorlevel% neq 0 (
+    echo Instalando PyInstaller...
+    pip install pyinstaller
+)
+
+:: Reconstruir frontend
+echo [1/4] Reconstruyendo frontend...
+if exist "lovable-code\node_modules\.bin\vite.cmd" (
+    pushd lovable-code
+    call npx vite build
+    if %errorlevel% neq 0 (
+        echo ERROR: Fallo la compilacion del frontend
+        popd
+        pause
+        exit /b 1
+    )
+    popd
+) else (
+    echo WARNING: node_modules no encontrado, saltando build del frontend...
+)
+
+:: Copiar assets a web/
+echo [2/4] Copiando assets...
+if exist "lovable-code\dist\client\assets" (
+    xcopy /E /I /Y "lovable-code\dist\client\assets\*" "web\assets\" >nul
+    echo OK - Assets copiados
+) else (
+    echo WARNING: No se encontraron assets compilados, usando existentes...
+)
+
+:: Verificar que web/index.html existe
+if not exist "web\index.html" (
+    echo ERROR: No se encuentra web/index.html
     pause
     exit /b 1
 )
 
-echo ====================================
-echo  Empaquetando EKHO con PyInstaller
-echo ====================================
-echo.
+echo [3/4] Construyendo ejecutable...
 
-pyinstaller --onefile --windowed --name EKHO ^
+pyinstaller ^
+    --onefile ^
+    --noconsole ^
+    --name "EKHO" ^
     --add-data "web;web" ^
-    --add-data "src;src" ^
-    --hidden-import=pygame ^
-    --hidden-import=mutagen ^
-    --hidden-import=yt_dlp ^
-    --hidden-import=requests ^
-    --hidden-import=spotdl ^
-    --hidden-import=sqlite3 ^
-    --hidden-import=pytubefix ^
-    --hidden-import=moviepy.editor ^
-    app.py
+    --hidden-import "pywebview" ^
+    --hidden-import "pygame" ^
+    --hidden-import "mutagen" ^
+    --hidden-import "moviepy" ^
+    --hidden-import "requests" ^
+    "app.py"
 
-echo.
 if %errorlevel% equ 0 (
-    echo ====================================
-    echo  Ejecutable creado: dist\EKHO.exe
     echo.
-    echo  Los datos de usuario se guardan en:
-    echo    %%APPDATA%%\EKHO\
+    echo ====================================
+    echo  EXE generado: dist\EKHO.exe
     echo ====================================
 ) else (
-    echo [31mERRO: Error durante el empaquetado[0m
-    echo Revisa los mensajes de error de PyInstaller.
+    echo.
+    echo ERROR: Fallo la compilacion
+    pause
+    exit /b 1
 )
-echo.
+
 pause

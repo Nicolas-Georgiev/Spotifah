@@ -2,49 +2,43 @@
 
 Aplicacion de escritorio EKHO (Plataforma Musical) que combina:
 - **Backend Python**: Conversores Spotify/YouTube a MP3, reproductor local, gestion de BD
-- **Frontend React**: UI moderna construida con Lovable.dev
-- **Puente**: PyWebView para ventana nativa + API bridge
+- **Frontend React**: UI con TanStack Start + Tailwind v4 + shadcn/ui
+- **Puente**: PyWebView para ventana nativa + API bridge via `window.pywebview.api`
 
 ## Requisitos
 
 - **Python 3.10+**
+- **Node.js 18+** (para el frontend)
 - **FFmpeg** en PATH
   - Windows: `winget install Gyan.FFmpeg`
-  - Linux: `sudo apt install ffmpeg`
-  - macOS: `brew install ffmpeg`
 
 ## Instalacion
 
 ```bash
 pip install -r requirements.txt
+cd lovable-code
+npm install
+cd ..
 ```
 
 ## Desarrollo
 
-1. Copia el build de Lovable (`dist/`) a la carpeta `web/`:
-   ```bash
-   xcopy /E /I dist\ web\
-   ```
-
-2. Ejecuta la aplicacion:
-   ```bash
-   python app.py
-   ```
-
-3. Se abrira una ventana nativa con la UI de EKHO.
-
-## Empaquetar (Windows)
+Ejecuta con un solo comando:
 
 ```bash
-build.bat
+python app.py
 ```
 
-El ejecutable se genera en `dist/EKHO.exe`.
+O:
 
-> Los datos de usuario (musica descargada, base de datos, configuracion)
-> se guardan en `%APPDATA%\EKHO\`.
+```bash
+run.bat
+```
 
-## Conexion Frontend ↔ Python
+`app.py` arranca automaticamente el servidor Vite (frontend) y la ventana
+PyWebView, y lo cierra todo al salir.
+
+## Como se conecta el Frontend con Python
 
 La UI React llama a Python a traves de `window.pywebview.api`:
 
@@ -95,16 +89,25 @@ await window.pywebview.api.update_settings({ volume: 50 });
 | `update_settings({...})` | `{ok, data: settings}` |
 | `get_system_status()` | `{dependencies, ffmpeg, music_count}` |
 
+## Empaquetar (Windows)
+
+Proximamente: empaquetado con PyInstaller incluyendo Node.js + el frontend.
+
 ## Estructura del proyecto
 
 ```
 ├── app.py                  # PyWebView launcher
 ├── api.py                  # API bridge (clase Api)
-├── requirements.txt        # Dependencias
-├── build.bat               # Script de empaquetado
+├── run.bat                 # Lanzador dev server + app
+├── requirements.txt        # Dependencias Python
 ├── README.md               # Esta documentacion
-├── web/                    # Build de React (Lovable)
-│   └── index.html
+├── lovable-code/           # Codigo fuente React (TanStack Start)
+│   ├── src/
+│   │   ├── lib/bridge.ts   # Bridge window.pywebview.api
+│   │   ├── routes/         # Paginas de la app
+│   │   └── ...
+│   └── package.json
+├── web/                    # Build de produccion (generado)
 ├── src/                    # Modulos Python existentes
 │   ├── model/
 │   ├── controller/
