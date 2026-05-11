@@ -1,7 +1,47 @@
 {
-  "ultima_actualizacion": "2025-12-10T18:06:48.994654",
+  "ultima_actualizacion": "2026-05-03T19:22:21.989676",
   "tipo_descarga": "cancion_individual",
-  "total_tracks": 0,
-  "tracks": [],
-  "track_actual": {}
+  "total_tracks": 1,
+  "tracks": [
+    {
+      "titulo": "hand of fate",
+      "artista": "Shiro SAGISU",
+      "album": "Shiro SAGISU Music from \"SHIN EVANGELION\" EVANGELION: 3.0+1.0.",
+      "duracion_seg": 284,
+      "genero": "anime, soundtrack",
+      "plataforma_origen": "Spotify",
+      "url_origen": "https://open.spotify.com/intl-es/track/3efolGze1slri71Otk8rpf?si=975f339b08434b04",
+      "ruta_local": "",
+      "caratula_url": "https://i.scdn.co/image/ab67616d0000b273210f52db7c98f5e1c0915342",
+      "letra": "Letra no disponible",
+      "track_id": "3efolGze1slri71Otk8rpf",
+      "isrc": "JPKI02110024",
+      "fecha_extraccion": "2026-05-03T19:22:09.412250",
+      "release_date": "2021-08-13",
+      "genres_list": [
+        "anime",
+        "soundtrack"
+      ]
+    }
+  ],
+  "track_actual": {
+    "titulo": "hand of fate",
+    "artista": "Shiro SAGISU",
+    "album": "Shiro SAGISU Music from \"SHIN EVANGELION\" EVANGELION: 3.0+1.0.",
+    "duracion_seg": 284,
+    "genero": "anime, soundtrack",
+    "plataforma_origen": "Spotify",
+    "url_origen": "https://open.spotify.com/intl-es/track/3efolGze1slri71Otk8rpf?si=975f339b08434b04",
+    "ruta_local": "",
+    "caratula_url": "https://i.scdn.co/image/ab67616d0000b273210f52db7c98f5e1c0915342",
+    "letra": "Letra no disponible",
+    "track_id": "3efolGze1slri71Otk8rpf",
+    "isrc": "JPKI02110024",
+    "fecha_extraccion": "2026-05-03T19:22:09.412250",
+    "release_date": "2021-08-13",
+    "genres_list": [
+      "anime",
+      "soundtrack"
+    ]
+  }
 }
