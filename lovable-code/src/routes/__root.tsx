@@ -4,11 +4,8 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
-  HeadContent,
-  Scripts,
 } from "@tanstack/react-router";
 
-import appCss from "../styles.css?url";
 import { EkhoLayout } from "../components/EkhoLayout";
 
 function NotFoundComponent() {
@@ -43,42 +40,10 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 }
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
-  head: () => ({
-    meta: [
-      { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "EKHO — Tu plataforma musical todo-en-uno" },
-      { name: "description", content: "Convierte canciones de Spotify y YouTube a MP3, reproduce tu biblioteca y monitorea el sistema." },
-      { property: "og:title", content: "EKHO — Tu plataforma musical todo-en-uno" },
-      { property: "og:description", content: "Convierte canciones de Spotify y YouTube a MP3, reproduce tu biblioteca y monitorea el sistema." },
-      { property: "og:type", content: "website" },
-      { name: "twitter:title", content: "EKHO — Tu plataforma musical todo-en-uno" },
-      { name: "twitter:description", content: "Convierte canciones de Spotify y YouTube a MP3, reproduce tu biblioteca y monitorea el sistema." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/77bd06d9-5789-4f45-ba30-ab84239617f6/id-preview-ae7b8adc--c5372792-9e49-4b31-91c6-c37cadc31a13.lovable.app-1778518097035.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/77bd06d9-5789-4f45-ba30-ab84239617f6/id-preview-ae7b8adc--c5372792-9e49-4b31-91c6-c37cadc31a13.lovable.app-1778518097035.png" },
-      { name: "twitter:card", content: "summary_large_image" },
-    ],
-    links: [
-      { rel: "stylesheet", href: appCss },
-      { rel: "preconnect", href: "https://fonts.googleapis.com" },
-      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" },
-    ],
-  }),
-  shellComponent: RootShell,
   component: RootComponent,
   notFoundComponent: NotFoundComponent,
   errorComponent: ErrorComponent,
 });
-
-function RootShell({ children }: { children: React.ReactNode }) {
-  return (
-    <html lang="es" className="dark">
-      <head><HeadContent /></head>
-      <body>{children}<Scripts /></body>
-    </html>
-  );
-}
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();

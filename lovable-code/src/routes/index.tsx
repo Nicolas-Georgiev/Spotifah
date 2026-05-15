@@ -4,7 +4,6 @@ import { Clock } from "lucide-react";
 import { bridge, type Playlist, type Song } from "../lib/bridge";
 
 export const Route = createFileRoute("/")({
-  head: () => ({ meta: [{ title: "EKHO — Inicio" }] }),
   component: Home,
 });
 

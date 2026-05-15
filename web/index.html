@@ -9,33 +9,35 @@
   <meta property="og:description" content="Convierte canciones de Spotify y YouTube a MP3, reproduce tu biblioteca y monitorea el sistema." />
   <meta property="og:type" content="website" />
   <meta name="twitter:card" content="summary_large_image" />
-  <link rel="stylesheet" href="assets/styles-L79E4qG2.css" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" />
+  <link rel="stylesheet" href="assets/index-L79E4qG2.css" />
   <style>
     body { background: #0a0a0f; color: #e0e0e0; margin: 0; }
-    #error-box { display: none; position: fixed; inset: 0; padding: 2rem; background: #1a0000; color: #ff6b6b; font-family: monospace; font-size: 0.85rem; white-space: pre-wrap; z-index: 9999; overflow: auto; }
-    #loading { display: flex; align-items: center; justify-content: center; height: 100vh; font-family: 'JetBrains Mono', monospace; font-size: 1.2rem; color: #a78bfa; }
+    #ekho-error-box { display: none; position: fixed; inset: 0; padding: 2rem; background: #1a0000; color: #ff6b6b; font-family: monospace; font-size: 0.85rem; white-space: pre-wrap; z-index: 99999; overflow: auto; }
   </style>
 </head>
 <body>
-  <div id="loading">Cargando EKHO...</div>
-  <div id="error-box"></div>
   <script>
-    window.onerror = function(m, source, line, col, err) {
-      var el = document.getElementById('error-box');
-      if (el) { el.style.display = 'block'; el.textContent += '[JS ERROR] ' + (err ? (err.stack || err.message) : m) + '\n'; }
+    function showError(msg) {
+      var el = document.getElementById('ekho-error-box');
+      if (!el) {
+        el = document.createElement('div');
+        el.id = 'ekho-error-box';
+        el.style.cssText = 'display:block;position:fixed;inset:0;padding:2rem;background:#1a0000;color:#ff6b6b;font-family:monospace;font-size:0.85rem;white-space:pre-wrap;z-index:99999;overflow:auto;';
+        document.body.appendChild(el);
+      } else {
+        el.style.display = 'block';
+      }
+      el.textContent += msg + '\n';
+    }
+    window.onerror = function (m, source, line, col, err) {
+      showError('[JS ERROR] ' + (err ? (err.stack || err.message) : m));
       return true;
     };
-    window.addEventListener('unhandledrejection', function(e) {
-      var el = document.getElementById('error-box');
-      if (el) { el.style.display = 'block'; el.textContent += '[PROMISE] ' + (e.reason ? (e.reason.stack || e.reason.message || e.reason) : e) + '\n'; }
-    });
-    import('./assets/index-CILO7tCJ.js').catch(function(e) {
-      var el = document.getElementById('error-box');
-      if (el) { el.style.display = 'block'; el.textContent += '[IMPORT ERROR] ' + (e.stack || e.message || e) + '\n'; }
+    window.addEventListener('unhandledrejection', function (e) {
+      showError('[PROMISE] ' + (e.reason ? (e.reason.stack || e.reason.message || e.reason) : e));
     });
   </script>
+  <div id="root"></div>
+  <script type="module" src="assets/index-Doz2V5JB.js"></script>
 </body>
 </html>

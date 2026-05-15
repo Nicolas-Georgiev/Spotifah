@@ -28,10 +28,22 @@ def _wait_for_server(url, timeout=10):
             time.sleep(0.5)
     return False
 
+def _resolve_data_dir():
+    if getattr(sys, "frozen", False):
+        if sys.platform == "win32":
+            base = os.environ.get("APPDATA", os.path.expanduser("~"))
+        elif sys.platform == "darwin":
+            base = os.path.join(os.path.expanduser("~"), "Library", "Application Support")
+        else:
+            base = os.path.join(os.path.expanduser("~"), ".local", "share")
+        return os.path.join(base, "EKHO", "data")
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+
 def main():
     _check_web_dir()
+    data_dir = _resolve_data_dir()
     print(f"Iniciando servidor estatico en {URL}...")
-    server = serve(port=PORT)
+    server = serve(port=PORT, data_dir=data_dir)
     if not _wait_for_server(URL):
         print("ERROR: El servidor no respondio a tiempo")
         server.shutdown()

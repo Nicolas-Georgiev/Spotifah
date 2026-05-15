@@ -85,12 +85,12 @@ VALUES
 (2,'Ana','ana@mail.com','hash456','México','["Jazz","Pop"]','["Artista C"]'),
 (3,'Luis','luis@mail.com','hash789','Argentina','["Electrónica","Rock"]','["Artista A","Artista D"]');
 
-INSERT OR IGNORE INTO canciones (id_cancion, titulo, artista, album, duracion_seg, genero, plataforma_origen)
+INSERT OR IGNORE INTO canciones (id_cancion, titulo, artista, album, duracion_seg, genero, plataforma_origen, caratula_url)
 VALUES
-(1,'Canción 1','Artista A','Album X',210,'Pop','Spotify'),
-(2,'Canción 2','Artista B','Album Y',180,'Rock','YouTube'),
-(3,'Canción 3','Artista C','Album Z',240,'Jazz','SoundCloud'),
-(4,'Canción 4','Artista D','Album W',300,'Electrónica','Local');
+(1,'Canción 1','Artista A','Album X',210,'Pop','Spotify','https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=400&h=400&fit=crop'),
+(2,'Canción 2','Artista B','Album Y',180,'Rock','YouTube','https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=400&h=400&fit=crop'),
+(3,'Canción 3','Artista C','Album Z',240,'Jazz','SoundCloud','https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=400&h=400&fit=crop'),
+(4,'Canción 4','Artista D','Album W',300,'Electrónica','Local','https://images.unsplash.com/photo-1465847899084-d164df4dedc6?w=400&h=400&fit=crop');
 
 INSERT OR IGNORE INTO playlists (id_playlist, id_usuario, nombre, descripcion, publica)
 VALUES

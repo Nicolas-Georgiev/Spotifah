@@ -4,9 +4,6 @@ import { Play, ChevronLeft, Clock } from "lucide-react";
 import { bridge, type Song, type Playlist } from "../lib/bridge";
 
 export const Route = createFileRoute("/library/$playlistId")({
-  head: ({ params }) => {
-    return { meta: [{ title: `Playlist — EKHO` }] };
-  },
   loader: async ({ params }) => {
     const playlists = await bridge.getPlaylists();
     const playlist = playlists.find((p) => p.id === params.playlistId);

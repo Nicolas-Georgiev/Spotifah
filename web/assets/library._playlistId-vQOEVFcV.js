@@ -1,1 +1,0 @@
-import{j as t,L as n}from"./index-CILO7tCJ.js";const o=()=>t.jsxs("div",{className:"text-center py-20",children:[t.jsx("h1",{className:"text-2xl font-bold",children:"Playlist no encontrada"}),t.jsx(n,{to:"/library",className:"inline-block mt-4 text-primary underline",children:"Volver a la biblioteca"})]});export{o as notFoundComponent};

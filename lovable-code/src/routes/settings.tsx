@@ -4,7 +4,6 @@ import { Palette, Bell, Download, Music2, Info } from "lucide-react";
 import { bridge } from "../lib/bridge";
 
 export const Route = createFileRoute("/settings")({
-  head: () => ({ meta: [{ title: "Configuracion — EKHO" }] }),
   component: SettingsPage,
 });
 

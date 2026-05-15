@@ -27,11 +27,13 @@ class Api:
         self._music_dir = os.path.join(self._data_dir, "music")
         self._metadata_dir = os.path.join(self._data_dir, "metadata")
         self._bdd_dir = os.path.join(self._data_dir, "BDD")
+        self._covers_dir = os.path.join(self._data_dir, "covers")
         self._settings_file = os.path.join(self._data_dir, "settings.json")
 
         os.makedirs(self._music_dir, exist_ok=True)
         os.makedirs(self._metadata_dir, exist_ok=True)
         os.makedirs(self._bdd_dir, exist_ok=True)
+        os.makedirs(self._covers_dir, exist_ok=True)
 
         self._seed_ekho_db()
 
@@ -85,6 +87,94 @@ class Api:
                 conn.close()
         except Exception:
             pass
+
+    # ── Cover extraction & local caching ────────────────────────
+
+    def _localize_cover(self, song_id: int, external_url: str) -> str:
+        if not external_url or external_url.startswith("/api/covers/"):
+            return external_url
+        try:
+            url_lower = external_url.lower()
+            ext = "jpg"
+            for c in ["png", "webp", "jpeg", "gif"]:
+                if f".{c}" in url_lower or f"image={c}" in url_lower:
+                    ext = "jpeg" if c == "jpeg" else c
+                    break
+            local_path = os.path.join(self._covers_dir, f"{song_id}.{ext}")
+            if not os.path.exists(local_path):
+                import urllib.request
+                urllib.request.urlretrieve(external_url, local_path)
+            local_url = f"/api/covers/{song_id}.{ext}"
+            self._save_cover_to_db(song_id, local_url)
+            return local_url
+        except Exception:
+            return external_url
+
+    def _save_cover_to_db(self, song_id: int, cover_url: str):
+        try:
+            conn = self.db.get_connection()
+            try:
+                cur = conn.cursor()
+                cur.execute(
+                    "UPDATE canciones SET caratula_url = ? WHERE id_cancion = ?",
+                    (cover_url, song_id),
+                )
+                conn.commit()
+            finally:
+                conn.close()
+        except Exception:
+            pass
+
+    def _ensure_cover(self, song_id: int, title: str, artist: str, album: str, mp3_path: str, plataforma: str) -> str:
+        for meta_file in ["spotify_metadata.json", "youtube_metadata.json"]:
+            meta_path = os.path.join(self._metadata_dir, meta_file)
+            if not os.path.exists(meta_path):
+                continue
+            try:
+                with open(meta_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                for track in data.get("tracks", []):
+                    cover = track.get("caratula_url", "") or ""
+                    if not cover:
+                        continue
+                    ruta_local = track.get("ruta_local", "") or ""
+                    track_title = track.get("titulo", "") or ""
+                    track_artist = track.get("artista", "") or ""
+                    match = False
+                    if ruta_local and mp3_path and os.path.normpath(ruta_local) == os.path.normpath(mp3_path):
+                        match = True
+                    elif track_title.lower() == title.lower() and track_artist.lower() == artist.lower():
+                        match = True
+                    elif track_title.lower() == title.lower() and album and track.get("album", "") and track["album"].lower() == album.lower():
+                        match = True
+                    if match:
+                        return self._localize_cover(song_id, cover)
+            except Exception:
+                continue
+
+        if mp3_path and os.path.exists(mp3_path):
+            try:
+                from mutagen.mp3 import MP3
+                from mutagen.id3 import ID3, APIC
+                audio = MP3(mp3_path)
+                if audio.tags:
+                    for tag in audio.tags.values():
+                        if isinstance(tag, APIC):
+                            ext = "jpg"
+                            if tag.mime == "image/png":
+                                ext = "png"
+                            elif tag.mime == "image/webp":
+                                ext = "webp"
+                            cover_path = os.path.join(self._covers_dir, f"{song_id}.{ext}")
+                            with open(cover_path, "wb") as f:
+                                f.write(tag.data)
+                            local_url = f"/api/covers/{song_id}.{ext}"
+                            self._save_cover_to_db(song_id, local_url)
+                            return local_url
+            except Exception:
+                pass
+
+        return ""
 
     # ── YouTube → MP3 ──────────────────────────────────────────
 
@@ -186,9 +276,23 @@ class Api:
                            ORDER BY pc.orden""",
                         (int(playlist_id),),
                     )
-                return [
-                    {
-                        "id": str(row["id_cancion"]),
+                rows = cur.fetchall()
+                result = []
+                for row in rows:
+                    song_id = row["id_cancion"]
+                    cover_url = row["caratula_url"] or ""
+                    if not cover_url:
+                        cover_url = self._ensure_cover(
+                            song_id=song_id,
+                            title=row["titulo"],
+                            artist=row["artista"] or "",
+                            album=row["album"] or "",
+                            mp3_path=row["ruta_local"] or "",
+                            plataforma=row["plataforma_origen"] or "",
+                        )
+                    cover_url = self._localize_cover(song_id, cover_url)
+                    result.append({
+                        "id": str(song_id),
                         "title": row["titulo"],
                         "artist": row["artista"] or "",
                         "album": row["album"] or "",
@@ -196,10 +300,9 @@ class Api:
                         "genre": row["genero"] or "",
                         "source": row["plataforma_origen"] or "",
                         "path": row["ruta_local"] or "",
-                        "cover_url": row["caratula_url"] or "",
-                    }
-                    for row in cur.fetchall()
-                ]
+                        "cover_url": cover_url,
+                    })
+                return result
             finally:
                 conn.close()
         except Exception as e:

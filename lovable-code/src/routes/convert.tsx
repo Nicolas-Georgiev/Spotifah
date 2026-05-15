@@ -4,7 +4,6 @@ import { Link2, Download, Music2, Youtube, Cloud, Loader2, Check } from "lucide-
 import { bridge } from "../lib/bridge";
 
 export const Route = createFileRoute("/convert")({
-  head: () => ({ meta: [{ title: "Conversor — EKHO" }] }),
   component: ConvertPage,
 });
 

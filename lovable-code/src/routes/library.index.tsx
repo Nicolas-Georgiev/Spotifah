@@ -4,7 +4,6 @@ import { Plus } from "lucide-react";
 import { bridge, type Playlist } from "../lib/bridge";
 
 export const Route = createFileRoute("/library/")({
-  head: () => ({ meta: [{ title: "Biblioteca — EKHO" }] }),
   component: LibraryPage,
 });
 

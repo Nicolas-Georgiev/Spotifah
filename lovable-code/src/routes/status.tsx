@@ -4,7 +4,6 @@ import { Sparkles, Music2, Check, X } from "lucide-react";
 import { bridge } from "../lib/bridge";
 
 export const Route = createFileRoute("/status")({
-  head: () => ({ meta: [{ title: "Estado del Sistema — EKHO" }] }),
   component: StatusPage,
 });
 
