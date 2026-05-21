@@ -106,8 +106,8 @@ Ekho/
 │   │   └── youtube2mp3_view.py          #   Vista YouTube
 ├── data/
 │   ├── music/                           # 🎵 Música convertida (MP3)
-│   ├── metadata/                        # 📋 Metadatos para BD
-│   │   └── spotify_metadata.json        #   Archivo fijo metadatos
+│   ├── BDD/                             # 💾 Base de datos SQLite
+│   │   └── ekho.db                      #   BD con canciones/playlists en JSON
 │   └── temp/                            # 🗂️ Archivos temporales
 ├── install_dependencies.py              # 📦 Instalador dependencias
 ├── requirements.txt                     # 📝 Lista dependencias simplificadas

@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS canciones (
     url_origen TEXT,
     ruta_local TEXT,
     caratula_url TEXT,
+    caratula_blob BLOB,
     letra TEXT,
     fecha_importacion DATETIME DEFAULT CURRENT_TIMESTAMP
 );
@@ -37,6 +38,8 @@ CREATE TABLE IF NOT EXISTS playlists (
     descripcion TEXT,
     fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP,
     publica INTEGER DEFAULT 0,
+    playlist_json TEXT,
+    caratula_blob BLOB,
     FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario) ON DELETE CASCADE
 );
 
