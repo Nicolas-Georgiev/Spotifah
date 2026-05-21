@@ -397,60 +397,21 @@ class YouTube2MP3Converter:
             traceback.print_exc()
             return file_path
 
-    def _save_metadata_to_json(self, video_info: dict, mp3_path: str) -> None:
-        """Guarda los metadatos de YouTube en data/metadata/youtube_metadata.json,
-        con la misma estructura que spotify_metadata.json."""
-        try:
-            project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-            metadata_dir = os.path.join(project_root, 'data', 'metadata')
-            os.makedirs(metadata_dir, exist_ok=True)
-            filepath = os.path.join(metadata_dir, 'youtube_metadata.json')
-
-            keywords = video_info.get('keywords') or []
-            genre_str = ', '.join(keywords[:5]) if keywords else ''
-
-            track_data = {
-                'titulo':           video_info.get('title', ''),
-                'artista':          video_info.get('author', ''),
-                'album':            '',
-                'duracion_seg':     video_info.get('length') or 0,
-                'genero':           genre_str,
-                'plataforma_origen': 'YouTube',
-                'url_origen':       video_info.get('url_origen', ''),
-                'ruta_local':       mp3_path,
-                'caratula_url':     video_info.get('thumbnail_url', ''),
-                'letra':            '',
-                'video_id':         video_info.get('video_id', ''),
-                'channel_url':      video_info.get('channel_url', ''),
-                'description':      video_info.get('description', ''),
-                'keywords':         keywords,
-                'publish_date':     video_info.get('publish_date', ''),
-                'views':            video_info.get('views', 0),
-                'fecha_extraccion': datetime.datetime.now().isoformat(),
-            }
-
-            # Cargar existente o crear nuevo
-            if os.path.exists(filepath):
-                try:
-                    with open(filepath, 'r', encoding='utf-8') as f:
-                        data = json.load(f)
-                except Exception:
-                    data = {'tracks': []}
-            else:
-                data = {'tracks': []}
-
-            data['tracks'].append(track_data)
-            data['track_actual'] = track_data
-            data['ultima_actualizacion'] = datetime.datetime.now().isoformat()
-            data['total_tracks'] = len(data['tracks'])
-            data['tipo_descarga'] = 'cancion_individual'
-
-            with open(filepath, 'w', encoding='utf-8') as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
-
-            print(f"💾 Metadatos YouTube guardados: {filepath}")
-        except Exception as e:
-            print(f"⚠️ Error guardando metadatos YouTube: {e}")
+    # ========================================================================
+    # MÉTODO OBSOLETO - Ya no se usa, toda la información se guarda 
+    # directamente en la base de datos como JSON
+    # ========================================================================
+    
+    # def _save_metadata_to_json(self, video_info: dict, mp3_path: str) -> None:
+    #     """
+    #     [OBSOLETO] Guardaba metadatos en data/metadata/youtube_metadata.json
+    #     Ahora todo se guarda directo en BD con upsert_cancion_json()
+    #     """
+    #     pass
+    
+    # ========================================================================
+    # FIN MÉTODO OBSOLETO
+    # ========================================================================
 
     def convert(self, url):
         """Descarga y convierte el video de YouTube a MP3 con portada"""
@@ -538,10 +499,11 @@ class YouTube2MP3Converter:
                 elif not video_info.get('thumbnail_url'):
                     print("⚠️ No se encontró URL de portada en el video")
 
-            # ── Guardar JSON de metadatos ──────────────────────────────────
+            # ── Guardar en BD directamente (sin archivo JSON intermedio) ──
             mp3_abs = os.path.normpath(os.path.abspath(mp3_file))
-            self._save_metadata_to_json(video_info, mp3_abs)
-
+            
+            # Ya NO se llama a _save_metadata_to_json() - todo va directo a BD
+            
             # ── Guardar en BD ──────────────────────────────────────────────
             if _DB_ADAPTER_OK:
                 try:

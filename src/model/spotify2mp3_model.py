@@ -200,136 +200,37 @@ class SpotifyInfoExtractor:
             print(f"⚠️ Error en SpotDL: {e}")
             return None
             
-    def _save_metadata_to_temp_file(self, metadata, clear_previous=False, is_batch=False):
-        """Guarda los metadatos en un archivo fijo para integración con base de datos"""
-        try:
-            # Directorio fijo en la raíz del proyecto
-            project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-            metadata_dir = os.path.join(project_root, 'data', 'metadata')
-            os.makedirs(metadata_dir, exist_ok=True)
-            
-            # Archivo fijo con nombre constante
-            filename = "spotify_metadata.json"
-            filepath = os.path.join(metadata_dir, filename)
-            
-            # Preparar datos del track actual
-            track_data = {
-                'titulo': metadata.get('titulo', ''),
-                'artista': metadata.get('artista', ''),
-                'album': metadata.get('album', ''),
-                'duracion_seg': metadata.get('duracion_seg', 0),
-                'genero': metadata.get('genero', ''),
-                'plataforma_origen': metadata.get('plataforma_origen', 'Spotify'),
-                'url_origen': metadata.get('url_origen', ''),
-                'ruta_local': metadata.get('ruta_local', ''),
-                'caratula_url': metadata.get('caratula_url', ''),
-                'letra': metadata.get('letra', ''),
-                'track_id': metadata.get('track_id', ''),
-                'isrc': metadata.get('isrc', ''),
-                'fecha_extraccion': datetime.datetime.now().isoformat(),
-                'release_date': metadata.get('release_date', ''),
-                'genres_list': metadata.get('genres', [])
-            }
-            
-            # Cargar datos existentes o crear nueva estructura
-            if clear_previous or not os.path.exists(filepath):
-                # Limpiar y empezar de nuevo
-                metadata_to_save = {
-                    'ultima_actualizacion': datetime.datetime.now().isoformat(),
-                    'tipo_descarga': 'album' if is_batch else 'cancion_individual',
-                    'total_tracks': 1,
-                    'tracks': [track_data],
-                    'track_actual': track_data  # Para compatibilidad
-                }
-                print("🧹 Contenido anterior eliminado - Nueva sesión de descarga iniciada")
-            else:
-                # Cargar existente y agregar
-                try:
-                    with open(filepath, 'r', encoding='utf-8') as f:
-                        metadata_to_save = json.load(f)
-                except Exception:
-                    metadata_to_save = {
-                        'ultima_actualizacion': datetime.datetime.now().isoformat(),
-                        'tipo_descarga': 'cancion_individual',
-                        'total_tracks': 0,
-                        'tracks': [],
-                        'track_actual': {}
-                    }
-                
-                # Si es una nueva sesión de descarga (álbum/playlist), limpiar
-                if is_batch and not hasattr(self, '_batch_session_started'):
-                    metadata_to_save['tracks'] = []
-                    metadata_to_save['tipo_descarga'] = 'album'
-                    self._batch_session_started = True
-                    print("🧹 Iniciando descarga de álbum/playlist - Contenido limpiado")
-                
-                # Agregar nuevo track
-                metadata_to_save['tracks'].append(track_data)
-                metadata_to_save['track_actual'] = track_data
-                metadata_to_save['ultima_actualizacion'] = datetime.datetime.now().isoformat()
-                metadata_to_save['total_tracks'] = len(metadata_to_save['tracks'])
-            
-            # Guardar en archivo JSON
-            with open(filepath, 'w', encoding='utf-8') as f:
-                json.dump(metadata_to_save, f, ensure_ascii=False, indent=2)
-            
-            track_num = len(metadata_to_save['tracks'])
-            print(f"💾 Metadatos guardados ({track_num}/{metadata_to_save['total_tracks']}): {filepath}")
-            return filepath
-            
-        except Exception as e:
-            print(f"⚠️ Error guardando metadatos: {e}")
-            return None
+    # ========================================================================
+    # MÉTODOS OBSOLETOS - Ya no se usan, toda la información se guarda 
+    # directamente en la base de datos como JSON
+    # ========================================================================
     
-    def get_metadata_file_path(self):
-        """Retorna la ruta del archivo de metadatos fijo"""
-        project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-        metadata_dir = os.path.join(project_root, 'data', 'metadata')
-        return os.path.join(metadata_dir, 'spotify_metadata.json')
+    # def _save_metadata_to_temp_file(self, metadata, clear_previous=False, is_batch=False):
+    #     """
+    #     [OBSOLETO] Guardaba metadatos en data/metadata/spotify_metadata.json
+    #     Ahora todo se guarda directo en BD con upsert_cancion_json()
+    #     """
+    #     pass
     
-    def get_current_metadata(self):
-        """Obtiene los metadatos actuales del archivo fijo"""
-        try:
-            filepath = self.get_metadata_file_path()
-            if os.path.exists(filepath):
-                with open(filepath, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
-                    return data.get('track_actual', {})
-            return {}
-        except Exception as e:
-            print(f"⚠️ Error leyendo metadatos: {e}")
-            return {}
+    # def get_metadata_file_path(self):
+    #     """[OBSOLETO] Retornaba ruta de archivo metadata JSON"""
+    #     pass
     
-    def get_all_tracks_metadata(self):
-        """Obtiene todos los tracks de la sesión actual"""
-        try:
-            filepath = self.get_metadata_file_path()
-            if os.path.exists(filepath):
-                with open(filepath, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
-                    return data.get('tracks', [])
-            return []
-        except Exception as e:
-            print(f"⚠️ Error leyendo tracks: {e}")
-            return []
+    # def get_current_metadata(self):
+    #     """[OBSOLETO] Obtenía metadatos del archivo JSON"""
+    #     pass
     
-    def get_download_session_info(self):
-        """Obtiene información de la sesión de descarga actual"""
-        try:
-            filepath = self.get_metadata_file_path()
-            if os.path.exists(filepath):
-                with open(filepath, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
-                    return {
-                        'tipo': data.get('tipo_descarga', 'individual'),
-                        'total_tracks': data.get('total_tracks', 0),
-                        'ultima_actualizacion': data.get('ultima_actualizacion', ''),
-                        'tracks_count': len(data.get('tracks', []))
-                    }
-            return {}
-        except Exception as e:
-            print(f"⚠️ Error leyendo info de sesión: {e}")
-            return {}
+    # def get_all_tracks_metadata(self):
+    #     """[OBSOLETO] Obtenía todos los tracks del archivo JSON"""
+    #     pass
+    
+    # def get_download_session_info(self):
+    #     """[OBSOLETO] Obtenía info de sesión del archivo JSON"""
+    #     pass
+    
+    # ========================================================================
+    # FIN MÉTODOS OBSOLETOS
+    # ========================================================================
 
     @staticmethod
     def _extract_spotify_id(url: str):
