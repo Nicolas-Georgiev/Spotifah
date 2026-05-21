@@ -65,11 +65,28 @@ except ImportError:
 class YouTube2MP3Converter:
     def __init__(self):
         self.origin = "YouTube"
+        # Carpeta de destino configurable
+        self.download_folder = os.path.normpath(
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "data", "music")
+        )
+
+    def set_download_folder(self, path):
+        """
+        Cambia la carpeta donde se guardarán las canciones descargadas.
+        Crea la carpeta si no existe.
+        """
+        abs_path = os.path.normpath(os.path.abspath(path))
+        os.makedirs(abs_path, exist_ok=True)
+        self.download_folder = abs_path
+        print(f"📁 Carpeta de descarga actualizada: {self.download_folder}")
 
     @staticmethod
-    def download_video(url):
+    def download_video(url, output_path=None):
         # Crear carpeta de descargas si no existe
-        downloads_dir = os.path.join(os.path.dirname(__file__), "..", "..", "data", "music")
+        if output_path is None:
+            downloads_dir = os.path.join(os.path.dirname(__file__), "..", "..", "data", "music")
+        else:
+            downloads_dir = str(output_path)
         os.makedirs(downloads_dir, exist_ok=True)
         
         try:
@@ -422,7 +439,7 @@ class YouTube2MP3Converter:
             source = "youtube" if "youtube" in url.lower() or "youtu.be" in url.lower() else "unknown"
             print(f"📍 Fuente detectada: {source}")
             
-            video_info = self.download_video(url)
+            video_info = self.download_video(url, self.download_folder)
             video_info['url_origen'] = url  # guardar URL original para metadatos
             print(f"📁 Archivo descargado: {video_info['file_path']}")
             
@@ -528,3 +545,17 @@ class YouTube2MP3Converter:
         except Exception as e:
             print(f"❌ Error en el proceso de conversión: {e}")
             raise
+
+
+# ============================================================
+# Función de conveniencia — misma interfaz que convert_spotify
+# y convert_soundcloud
+# ============================================================
+
+def convert_youtube(url):
+    """
+    Función de conveniencia: entrega un link de YouTube y devuelve la ruta del MP3.
+    Equivalente a YouTube2MP3Converter().convert(url).
+    """
+    converter = YouTube2MP3Converter()
+    return converter.convert(url)

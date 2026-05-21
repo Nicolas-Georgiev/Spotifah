@@ -865,8 +865,8 @@ class Spotify2MP3Converter(BaseModel):
 
     def convert(self, spotify_url): # type: ignore
         """Convierte una URL de Spotify a MP3"""
-        # Crear carpeta de descargas si no existe
-        downloads_dir = os.path.join(os.path.dirname(__file__), "..", "..", "data", "music")
+        # Usar carpeta configurada (o la por defecto)
+        downloads_dir = self.download_folder
         os.makedirs(downloads_dir, exist_ok=True)
         
         try:
@@ -1054,3 +1054,17 @@ class Spotify2MP3Converter(BaseModel):
         
         # Limitar longitud
         return filename[:50] if len(filename) > 50 else filename
+
+
+# ============================================================
+# Función de conveniencia — misma interfaz que convert_youtube
+# y convert_soundcloud
+# ============================================================
+
+def convert_spotify(url):
+    """
+    Función de conveniencia: entrega un link de Spotify y devuelve la ruta del MP3.
+    Equivalente a Spotify2MP3Converter().convert(url).
+    """
+    converter = Spotify2MP3Converter()
+    return converter.convert(url)
