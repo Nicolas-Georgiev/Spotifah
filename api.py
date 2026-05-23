@@ -727,8 +727,6 @@ class Api:
                 return {"ok": True, "data": None}
             import pygame
             is_playing = pygame.mixer.music.get_busy()
-            if not is_playing:
-                return {"ok": True, "data": None}
             conn = self.db.get_connection()
             try:
                 cur = conn.cursor()

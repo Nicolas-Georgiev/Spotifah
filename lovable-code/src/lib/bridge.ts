@@ -311,7 +311,8 @@ export const bridge = {
     const api = getApi();
     if (!api) return { position: 0, is_playing: false };
     try {
-      return await api.get_playback_position();
+      const result = await api.get_playback_position();
+      return result.data || { position: 0, is_playing: false };
     } catch {
       return { position: 0, is_playing: false };
     }
