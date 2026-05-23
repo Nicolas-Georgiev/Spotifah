@@ -3,6 +3,7 @@ __pycache__/
 
 data\BDD\ekho.db
 data\settings.json
+data\music
 # Logs
 logs
 *.log
