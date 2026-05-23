@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Plus } from "lucide-react";
+import { toast } from "sonner";
 import { bridge } from "../../lib/bridge";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose } from "../ui/dialog";
 import { Button } from "../ui/button";
@@ -18,12 +19,21 @@ export function CreatePlaylistButton({ onCreated }: Props) {
   const handleCreate = async () => {
     if (!name.trim() || busy) return;
     setBusy(true);
-    await bridge.createPlaylist(name.trim(), desc.trim());
+    const result = await bridge.createPlaylist(name.trim(), desc.trim());
     setBusy(false);
-    setOpen(false);
-    setName("");
-    setDesc("");
-    onCreated();
+    if (result.ok) {
+      toast.success("Playlist creada", {
+        description: `"${name.trim()}" se ha creado correctamente.`,
+      });
+      setOpen(false);
+      setName("");
+      setDesc("");
+      onCreated();
+    } else {
+      toast.error("Error al crear playlist", {
+        description: result.error ?? "Ocurrió un error inesperado",
+      });
+    }
   };
 
   return (

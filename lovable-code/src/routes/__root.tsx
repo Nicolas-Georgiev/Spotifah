@@ -5,6 +5,7 @@ import {
   createRootRouteWithContext,
   useRouter,
 } from "@tanstack/react-router";
+import { Toaster } from "../components/ui/sonner";
 
 import { EkhoLayout } from "../components/EkhoLayout";
 
@@ -50,6 +51,7 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <EkhoLayout />
+      <Toaster richColors closeButton />
     </QueryClientProvider>
   );
 }

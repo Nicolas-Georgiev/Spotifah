@@ -202,9 +202,48 @@ class Api:
 
         return ""
 
+    # ── Validación de dependencias ─────────────────────────────
+
+    def _check_ffmpeg(self) -> tuple[bool, str]:
+        try:
+            result = subprocess.run(
+                ["ffmpeg", "-version"],
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+            if result.returncode == 0:
+                return True, ""
+            return False, "ffmpeg no responde correctamente"
+        except FileNotFoundError:
+            return False, (
+                "ffmpeg no está instalado. "
+                "Descárgalo desde https://ffmpeg.org/download.html "
+                "y asegúrate de que esté en el PATH del sistema"
+            )
+        except Exception as e:
+            return False, f"Error al verificar ffmpeg: {e}"
+
+    def _check_spotify_creds(self) -> tuple[bool, str]:
+        import os
+        client_id = os.getenv("SPOTIFY_CLIENT_ID") or os.getenv("SPOTDL_CLIENT_ID")
+        client_secret = os.getenv("SPOTIFY_CLIENT_SECRET") or os.getenv("SPOTDL_CLIENT_SECRET")
+        if client_id and client_secret:
+            return True, ""
+        return False, (
+            "SPOTIFY_CLIENT_ID y SPOTIFY_CLIENT_SECRET no configurados.\n"
+            "Crea un archivo .env en la raíz del proyecto con:\n"
+            "SPOTIFY_CLIENT_ID=tu_client_id\n"
+            "SPOTIFY_CLIENT_SECRET=tu_client_secret\n"
+            "o configúralos como variables de entorno."
+        )
+
     # ── YouTube → MP3 ──────────────────────────────────────────
 
     def convert_youtube(self, url: str) -> dict:
+        ok, msg = self._check_ffmpeg()
+        if not ok:
+            return {"ok": False, "error": msg}
         try:
             f = io.StringIO()
             with contextlib.redirect_stdout(f), contextlib.redirect_stderr(f):
@@ -224,6 +263,12 @@ class Api:
     # ── Spotify → MP3 ─────────────────────────────────────────
 
     def convert_spotify(self, url: str) -> dict:
+        ok, msg = self._check_ffmpeg()
+        if not ok:
+            return {"ok": False, "error": msg}
+        ok, msg = self._check_spotify_creds()
+        if not ok:
+            return {"ok": False, "error": msg}
         try:
             f = io.StringIO()
             with contextlib.redirect_stdout(f), contextlib.redirect_stderr(f):
@@ -243,11 +288,17 @@ class Api:
     # ── SoundCloud → MP3 ───────────────────────────────────────
 
     def convert_soundcloud(self, url: str) -> dict:
+        ok, msg = self._check_ffmpeg()
+        if not ok:
+            return {"ok": False, "error": msg}
         try:
             f = io.StringIO()
             with contextlib.redirect_stdout(f), contextlib.redirect_stderr(f):
                 converter = SoundCloudConverter(self._music_dir)
                 result_path = converter.convert(url)
+            if result_path is None:
+                log = f.getvalue()
+                return {"ok": False, "error": f"La conversión falló. Revisa los logs:\n{log}"}
             return {
                 "ok": True,
                 "data": {
