@@ -1,8 +1,14 @@
 
 __pycache__/
 
+<<<<<<< HEAD
 BDD/
 data/
+=======
+data\BDD\ekho.db
+data\settings.json
+data\music
+>>>>>>> 2e5ae70a734831cb25e312daa73186fa346db523
 # Logs
 logs
 *.log
