@@ -16,7 +16,7 @@ export default defineConfig({
     },
   },
   build: {
-    outDir: "dist/client",
+    outDir: "../../web",
     emptyOutDir: true,
   },
 });

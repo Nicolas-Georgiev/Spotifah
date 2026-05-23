@@ -3,6 +3,7 @@ import sys
 import json
 import threading
 import subprocess
+import time
 
 _src_dir = os.path.join(os.path.dirname(__file__), "src")
 if _src_dir not in sys.path:
@@ -48,6 +49,9 @@ class Api:
         threading.Thread(target=self._ensure_system_playlists, daemon=True).start()
 
         self._current_song_id = None
+
+        self._import_tasks: dict[str, dict] = {}
+        self._import_counter = 0
 
     def _resolve_data_dir(self):
         if self._is_frozen:
@@ -349,6 +353,217 @@ class Api:
                 "error": str(e),
                 "log": f.getvalue(),
             }
+
+    # ── Importación de playlists ──────────────────────────────
+
+    def _detect_url_type(self, url: str) -> dict:
+        from model.spotify2mp3_model import Spotify2MP3Converter
+        from model.youtube2mp3_model import YouTube2MP3Converter
+        from model.soundcloud2mp3 import SoundCloudConverter
+
+        if Spotify2MP3Converter.is_playlist_url(url):
+            return {"platform": "spotify", "is_playlist": True}
+        if YouTube2MP3Converter.is_playlist_url(url):
+            return {"platform": "youtube", "is_playlist": True}
+        if SoundCloudConverter.is_playlist_url(url):
+            return {"platform": "soundcloud", "is_playlist": True}
+
+        u = url.lower()
+        if "youtube.com" in u or "youtu.be" in u:
+            return {"platform": "youtube", "is_playlist": False}
+        if "spotify.com" in u or "spotify:" in u:
+            return {"platform": "spotify", "is_playlist": False}
+        if "soundcloud.com" in u:
+            return {"platform": "soundcloud", "is_playlist": False}
+        return {"platform": None, "is_playlist": False}
+
+    def detect_url_type(self, url: str) -> dict:
+        return self._detect_url_type(url)
+
+    def import_playlist(self, url: str) -> dict:
+        detection = self._detect_url_type(url)
+        if not detection["platform"] or not detection["is_playlist"]:
+            return {"ok": False, "error": "La URL no corresponde a una playlist v\u00e1lida"}
+
+        task_id = f"pl_{int(time.time())}_{self._import_counter}"
+        self._import_counter += 1
+
+        self._import_tasks[task_id] = {
+            "status": "starting",
+            "platform": detection["platform"],
+            "url": url,
+            "current": 0,
+            "total": 0,
+            "playlist_name": "",
+            "playlist_id": None,
+            "error": None,
+            "log": "",
+        }
+
+        def _run():
+            log_buf = io.StringIO()
+            task = self._import_tasks[task_id]
+            try:
+                with contextlib.redirect_stdout(log_buf), contextlib.redirect_stderr(log_buf):
+                    task["status"] = "running"
+
+                    ok, msg = self._check_ffmpeg()
+                    if not ok:
+                        raise RuntimeError(msg)
+
+                    if detection["platform"] == "spotify":
+                        ok, msg = self._check_spotify_creds()
+                        if not ok:
+                            raise RuntimeError(msg)
+                        converter = Spotify2MP3Converter()
+                        self._import_spotify_playlist(task, converter, url)
+                    elif detection["platform"] == "youtube":
+                        converter = YouTube2MP3Converter()
+                        self._import_youtube_playlist(task, converter, url)
+                    elif detection["platform"] == "soundcloud":
+                        converter = SoundCloudConverter(self._music_dir)
+                        self._import_soundcloud_playlist(task, converter, url)
+
+                    if task["status"] != "error":
+                        task["status"] = "done"
+            except Exception as e:
+                task["status"] = "error"
+                task["error"] = str(e)
+            finally:
+                task["log"] = log_buf.getvalue()
+
+        thread = threading.Thread(target=_run, daemon=True)
+        thread.start()
+        return {"ok": True, "data": {"task_id": task_id, "platform": detection["platform"]}}
+
+    def _import_spotify_playlist(self, task: dict, converter, url: str):
+        songs = converter.get_playlist_songs(url)
+        total = len(songs)
+        task["total"] = total
+        task["playlist_name"] = getattr(songs[0], 'list_name', None) or 'Playlist Spotify'
+        print(f"Obteniendo {total} canciones de: {task['playlist_name']}")
+
+        from model.db_adapter import get_id_cancion_por_ruta
+
+        cover_url = converter._get_spotify_playlist_cover(url)
+        if not cover_url:
+            cover_url = getattr(songs[0], 'cover_url', '') or ''
+
+        song_ids = []
+        for i, song in enumerate(songs, 1):
+            titulo = getattr(song, 'name', '?')
+            artistas = getattr(song, 'artists', []) or []
+            artista = artistas[0] if artistas else '?'
+            print(f"[{i}/{total}] {artista} - {titulo}")
+            try:
+                track_url = getattr(song, 'url', None)
+                if not track_url:
+                    sid = getattr(song, 'song_id', None)
+                    track_url = f'https://open.spotify.com/track/{sid}' if sid else None
+                if track_url:
+                    path = converter.convert(track_url)
+                    if path:
+                        id_c = get_id_cancion_por_ruta(path)
+                        if id_c:
+                            song_ids.append(id_c)
+            except Exception as e:
+                print(f"  Error: {e}")
+            task["current"] = i
+
+        self._finalize_import(task, song_ids, cover_url, url, "Spotify")
+
+    def _import_youtube_playlist(self, task: dict, converter, url: str):
+        pl_info = converter.get_playlist_info(url)
+        task["playlist_name"] = pl_info["nombre"]
+        cover_url = pl_info["cover_url"]
+
+        track_urls = converter.get_playlist_track_urls(url)
+        total = len(track_urls)
+        task["total"] = total
+        print(f"Obteniendo {total} v\u00eddeos de: {task['playlist_name']}")
+
+        from model.db_adapter import get_id_cancion_por_ruta
+
+        song_ids = []
+        for i, track_url in enumerate(track_urls, 1):
+            print(f"[{i}/{total}] {track_url}")
+            try:
+                path = converter.convert(track_url)
+                if path:
+                    id_c = get_id_cancion_por_ruta(path)
+                    if id_c:
+                        song_ids.append(id_c)
+            except Exception as e:
+                print(f"  Error: {e}")
+            task["current"] = i
+
+        self._finalize_import(task, song_ids, cover_url, url, "YouTube")
+
+    def _import_soundcloud_playlist(self, task: dict, converter, url: str):
+        pl_info = converter.get_playlist_info(url)
+        task["playlist_name"] = pl_info["nombre"]
+        cover_url = pl_info["cover_url"]
+
+        track_urls = converter.get_playlist_track_urls(url)
+        total = len(track_urls)
+        task["total"] = total
+        print(f"Obteniendo {total} pistas de: {task['playlist_name']}")
+
+        from model.db_adapter import get_id_cancion_por_ruta
+
+        song_ids = []
+        for i, track_url in enumerate(track_urls, 1):
+            print(f"[{i}/{total}] {track_url}")
+            try:
+                path = converter.convert(track_url)
+                if path:
+                    id_c = get_id_cancion_por_ruta(path)
+                    if id_c:
+                        song_ids.append(id_c)
+            except Exception as e:
+                print(f"  Error: {e}")
+            task["current"] = i
+
+        self._finalize_import(task, song_ids, cover_url, url, "SoundCloud")
+
+    def _finalize_import(self, task: dict, song_ids: list, cover_url: str, url: str, platform_name: str):
+        if not song_ids:
+            task["status"] = "error"
+            task["error"] = "No se pudo importar ninguna canci\u00f3n"
+            return
+
+        from model.db_adapter import guardar_playlist_json_completa
+        result = guardar_playlist_json_completa(
+            id_usuario=1,
+            nombre=task["playlist_name"],
+            descripcion=f'Importada de {platform_name} | {url}',
+            canciones=song_ids,
+            caratula_url=cover_url,
+        )
+        if result:
+            task["playlist_id"] = result.get("id_playlist")
+            print(f"Playlist creada: {task['playlist_name']} (ID: {task['playlist_id']}, {len(song_ids)} canciones)")
+        else:
+            task["status"] = "error"
+            task["error"] = "No se pudo guardar la playlist en la base de datos"
+
+    def get_import_progress(self, task_id: str) -> dict:
+        task = self._import_tasks.get(task_id)
+        if not task:
+            return {"ok": False, "error": "Tarea no encontrada"}
+        return {
+            "ok": True,
+            "data": {
+                "status": task["status"],
+                "platform": task["platform"],
+                "current": task["current"],
+                "total": task["total"],
+                "playlist_name": task["playlist_name"],
+                "playlist_id": task["playlist_id"],
+                "error": task["error"],
+                "log": task["log"],
+            },
+        }
 
     # ── Playlists ──────────────────────────────────────────────
 

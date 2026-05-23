@@ -70,6 +70,28 @@ interface CreatePlaylistResult {
   error?: string;
 }
 
+interface UrlTypeResult {
+  platform: string | null;
+  is_playlist: boolean;
+}
+
+interface ImportPlaylistResult {
+  ok: boolean;
+  data?: { task_id: string; platform: string };
+  error?: string;
+}
+
+interface ImportProgress {
+  status: "starting" | "running" | "done" | "error";
+  platform: string;
+  current: number;
+  total: number;
+  playlist_name: string;
+  playlist_id: number | null;
+  error: string | null;
+  log: string;
+}
+
 function getApi() {
   try {
     return (window as any)?.pywebview?.api ?? null;
@@ -252,6 +274,36 @@ export const bridge = {
       return await api.convert_soundcloud(url);
     } catch (e: any) {
       return { ok: false, error: e?.message ?? "Error en conversión" };
+    }
+  },
+
+  async detectUrlType(url: string): Promise<UrlTypeResult> {
+    const api = getApi();
+    if (!api) return { platform: null, is_playlist: false };
+    try {
+      return await api.detect_url_type(url);
+    } catch {
+      return { platform: null, is_playlist: false };
+    }
+  },
+
+  async importPlaylist(url: string): Promise<ImportPlaylistResult> {
+    const api = getApi();
+    if (!api) return { ok: false, error: "PyWebView no disponible" };
+    try {
+      return await api.import_playlist(url);
+    } catch (e: any) {
+      return { ok: false, error: e?.message ?? "Error al importar playlist" };
+    }
+  },
+
+  async getImportProgress(taskId: string): Promise<{ ok: boolean; data?: ImportProgress; error?: string }> {
+    const api = getApi();
+    if (!api) return { ok: false, error: "PyWebView no disponible" };
+    try {
+      return await api.get_import_progress(taskId);
+    } catch (e: any) {
+      return { ok: false, error: e?.message ?? "Error al obtener progreso" };
     }
   },
 
