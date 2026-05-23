@@ -15,7 +15,7 @@ function Home() {
 
   useEffect(() => {
     bridge.getPlaylists().then(setPlaylists);
-    bridge.getSongs().then(setSongs);
+    bridge.getRecentlyPlayed(4).then(setSongs);
   }, []);
 
   return (

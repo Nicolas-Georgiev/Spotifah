@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { bridge, type Playlist } from "../lib/bridge";
 import { PlaylistGrid } from "../components/library/PlaylistGrid";
 
@@ -10,9 +10,14 @@ export const Route = createFileRoute("/library/")({
 function LibraryPage() {
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
 
-  useEffect(() => {
-    bridge.getPlaylists().then(setPlaylists);
+  const load = useCallback(async () => {
+    const p = await bridge.getPlaylists();
+    setPlaylists(p);
   }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   return (
     <div className="space-y-8">
@@ -23,7 +28,7 @@ function LibraryPage() {
         </p>
       </header>
 
-      <PlaylistGrid playlists={playlists} />
+      <PlaylistGrid playlists={playlists} onCreated={load} onChanged={load} />
     </div>
   );
 }

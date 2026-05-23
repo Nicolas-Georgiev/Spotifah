@@ -46,6 +46,8 @@ function ConvertPage() {
         result = await bridge.convertYoutube(entryUrl);
       } else if (platform === "spotify") {
         result = await bridge.convertSpotify(entryUrl);
+      } else if (platform === "soundcloud") {
+        result = await bridge.convertSoundcloud(entryUrl);
       } else {
         throw new Error("Plataforma no soportada");
       }

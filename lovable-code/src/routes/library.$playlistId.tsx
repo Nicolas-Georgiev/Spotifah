@@ -47,6 +47,11 @@ function PlaylistDetail() {
     bridge.playSong(songId);
   };
 
+  const handleRemove = async (songId: string) => {
+    await bridge.removeSongFromPlaylist(playlist.id, songId);
+    setSongs((prev) => prev.filter((s) => s.id !== songId));
+  };
+
   return (
     <div className="space-y-8">
       <Link to="/library" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
@@ -65,6 +70,8 @@ function PlaylistDetail() {
         playingId={playingId}
         onPlay={handlePlay}
         fmtDuration={fmtDuration}
+        playlistId={playlist.id}
+        onRemoveFromPlaylist={handleRemove}
       />
     </div>
   );

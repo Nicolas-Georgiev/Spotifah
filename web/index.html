@@ -3,41 +3,11 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>EKHO — Tu plataforma musical todo-en-uno</title>
-  <meta name="description" content="Convierte canciones de Spotify y YouTube a MP3, reproduce tu biblioteca y monitorea el sistema." />
-  <meta property="og:title" content="EKHO — Tu plataforma musical todo-en-uno" />
-  <meta property="og:description" content="Convierte canciones de Spotify y YouTube a MP3, reproduce tu biblioteca y monitorea el sistema." />
-  <meta property="og:type" content="website" />
-  <meta name="twitter:card" content="summary_large_image" />
-  <link rel="stylesheet" href="assets/index-L79E4qG2.css" />
-  <style>
-    body { background: #0a0a0f; color: #e0e0e0; margin: 0; }
-    #ekho-error-box { display: none; position: fixed; inset: 0; padding: 2rem; background: #1a0000; color: #ff6b6b; font-family: monospace; font-size: 0.85rem; white-space: pre-wrap; z-index: 99999; overflow: auto; }
-  </style>
+  <title>EKHO</title>
+  <script type="module" crossorigin src="/assets/index-B0WJh484.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-CdYrA6LZ.css">
 </head>
 <body>
-  <script>
-    function showError(msg) {
-      var el = document.getElementById('ekho-error-box');
-      if (!el) {
-        el = document.createElement('div');
-        el.id = 'ekho-error-box';
-        el.style.cssText = 'display:block;position:fixed;inset:0;padding:2rem;background:#1a0000;color:#ff6b6b;font-family:monospace;font-size:0.85rem;white-space:pre-wrap;z-index:99999;overflow:auto;';
-        document.body.appendChild(el);
-      } else {
-        el.style.display = 'block';
-      }
-      el.textContent += msg + '\n';
-    }
-    window.onerror = function (m, source, line, col, err) {
-      showError('[JS ERROR] ' + (err ? (err.stack || err.message) : m));
-      return true;
-    };
-    window.addEventListener('unhandledrejection', function (e) {
-      showError('[PROMISE] ' + (e.reason ? (e.reason.stack || e.reason.message || e.reason) : e));
-    });
-  </script>
-  <div id="root"></div>
-  <script type="module" src="assets/index-Doz2V5JB.js"></script>
+  <div id="root"></div>
 </body>
 </html>
