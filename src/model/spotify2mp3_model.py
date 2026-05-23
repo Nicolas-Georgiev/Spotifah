@@ -1066,9 +1066,21 @@ class Spotify2MP3Converter(BaseModel):
 
     def get_playlist_songs(self, url: str):
         """Devuelve lista de objetos Song de spotdl para una playlist/álbum."""
-        if SPOTDL_API_MODE != 'legacy_spotdl_class':
+        if SPOTDL_API_MODE == 'legacy_spotdl_class':
+            songs = self.info_extractor.spotdl.search([url])  # type: ignore
+        elif SPOTDL_API_MODE == 'song_gatherer':
+            result = spotdl_from_spotify_url(url)
+            if result is None:
+                raise RuntimeError(f'No se encontraron canciones en: {url}')
+            if isinstance(result, (list, tuple)):
+                songs = list(result)
+            else:
+                try:
+                    songs = list(result)
+                except TypeError:
+                    songs = [result]
+        else:
             raise RuntimeError('La versión de spotdl instalada no soporta búsqueda de playlists')
-        songs = self.info_extractor.spotdl.search([url])  # type: ignore
         if not songs:
             raise RuntimeError(f'No se encontraron canciones en: {url}')
         return songs
