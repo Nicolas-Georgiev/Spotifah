@@ -3,6 +3,7 @@
 Clase base para conversores de diferentes plataformas
 Facilita la expansión a otras plataformas manteniendo consistencia en metadatos
 """
+import os
 
 class BaseModel:
     """Clase base para todos los convertidores de audio"""
@@ -12,9 +13,25 @@ class BaseModel:
     ORIGIN_SPOTIFY = "Spotify"
     ORIGIN_SOUNDCLOUD = "SoundCloud"
     ORIGIN_UNKNOWN = "Unknown"
+
+    # Carpeta de descarga por defecto (data/music relativa a la raíz del proyecto)
+    DEFAULT_DOWNLOAD_FOLDER = os.path.normpath(
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "data", "music")
+    )
     
     def __init__(self, origin_name):
         self.origin = origin_name
+        self.download_folder = self.DEFAULT_DOWNLOAD_FOLDER
+
+    def set_download_folder(self, path):
+        """
+        Cambia la carpeta donde se guardarán las canciones descargadas.
+        Crea la carpeta si no existe.
+        """
+        abs_path = os.path.normpath(os.path.abspath(path))
+        os.makedirs(abs_path, exist_ok=True)
+        self.download_folder = abs_path
+        print(f"📁 Carpeta de descarga actualizada: {self.download_folder}")
     
     def get_standard_metadata(self, title, artist):
         """Retorna metadatos estándares simplificados para cualquier plataforma"""            
@@ -62,8 +79,8 @@ class ConverterFactory:
             from spotify2mp3_model import Spotify2MP3Converter
             return Spotify2MP3Converter()
         elif platform == BaseModel.ORIGIN_SOUNDCLOUD:
-            # TODO: Implementar SoundCloudConverter en el futuro
-            raise NotImplementedError("SoundCloud converter no implementado aún")
+            from model.soundcloud2mp3 import SoundCloudConverter
+            return SoundCloudConverter()
         else:
             raise ValueError(f"Plataforma no soportada: {platform}")
     
@@ -73,5 +90,5 @@ class ConverterFactory:
         return [
             BaseModel.ORIGIN_YOUTUBE,
             BaseModel.ORIGIN_SPOTIFY,
-            # BaseModel.ORIGIN_SOUNDCLOUD,  # Futuro
+            BaseModel.ORIGIN_SOUNDCLOUD,
         ]
