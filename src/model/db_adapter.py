@@ -980,3 +980,26 @@ def actualizar_playlist_json_completa(id_playlist: int, nombre: str = None,
         import traceback
         traceback.print_exc()
         return None
+
+
+def get_id_cancion_por_ruta(ruta_local: str, db_path=None) -> int | None:
+    """Devuelve el id_cancion de la canción cuya ruta_local coincide."""
+    if not _DB_AVAILABLE or not ruta_local:
+        return None
+    try:
+        ruta_norm = os.path.normpath(os.path.abspath(ruta_local))
+        db = _get_db(db_path)
+        conn = db.get_connection()
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                "SELECT id_cancion FROM canciones WHERE ruta_local = ? OR ruta_local = ?",
+                (ruta_norm, ruta_local),
+            )
+            row = cur.fetchone()
+            return row['id_cancion'] if row else None
+        finally:
+            conn.close()
+    except Exception as e:
+        print(f"⚠️ db_adapter.get_id_cancion_por_ruta error: {e}")
+        return None

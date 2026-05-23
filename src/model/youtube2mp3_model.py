@@ -546,6 +546,127 @@ class YouTube2MP3Converter:
             print(f"❌ Error en el proceso de conversión: {e}")
             raise
 
+    # ── Soporte de playlists ────────────────────────────────────────────────────
+
+    @staticmethod
+    def is_playlist_url(url: str) -> bool:
+        """Devuelve True si la URL contiene una playlist de YouTube."""
+        return ('youtube.com' in url or 'youtu.be' in url) and 'list=' in url
+
+    @staticmethod
+    def _normalize_playlist_url(url: str) -> str:
+        """
+        Convierte una URL mixta (v=...&list=...) en una URL de playlist pura
+        (https://www.youtube.com/playlist?list=<id>).
+        yt-dlp trata las URLs mixtas como vídeo individual e ignora la playlist.
+        """
+        import re
+        m = re.search(r'[?&]list=([A-Za-z0-9_-]+)', url)
+        if m:
+            return f'https://www.youtube.com/playlist?list={m.group(1)}'
+        return url
+
+    def get_playlist_track_urls(self, url: str):
+        """Extrae las URLs individuales de vídeo de una playlist de YouTube."""
+        import yt_dlp as _yt
+        playlist_url = self._normalize_playlist_url(url)
+        ydl_opts = {
+            'quiet': True,
+            'extract_flat': True,
+            'skip_download': True,
+            'no_warnings': True,
+        }
+        with _yt.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(playlist_url, download=False)
+        entries = info.get('entries', []) if info else []
+        urls = []
+        for e in entries:
+            if not e:
+                continue
+            vid_url = e.get('url') or (f"https://www.youtube.com/watch?v={e['id']}" if e.get('id') else None)
+            if vid_url:
+                urls.append(vid_url)
+        return urls
+
+    def get_playlist_info(self, url: str) -> dict:
+        """Obtiene nombre y portada de la playlist de YouTube."""
+        import yt_dlp as _yt
+        playlist_url = self._normalize_playlist_url(url)
+        ydl_opts = {
+            'quiet': True, 'extract_flat': True,
+            'skip_download': True, 'no_warnings': True, 'playlistend': 1,
+        }
+        try:
+            with _yt.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(playlist_url, download=False)
+            return {
+                'nombre': info.get('title') or 'Playlist YouTube',
+                'cover_url': info.get('thumbnail') or '',
+            }
+        except Exception:
+            return {'nombre': 'Playlist YouTube', 'cover_url': ''}
+
+    def convert_playlist(self, url: str, on_progress=None):
+        """Descarga todos los vídeos de una playlist de YouTube como MP3.
+
+        Parámetros:
+        - on_progress: callback(actual, total, titulo) llamado tras cada canción
+        Devuelve lista de rutas de archivos descargados.
+        """
+        print(f'\n🎵 Obteniendo videos de la playlist: {url}')
+        pl_info = self.get_playlist_info(url)
+        playlist_name = pl_info['nombre']
+        cover_url = pl_info['cover_url']
+        print(f'📋 Playlist: {playlist_name}')
+
+        track_urls = self.get_playlist_track_urls(url)
+        total = len(track_urls)
+        print(f'📋 {total} videos encontrados')
+        if total == 0:
+            return []
+
+        results = []
+        song_ids = []
+        failed = 0
+        for i, track_url in enumerate(track_urls, 1):
+            print(f'\n[{i}/{total}] {track_url}')
+            try:
+                path = self.convert(track_url)
+                if path:
+                    results.append(path)
+                    print(f'  ✅ Descargado: {path}')
+                    if _DB_ADAPTER_OK:
+                        from model.db_adapter import get_id_cancion_por_ruta
+                        id_c = get_id_cancion_por_ruta(path)
+                        if id_c:
+                            song_ids.append(id_c)
+                else:
+                    failed += 1
+            except Exception as e:
+                print(f'  ❌ Error: {e}')
+                failed += 1
+            if on_progress:
+                on_progress(i, total, track_url)
+
+        # Crear playlist en BD con portada
+        if song_ids and _DB_ADAPTER_OK:
+            try:
+                from model.db_adapter import guardar_playlist_json_completa
+                guardar_playlist_json_completa(
+                    id_usuario=1,
+                    nombre=playlist_name,
+                    descripcion=f'Importada de YouTube | {url}',
+                    canciones=song_ids,
+                    caratula_url=cover_url,
+                )
+            except Exception as _pl_err:
+                print(f'⚠️ No se pudo crear la playlist en BD: {_pl_err}')
+
+        print(f'\n🎉 Playlist completada: {len(results)}/{total} exitosas  ·  {failed} fallidas')
+        return results
+
+    # ──────────────────────────────────────────────────────────────────
+
 
 # ============================================================
 # Función de conveniencia — misma interfaz que convert_spotify

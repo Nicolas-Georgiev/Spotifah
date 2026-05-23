@@ -56,11 +56,11 @@ class YouTube2MP3Controller(BaseController):
             raise e
     
     def convert_single_video(self) -> bool:
-        """Convertir un solo video - retorna True si fue exitoso"""
+        """Convierte un vídeo o playlist de YouTube - retorna True si fue exitoso"""
         try:
             # Obtener URL del usuario
             url = self.view.get_user_input()
-            
+
             # Validar entrada
             if not self.validate_input(url):
                 self.handle_error(ValueError(
@@ -68,19 +68,34 @@ class YouTube2MP3Controller(BaseController):
                     "(youtube.com/watch?v=... o youtu.be/...)"
                 ))
                 return False
-            
-            # Procesar conversión
+
+            # — Detectar si es playlist —
+            if self.model.is_playlist_url(url):
+                print("\n📋 Playlist de YouTube detectada.")
+                print("Obteniendo lista de vídeos... (puede tardar unos segundos)")
+                try:
+                    track_urls = self.model.get_playlist_track_urls(url)
+                    total = len(track_urls)
+                except Exception as e:
+                    self.handle_error(e)
+                    return False
+
+                print(f"\n🎵 Se encontraron {total} vídeos.")
+                confirm = input("\u00bfDescargar todos? [s/N]: ").strip().lower()
+                if confirm not in ('s', 'si', 'yes', 'y'):
+                    print("⏹️  Descarga cancelada.")
+                    return False
+
+                results = self.model.convert_playlist(url)
+                print(f"\n✅ Descargados {len(results)}/{total} vídeos")
+                return len(results) > 0
+
+            # — Vídeo individual —
             result_path = self.process_conversion(url)
-            
-            # Mostrar resultado exitoso
             self.handle_success(result_path)
-            
-            # Mostrar información adicional
             self.view.show_output_info()
-            
             return True
-            
-        except KeyboardInterrupt:
+
             self.show_progress("⏹️  Operación cancelada por el usuario")
             return False
         except Exception as e:

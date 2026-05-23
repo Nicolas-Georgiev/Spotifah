@@ -47,30 +47,46 @@ class Spotify2MP3Controller(BaseController):
         return self.model.convert(spotify_url)
     
     def convert_single_track(self) -> bool:
-        """Convertir una sola pista - retorna True si fue exitoso"""
+        """Convierte una pista o una playlist completa - retorna True si fue exitoso"""
         try:
             # Obtener URL del usuario
             url = self.view.get_user_input()
-            
+
             # Validar entrada
             if not self.validate_input(url):
                 self.handle_error(ValueError(
                     "URL no válida. Debe ser un enlace de Spotify válido "
-                    "(open.spotify.com/track/... o spotify:track:...)"
+                    "(open.spotify.com/track|playlist|album/...)"
                 ))
                 return False
-            
-            # Procesar conversión
+
+            # — Detectar si es playlist/álbum —
+            if self.model.is_playlist_url(url):
+                print("\n📋 Playlist/álbum de Spotify detectado.")
+                print("Obteniendo lista de canciones... (puede tardar unos segundos)")
+                try:
+                    songs = self.model.get_playlist_songs(url)
+                    total = len(songs)
+                except Exception as e:
+                    self.handle_error(e)
+                    return False
+
+                print(f"\n🎵 Se encontraron {total} canciones.")
+                confirm = input("\u00bfDescargar todas? [s/N]: ").strip().lower()
+                if confirm not in ('s', 'si', 'yes', 'y'):
+                    print("⏹️  Descarga cancelada.")
+                    return False
+
+                results = self.model.convert_playlist(url)
+                print(f"\n✅ Descargadas {len(results)}/{total} canciones")
+                return len(results) > 0
+
+            # — Canción individual —
             result_path = self.process_conversion(url)
-            
-            # Mostrar resultado exitoso
             self.handle_success(result_path)
-            
-            # Mostrar información adicional
             self.view.show_metadata_info()
-            
             return True
-            
+
         except KeyboardInterrupt:
             self.show_progress("⏹️  Operación cancelada por el usuario")
             return False

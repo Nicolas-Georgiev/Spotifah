@@ -996,6 +996,115 @@ class Spotify2MP3Converter(BaseModel):
         except Exception as e:
             raise Exception(f"Error en la conversión: {e}")
 
+    # ── Soporte de playlists / álbumes ──────────────────────────────────────
+
+    @staticmethod
+    def is_playlist_url(url: str) -> bool:
+        """Devuelve True si la URL es una playlist o álbum de Spotify."""
+        url = url.strip()
+        return ('open.spotify.com/playlist/' in url or
+                'open.spotify.com/album/'    in url or
+                'spotify:playlist:'          in url or
+                'spotify:album:'             in url)
+
+    def get_playlist_songs(self, url: str):
+        """Devuelve lista de objetos Song de spotdl para una playlist/álbum."""
+        if SPOTDL_API_MODE != 'legacy_spotdl_class':
+            raise RuntimeError('La versión de spotdl instalada no soporta búsqueda de playlists')
+        songs = self.info_extractor.spotdl.search([url])  # type: ignore
+        if not songs:
+            raise RuntimeError(f'No se encontraron canciones en: {url}')
+        return songs
+
+    def _get_spotify_playlist_cover(self, url: str) -> str:
+        """Obtiene la URL de portada de una playlist/álbum de Spotify via OEmbed (sin auth)."""
+        try:
+            resp = requests.get(
+                f'https://open.spotify.com/oembed?url={url}',
+                timeout=10,
+                headers={'User-Agent': 'Mozilla/5.0'},
+            )
+            if resp.status_code == 200:
+                return resp.json().get('thumbnail_url', '')
+        except Exception:
+            pass
+        return ''
+
+    def convert_playlist(self, url: str, on_progress=None):
+        """Descarga todas las canciones de una playlist/álbum de Spotify.
+
+        Parámetros:
+        - on_progress: callback(actual, total, titulo) llamado tras cada canción
+        Devuelve lista de rutas de archivos descargados.
+        """
+        print(f'\n🎵 Obteniendo canciones de la playlist: {url}')
+        songs = self.get_playlist_songs(url)
+        total = len(songs)
+        if total == 0:
+            print('📋 0 canciones encontradas')
+            return []
+
+        # Metadatos de playlist
+        playlist_name = getattr(songs[0], 'list_name', None) or 'Playlist Spotify'
+        print(f'📋 {total} canciones en "{playlist_name}"')
+        cover_url = self._get_spotify_playlist_cover(url)
+        if not cover_url:
+            cover_url = getattr(songs[0], 'cover_url', '') or ''
+
+        results = []
+        song_ids = []
+        failed = 0
+        for i, song in enumerate(songs, 1):
+            titulo = getattr(song, 'name', '?')
+            artistas = getattr(song, 'artists', []) or []
+            artista = artistas[0] if artistas else '?'
+            print(f'\n[{i}/{total}] {artista} - {titulo}')
+            try:
+                track_url = getattr(song, 'url', None)
+                if not track_url:
+                    song_id = getattr(song, 'song_id', None)
+                    track_url = f'https://open.spotify.com/track/{song_id}' if song_id else None
+                if not track_url:
+                    print(f'  ⚠️  Sin URL, omitiendo')
+                    failed += 1
+                    continue
+                path = self.convert(track_url)
+                if path:
+                    results.append(path)
+                    print(f'  ✅ Descargado: {path}')
+                    if _DB_ADAPTER_OK:
+                        from model.db_adapter import get_id_cancion_por_ruta
+                        id_c = get_id_cancion_por_ruta(path)
+                        if id_c:
+                            song_ids.append(id_c)
+                else:
+                    failed += 1
+                    print(f'  ❌ Falló (sin ruta)')
+            except Exception as e:
+                print(f'  ❌ Error: {e}')
+                failed += 1
+            if on_progress:
+                on_progress(i, total, titulo)
+
+        # Crear playlist en BD con portada
+        if song_ids and _DB_ADAPTER_OK:
+            try:
+                from model.db_adapter import guardar_playlist_json_completa
+                guardar_playlist_json_completa(
+                    id_usuario=1,
+                    nombre=playlist_name,
+                    descripcion=f'Importada de Spotify | {url}',
+                    canciones=song_ids,
+                    caratula_url=cover_url,
+                )
+            except Exception as _pl_err:
+                print(f'⚠️ No se pudo crear la playlist en BD: {_pl_err}')
+
+        print(f'\n🎉 Playlist completada: {len(results)}/{total} exitosas  ·  {failed} fallidas')
+        return results
+
+    # ────────────────────────────────────────────────────────────────────────
+
     def _update_metadata_with_local_path(self, track_info, local_path):
         """Actualiza los metadatos con la ruta local del archivo descargado"""
         try:

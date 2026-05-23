@@ -84,10 +84,12 @@ class ConversorController:
         # Importar controladores aquí para evitar importaciones circulares
         from controller.spotify2mp3_controller import Spotify2MP3Controller
         from controller.youtube2mp3_controller import YouTube2MP3Controller
+        from controller.soundcloud2mp3_controller import SoundCloud2MP3Controller
         
         self.controllers: Dict[str, BaseController] = {
-            'spotify': Spotify2MP3Controller(),
-            'youtube': YouTube2MP3Controller()
+            'spotify':    Spotify2MP3Controller(),
+            'youtube':    YouTube2MP3Controller(),
+            'soundcloud': SoundCloud2MP3Controller(),
         }
         self._setup_environment()
     
@@ -111,10 +113,12 @@ class ConversorController:
         print("  🎵 EKHO - PLATAFORMA MUSICAL 🎵")
         print("="*70)
         print("\n📋 CONVERTIDORES DISPONIBLES:")
-        print("  1️⃣  Spotify a MP3")
-        print("  2️⃣  YouTube a MP3")
-        print("  3️⃣  Estado del sistema")
-        print("  4️⃣  Ver canciones en la base de datos")
+        print("  1️⃣  Spotify a MP3  (pistas, playlists y álbumes)")
+        print("  2️⃣  YouTube a MP3  (vídeos y playlists)")
+        print("  3️⃣  SoundCloud a MP3  (pistas y sets/playlists)")
+        print("\n⚙️  OTRAS OPCIONES:")
+        print("  4️⃣  Estado del sistema")
+        print("  5️⃣  Ver canciones en la base de datos")
         print("  0️⃣  Salir")
         print("="*70)
     
@@ -122,13 +126,13 @@ class ConversorController:
         """Obtener elección del usuario"""
         while True:
             try:
-                print("\nSelecciona una opción (1-2, 0 para salir): ", end='', flush=True)
+                print("\nSelecciona una opción (1-3, 0 para salir): ", end='', flush=True)
                 choice = input().strip()
                 
-                if choice in ['1', '2', '3', '4', '0']:
+                if choice in ['1', '2', '3', '4', '5', '0']:
                     return choice
                 else:
-                    print("\u274c Opci\u00f3n no v\u00e1lida. Por favor selecciona 1, 2, 3, 4 o 0.")
+                    print("\u274c Opción no válida. Por favor selecciona 1, 2, 3, 4, 5 o 0.")
                     
             except EOFError:
                 print("\n❌ EOF detectado - finalizando programa")
@@ -216,8 +220,14 @@ class ConversorController:
                     except Exception as e:
                         print(f"❌ Error en conversor de YouTube: {e}")
                 elif choice == '3':
-                    self.show_system_status()
+                    print("\n☁️ Iniciando conversor de SoundCloud...")
+                    try:
+                        self.controllers['soundcloud'].run()
+                    except Exception as e:
+                        print(f"❌ Error en conversor de SoundCloud: {e}")
                 elif choice == '4':
+                    self.show_system_status()
+                elif choice == '5':
                     from run_conversores import mostrar_canciones
                     mostrar_canciones()
                 
