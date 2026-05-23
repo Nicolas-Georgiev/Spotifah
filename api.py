@@ -46,7 +46,7 @@ class Api:
         self._pygame_inited = False
         self._player_lock = threading.Lock()
 
-        threading.Thread(target=self._ensure_system_playlists, daemon=True).start()
+        self._ensure_system_playlists()
 
         self._current_song_id = None
 

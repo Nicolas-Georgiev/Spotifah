@@ -4,10 +4,37 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>EKHO</title>
-  <script type="module" crossorigin src="/assets/index-BGUC7qjL.js"></script>
-  <link rel="stylesheet" crossorigin href="/assets/index-HImo1Fns.css">
+  <style>
+    .splash-init {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(ellipse at top, oklch(0.2 0.06 290 / 0.6), transparent 60%),
+                  radial-gradient(ellipse at bottom right, oklch(0.18 0.08 220 / 0.4), transparent 60%),
+                  oklch(0.1 0.01 280);
+    }
+    .splash-init h1 {
+      font-size: 4rem;
+      font-weight: 700;
+      color: oklch(0.75 0.21 305);
+      text-shadow: 0 0 12px oklch(0.75 0.21 305 / 0.7);
+      font-family: ui-monospace, monospace;
+      letter-spacing: -0.01em;
+      user-select: none;
+    }
+  </style>
+  <script type="module" crossorigin src="/assets/index-WzqQzmJV.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-DfptvlY6.css">
 </head>
 <body>
-  <div id="root"></div>
+  <div id="root">
+    <div class="splash-init">
+      <h1>EKHO</h1>
+    </div>
+  </div>
 </body>
 </html>

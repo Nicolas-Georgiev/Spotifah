@@ -85,6 +85,9 @@ CREATE TABLE IF NOT EXISTS descargas (
 INSERT OR IGNORE INTO usuarios (id_usuario, nombre_usuario, correo, contraseña_hash, pais, preferencias_generos, preferencias_artistas)
 VALUES
 (1,'Usuario','usuario@mail.com','hash',NULL,NULL,NULL);
+
+INSERT OR IGNORE INTO playlists (id_playlist, id_usuario, nombre, descripcion, publica)
+VALUES (1, 1, 'Favoritos', 'Tus canciones favoritas', 0);
 """
 
 class Database:

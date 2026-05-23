@@ -1,8 +1,0 @@
-.env
-data/settings.json
-data/BDD/ekho.db
-data/
-# Python cache
-__pycache__/
-*.py[cod]
-*.pyo
