@@ -54,6 +54,37 @@ class MusicController:
         else:
             print("❌ No se pudo reproducir: archivo no encontrado")
 
+    def play_file(self, file_path):
+        """
+        Reproduce un archivo de audio específico.
+        Si el archivo está en la biblioteca, actualiza current_index
+        para que next/prev sigan funcionando.
+        Retorna True si se reprodujo correctamente, False en caso contrario.
+        """
+        if not self._can_control_playback():
+            return False
+        if not file_path:
+            print("❌ Ruta de archivo vacía")
+            return False
+        abs_path = os.path.normpath(os.path.abspath(file_path))
+        if not os.path.exists(abs_path):
+            print(f"❌ Archivo no encontrado: {abs_path}")
+            return False
+        try:
+            normalized = os.path.normpath(abs_path)
+            self.current_index = 0
+            for i, t in enumerate(self.library.tracks):
+                if os.path.normpath(t) == normalized:
+                    self.current_index = i
+                    break
+            pygame.mixer.music.load(abs_path)
+            pygame.mixer.music.play()
+            print(f"🎵 Reproduciendo: {abs_path}")
+            return True
+        except Exception as e:
+            print(f"❌ Error al reproducir archivo: {e}")
+            return False
+
     def pause(self):
         if not self._can_control_playback():
             return

@@ -614,12 +614,19 @@ class Api:
                 if not row or not row["ruta_local"]:
                     return {"ok": False, "error": "Cancion no encontrada en disco"}
                 song_path = row["ruta_local"]
-                for i, t in enumerate(self.library.tracks):
-                    if os.path.normpath(t) == os.path.normpath(song_path):
-                        self._music_controller.current_index = i
-                        break
+                if not os.path.exists(song_path):
+                    filename = os.path.basename(song_path)
+                    alt_path = os.path.join(self._music_dir, filename)
+                    if os.path.exists(alt_path):
+                        song_path = os.path.normpath(alt_path)
+                        cur.execute(
+                            "UPDATE canciones SET ruta_local = ? WHERE id_cancion = ?",
+                            (song_path, int(song_id)),
+                        )
                 with self._player_lock:
-                    self._music_controller.play()
+                    ok = self._music_controller.play_file(song_path)
+                if not ok:
+                    return {"ok": False, "error": f"No se pudo reproducir: {song_path}"}
                 self._current_song_id = song_id
                 cur.execute(
                     "INSERT INTO historial_reproduccion (id_usuario, id_cancion) VALUES (?, ?)",
