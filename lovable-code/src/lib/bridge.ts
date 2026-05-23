@@ -173,6 +173,16 @@ export const bridge = {
     }
   },
 
+  async seekSong(position: number): Promise<ActionResult> {
+    const api = getApi();
+    if (!api) return { ok: false, error: "PyWebView no disponible" };
+    try {
+      return await api.seek_song(position);
+    } catch (e: any) {
+      return { ok: false, error: e?.message ?? "Error al buscar" };
+    }
+  },
+
   async nextSong(): Promise<ActionResult> {
     const api = getApi();
     if (!api) return { ok: true, data: { message: "Simulado" } };

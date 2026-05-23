@@ -674,6 +674,18 @@ class Api:
         except Exception as e:
             return {"ok": False, "error": str(e)}
 
+    def seek_song(self, position: float) -> dict:
+        try:
+            if not self._pygame_inited or self._current_song_id is None:
+                return {"ok": False, "error": "No hay canción reproduciendo"}
+            with self._player_lock:
+                ok = self._music_controller.seek(max(0, position))
+            if not ok:
+                return {"ok": False, "error": "No se pudo cambiar la posición"}
+            return {"ok": True, "data": {"message": "Posición cambiada"}}
+        except Exception as e:
+            return {"ok": False, "error": str(e)}
+
     def _sync_current_song_from_player(self):
         try:
             idx = self._music_controller.current_index
@@ -739,7 +751,7 @@ class Api:
                 row = cur.fetchone()
                 if not row:
                     return {"ok": True, "data": None}
-                pos = pygame.mixer.music.get_pos() // 1000
+                pos = self._music_controller.get_absolute_position()
                 cover = row["caratula_url"] or ""
                 if not cover:
                     cover = self._ensure_cover(row["id_cancion"], row["titulo"], row["artista"] or "", row["album"] or "", row["ruta_local"] or "", row["plataforma_origen"] or "")
@@ -765,13 +777,14 @@ class Api:
     def get_playback_position(self) -> dict:
         try:
             if not self._pygame_inited:
-                return {"ok": True, "data": {"position": 0, "is_playing": False}}
-            import pygame
-            pos = pygame.mixer.music.get_pos() // 1000
-            busy = bool(pygame.mixer.music.get_busy())
-            return {"ok": True, "data": {"position": max(0, pos), "is_playing": busy}}
+                return {"ok": True, "data": {"position": 0.0, "is_playing": False}}
+            with self._player_lock:
+                import pygame
+                pos = self._music_controller.get_absolute_position()
+                busy = bool(pygame.mixer.music.get_busy())
+                return {"ok": True, "data": {"position": max(0.0, pos), "is_playing": busy}}
         except Exception:
-            return {"ok": True, "data": {"position": 0, "is_playing": False}}
+            return {"ok": True, "data": {"position": 0.0, "is_playing": False}}
 
     def set_volume(self, volume: int) -> dict:
         try:
