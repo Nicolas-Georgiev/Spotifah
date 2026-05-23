@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX } from "lucide-react";
+import { Play, Pause, SkipBack, SkipForward, Shuffle, Repeat, Repeat1, Volume2, VolumeX } from "lucide-react";
 import { bridge } from "../../lib/bridge";
 import { Slider } from "../ui/slider";
 
@@ -11,6 +11,8 @@ interface NowPlayingInfo {
   cover_url: string;
   is_playing: boolean;
   position: number;
+  shuffle: boolean;
+  repeat: string;
 }
 
 export function PlayerBar() {
@@ -19,10 +21,14 @@ export function PlayerBar() {
   const [volume, setVolume] = useState(100);
   const [muted, setMuted] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [shuffle, setShuffle] = useState(false);
+  const [repeat, setRepeat] = useState("none");
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const posPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const barRef = useRef<HTMLDivElement | null>(null);
   const isDraggingRef = useRef(false);
+  const justSkippedRef = useRef(false);
+  const npRef = useRef<NowPlayingInfo | null>(null);
 
   const dur = np?.duration || 1;
 
@@ -44,6 +50,8 @@ export function PlayerBar() {
           }
           return data;
         });
+        setShuffle(data.shuffle);
+        setRepeat(data.repeat);
       } else {
         setNp(null);
       }
@@ -64,6 +72,14 @@ export function PlayerBar() {
       if (isDraggingRef.current) return;
       const res = await bridge.getPlaybackPosition();
       setPosition(res.position);
+      const prevNp = npRef.current;
+      if (prevNp && prevNp.is_playing && !res.is_playing && !justSkippedRef.current) {
+        const dur = prevNp.duration;
+        if (dur > 0 && res.position >= dur - 1) {
+          await bridge.nextSong();
+          refreshNowPlaying();
+        }
+      }
     };
     pollPos();
     posPollRef.current = setInterval(pollPos, 200);
@@ -77,6 +93,10 @@ export function PlayerBar() {
   useEffect(() => {
     isDraggingRef.current = isDragging;
   }, [isDragging]);
+
+  useEffect(() => {
+    npRef.current = np;
+  }, [np]);
 
   useEffect(() => {
     if (!isDragging) return;
@@ -127,8 +147,26 @@ export function PlayerBar() {
     await refreshNowPlaying();
   };
 
-  const handlePrev = async () => { await bridge.prevSong(); await refreshNowPlaying(); };
-  const handleNext = async () => { await bridge.nextSong(); await refreshNowPlaying(); };
+  const handlePrev = async () => {
+    justSkippedRef.current = true;
+    setTimeout(() => { justSkippedRef.current = false; }, 500);
+    await bridge.prevSong(); await refreshNowPlaying();
+  };
+  const handleNext = async () => {
+    justSkippedRef.current = true;
+    setTimeout(() => { justSkippedRef.current = false; }, 500);
+    await bridge.nextSong(); await refreshNowPlaying();
+  };
+
+  const handleShuffle = async () => {
+    const res = await bridge.toggleShuffle();
+    if (res.ok && res.data) setShuffle(res.data.shuffle);
+  };
+
+  const handleRepeat = async () => {
+    const res = await bridge.cycleRepeat();
+    if (res.ok && res.data) setRepeat(res.data.repeat);
+  };
 
   const handleVolume = async (v: number[]) => {
     const val = v[0];
@@ -192,11 +230,25 @@ export function PlayerBar() {
             <SkipBack className="w-4 h-4" />
           </button>
           <button
+            onClick={handleShuffle}
+            className={`transition p-1.5 rounded ${shuffle ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
+            aria-label="Aleatorio"
+          >
+            <Shuffle className="w-4 h-4" />
+          </button>
+          <button
             onClick={handlePlayPause}
             className="w-9 h-9 rounded-full bg-primary text-primary-foreground grid place-items-center hover:scale-105 transition"
             aria-label={np?.is_playing ? "Pausar" : "Reproducir"}
           >
             {np?.is_playing ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current ml-0.5" />}
+          </button>
+          <button
+            onClick={handleRepeat}
+            className={`transition p-1.5 rounded ${repeat !== "none" ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
+            aria-label="Repetir"
+          >
+            {repeat === "one" ? <Repeat1 className="w-4 h-4" /> : <Repeat className="w-4 h-4" />}
           </button>
           <button onClick={handleNext} className="text-muted-foreground hover:text-foreground transition p-1" aria-label="Siguiente">
             <SkipForward className="w-4 h-4" />

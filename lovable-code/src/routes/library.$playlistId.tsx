@@ -1,9 +1,9 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { ChevronLeft } from "lucide-react";
 import { bridge, type Song } from "../lib/bridge";
 import { PlaylistHeader } from "../components/library/PlaylistHeader";
-import { SongTable } from "../components/library/SongTable";
+import { SongTable, sortSongs, type SortConfig } from "../components/library/SongTable";
 
 export const Route = createFileRoute("/library/$playlistId")({
   loader: async ({ params }) => {
@@ -34,17 +34,24 @@ function PlaylistDetail() {
   const { playlist } = Route.useLoaderData();
   const [songs, setSongs] = useState<Song[]>([]);
   const [playingId, setPlayingId] = useState<string | null>(null);
+  const [sort, setSort] = useState<SortConfig | null>(null);
 
   useEffect(() => {
     bridge.getPlaylistSongs(playlist.id).then(setSongs);
+    const defaultSort: SortConfig | null = playlist.id === "all"
+      ? { key: "download_date", dir: "desc" }
+      : null;
+    setSort(defaultSort);
   }, [playlist.id]);
 
-  const totalSecs = songs.reduce((acc, s) => acc + s.duration, 0);
+  const sortedSongs = useMemo(() => sortSongs(songs, sort), [songs, sort]);
+
+  const totalSecs = sortedSongs.reduce((acc, s) => acc + s.duration, 0);
   const totalMin = Math.round(totalSecs / 60);
 
   const handlePlay = (songId: string) => {
     setPlayingId(songId);
-    bridge.playSong(songId, songs.map((s) => s.id));
+    bridge.playSong(songId, sortedSongs.map((s) => s.id));
   };
 
   const handleRemove = async (songId: string) => {
@@ -64,19 +71,21 @@ function PlaylistDetail() {
 
       <PlaylistHeader
         playlist={playlist}
-        songs={songs}
+        songs={sortedSongs}
         totalMin={totalMin}
-        onPlayAll={() => songs.length > 0 && handlePlay(songs[0].id)}
+        onPlayAll={() => sortedSongs.length > 0 && handlePlay(sortedSongs[0].id)}
       />
 
       <SongTable
-        songs={songs}
+        songs={sortedSongs}
         playingId={playingId}
         onPlay={handlePlay}
         fmtDuration={fmtDuration}
         playlistId={playlist.id}
         onRemoveFromPlaylist={handleRemove}
         onSongDeleted={handleSongDeleted}
+        sort={sort}
+        onSortChange={setSort}
       />
     </div>
   );

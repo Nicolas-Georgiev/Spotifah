@@ -1,8 +1,15 @@
-import { useState, useMemo } from "react";
 import { ArrowUpDown, ArrowUp, ArrowDown, Clock } from "lucide-react";
 import { SongRow } from "./SongRow";
 import type { Song } from "../../lib/bridge";
 import { GlassCard } from "../shared/GlassCard";
+
+export type SortKey = "title" | "artist" | "album" | "source" | "duration" | "download_date";
+export type SortDir = "asc" | "desc";
+
+export interface SortConfig {
+  key: SortKey;
+  dir: SortDir;
+}
 
 interface Props {
   songs: Song[];
@@ -12,17 +19,11 @@ interface Props {
   playlistId?: string;
   onRemoveFromPlaylist?: (songId: string) => void;
   onSongDeleted?: (songId: string) => void;
+  sort?: SortConfig | null;
+  onSortChange?: (config: SortConfig | null) => void;
 }
 
-type SortKey = "title" | "artist" | "album" | "source" | "duration" | "download_date";
-type SortDir = "asc" | "desc";
-
-interface SortConfig {
-  key: SortKey;
-  dir: SortDir;
-}
-
-function sortSongs(songs: Song[], config: SortConfig | null): Song[] {
+export function sortSongs(songs: Song[], config: SortConfig | null): Song[] {
   if (!config) return songs;
   const { key, dir } = config;
   const mult = dir === "asc" ? 1 : -1;
@@ -53,18 +54,16 @@ const HEADERS: { key: SortKey | null; label: string; className?: string }[] = [
   { key: null, label: "" },
 ];
 
-export function SongTable({ songs, playingId, onPlay, fmtDuration, playlistId, onRemoveFromPlaylist, onSongDeleted }: Props) {
-  const [sort, setSort] = useState<SortConfig | null>(null);
-
+export function SongTable({ songs, playingId, onPlay, fmtDuration, playlistId, onRemoveFromPlaylist, onSongDeleted, sort, onSortChange }: Props) {
   const toggleSort = (key: SortKey) => {
-    setSort((prev) => {
-      if (!prev || prev.key !== key) return { key, dir: "asc" };
-      if (prev.dir === "asc") return { key, dir: "desc" };
-      return null;
-    });
+    if (!onSortChange) return;
+    const next = !sort || sort.key !== key
+      ? { key, dir: "asc" as const }
+      : sort.dir === "asc"
+        ? { key, dir: "desc" as const }
+        : null;
+    onSortChange(next);
   };
-
-  const sorted = useMemo(() => sortSongs(songs, sort), [songs, sort]);
 
   const renderSortIcon = (key: SortKey | null) => {
     if (!key) return null;
@@ -96,7 +95,7 @@ export function SongTable({ songs, playingId, onPlay, fmtDuration, playlistId, o
         )}
       </div>
       <ul>
-        {sorted.map((s, i) => (
+        {songs.map((s, i) => (
           <SongRow
             key={s.id}
             song={s}

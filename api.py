@@ -1300,6 +1300,24 @@ class Api:
         except Exception as e:
             return {"ok": False, "error": str(e)}
 
+    def toggle_shuffle(self) -> dict:
+        try:
+            self._init_player()
+            with self._player_lock:
+                enabled = self._music_controller.toggle_shuffle()
+            return {"ok": True, "data": {"shuffle": enabled}}
+        except Exception as e:
+            return {"ok": False, "error": str(e)}
+
+    def cycle_repeat(self) -> dict:
+        try:
+            self._init_player()
+            with self._player_lock:
+                mode = self._music_controller.cycle_repeat_mode()
+            return {"ok": True, "data": {"repeat": mode}}
+        except Exception as e:
+            return {"ok": False, "error": str(e)}
+
     # ── Now Playing / Position / Volume ───────────────────────
 
     def get_now_playing(self) -> dict:
@@ -1336,6 +1354,8 @@ class Api:
                         "cover_url": cover,
                         "is_playing": bool(is_playing),
                         "position": pos,
+                        "shuffle": self._music_controller.get_shuffle_enabled(),
+                        "repeat": self._music_controller.get_repeat_mode(),
                     },
                 }
             finally:

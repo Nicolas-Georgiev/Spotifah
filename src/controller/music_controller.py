@@ -25,6 +25,10 @@ class MusicController:
         self._queue_ids: list[int] = []
         self._queue_index: int = 0
 
+        self._shuffle_enabled: bool = False
+        self._shuffle_order: list[int] = []
+        self._repeat_mode: str = "none"  # "none", "all", "one"
+
         if HAS_PYGAME:
             try:
                 pygame.mixer.init()
@@ -34,6 +38,36 @@ class MusicController:
                 print("   Verifica dispositivo de audio disponible")
         else:
             print("⚠️ Reproductor musical no disponible (pygame no instalado)")
+
+    def _build_shuffle_order(self):
+        n = len(self._queue_paths)
+        if n == 0:
+            self._shuffle_order = []
+            return
+        import random
+        indices = list(range(n))
+        random.shuffle(indices)
+        self._shuffle_order = indices
+
+    def toggle_shuffle(self) -> bool:
+        self._shuffle_enabled = not self._shuffle_enabled
+        if self._shuffle_enabled:
+            self._build_shuffle_order()
+        else:
+            self._shuffle_order = []
+        return self._shuffle_enabled
+
+    def cycle_repeat_mode(self) -> str:
+        order = ["none", "all", "one"]
+        idx = order.index(self._repeat_mode)
+        self._repeat_mode = order[(idx + 1) % len(order)]
+        return self._repeat_mode
+
+    def get_shuffle_enabled(self) -> bool:
+        return self._shuffle_enabled
+
+    def get_repeat_mode(self) -> str:
+        return self._repeat_mode
 
     def _can_control_playback(self):
         if not HAS_PYGAME:
@@ -58,6 +92,8 @@ class MusicController:
         self._queue_paths = paths
         self._queue_ids = ids
         self._queue_index = start_index
+        if self._shuffle_enabled:
+            self._build_shuffle_order()
 
     def clear_queue(self):
         self._queue_paths = []
@@ -238,11 +274,24 @@ class MusicController:
     def next_track(self):
         if not self._can_control_playback():
             return
+
+        if self._repeat_mode == "one":
+            if self.has_queue():
+                self._play_path(self._queue_paths[self._queue_index])
+            else:
+                self.play()
+            return
+
         if self.has_queue():
             if len(self._queue_paths) == 0:
                 print("⚠️ No hay pistas en la cola")
                 return
-            self._queue_index = (self._queue_index + 1) % len(self._queue_paths)
+            if self._shuffle_enabled and len(self._shuffle_order) > 0:
+                cur_pos = self._shuffle_order.index(self._queue_index)
+                next_pos = (cur_pos + 1) % len(self._shuffle_order)
+                self._queue_index = self._shuffle_order[next_pos]
+            else:
+                self._queue_index = (self._queue_index + 1) % len(self._queue_paths)
             self._play_path(self._queue_paths[self._queue_index])
         else:
             if self.library.total_tracks() == 0:
@@ -258,7 +307,12 @@ class MusicController:
             if len(self._queue_paths) == 0:
                 print("⚠️ No hay pistas en la cola")
                 return
-            self._queue_index = (self._queue_index - 1) % len(self._queue_paths)
+            if self._shuffle_enabled and len(self._shuffle_order) > 0:
+                cur_pos = self._shuffle_order.index(self._queue_index)
+                prev_pos = (cur_pos - 1) % len(self._shuffle_order)
+                self._queue_index = self._shuffle_order[prev_pos]
+            else:
+                self._queue_index = (self._queue_index - 1) % len(self._queue_paths)
             self._play_path(self._queue_paths[self._queue_index])
         else:
             if self.library.total_tracks() == 0:

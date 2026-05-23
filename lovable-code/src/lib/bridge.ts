@@ -53,6 +53,8 @@ interface NowPlayingData {
   cover_url: string;
   is_playing: boolean;
   position: number;
+  shuffle: boolean;
+  repeat: string;
 }
 
 interface NowPlayingResult {
@@ -255,6 +257,26 @@ export const bridge = {
     if (!api) return { ok: true, data: { message: "Simulado" } };
     try {
       return await api.prev_song();
+    } catch (e: any) {
+      return { ok: false, error: e?.message ?? "Error" };
+    }
+  },
+
+  async toggleShuffle(): Promise<{ ok: boolean; data?: { shuffle: boolean }; error?: string }> {
+    const api = getApi();
+    if (!api) return { ok: true, data: { shuffle: false } };
+    try {
+      return await api.toggle_shuffle();
+    } catch (e: any) {
+      return { ok: false, error: e?.message ?? "Error" };
+    }
+  },
+
+  async cycleRepeat(): Promise<{ ok: boolean; data?: { repeat: string }; error?: string }> {
+    const api = getApi();
+    if (!api) return { ok: true, data: { repeat: "none" } };
+    try {
+      return await api.cycle_repeat();
     } catch (e: any) {
       return { ok: false, error: e?.message ?? "Error" };
     }
