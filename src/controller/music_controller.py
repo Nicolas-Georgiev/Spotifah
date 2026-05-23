@@ -1,4 +1,5 @@
 import os
+import time
 import importlib
 
 try:
@@ -15,6 +16,10 @@ class MusicController:
         self.library = library
         self.current_index = 0
         self.mixer_ready = False
+        self._start_time = 0.0
+        self._start_pos = 0.0
+        self._paused_pos = 0.0
+        self._is_paused = False
 
         if HAS_PYGAME:
             try:
@@ -35,6 +40,13 @@ class MusicController:
             return False
         return True
 
+    def get_absolute_position(self) -> float:
+        if self._is_paused:
+            return self._paused_pos
+        if self._start_time == 0:
+            return 0.0
+        return self._start_pos + (time.time() - self._start_time)
+
     def play(self):
         if not self._can_control_playback():
             return
@@ -50,6 +62,10 @@ class MusicController:
         if track and os.path.exists(track):
             pygame.mixer.music.load(track)
             pygame.mixer.music.play()
+            self._start_time = time.time()
+            self._start_pos = 0.0
+            self._paused_pos = 0.0
+            self._is_paused = False
             print(f"🎵 Reproduciendo: {track}")
         else:
             print("❌ No se pudo reproducir: archivo no encontrado")
@@ -79,6 +95,10 @@ class MusicController:
                     break
             pygame.mixer.music.load(abs_path)
             pygame.mixer.music.play()
+            self._start_time = time.time()
+            self._start_pos = 0.0
+            self._paused_pos = 0.0
+            self._is_paused = False
             print(f"🎵 Reproduciendo: {abs_path}")
             return True
         except Exception as e:
@@ -88,17 +108,44 @@ class MusicController:
     def pause(self):
         if not self._can_control_playback():
             return
+        self._paused_pos = self._start_pos + (time.time() - self._start_time)
+        self._is_paused = True
         pygame.mixer.music.pause()
 
     def resume(self):
         if not self._can_control_playback():
             return
+        self._start_time = time.time()
+        self._start_pos = self._paused_pos
+        self._is_paused = False
         pygame.mixer.music.unpause()
 
     def stop(self):
         if not self._can_control_playback():
             return
+        self._start_time = 0.0
+        self._start_pos = 0.0
+        self._paused_pos = 0.0
+        self._is_paused = False
         pygame.mixer.music.stop()
+
+    def seek(self, position_seconds):
+        if not self._can_control_playback():
+            return False
+        track = self.library.get_track(self.current_index)
+        if track and os.path.exists(track):
+            try:
+                pygame.mixer.music.load(track)
+                pygame.mixer.music.play(start=position_seconds)
+                self._start_time = time.time()
+                self._start_pos = position_seconds
+                self._paused_pos = 0.0
+                self._is_paused = False
+                return True
+            except Exception as e:
+                print(f"❌ Error al hacer seek: {e}")
+                return False
+        return False
 
     def next_track(self):
         if not self._can_control_playback():

@@ -18,7 +18,20 @@ export function PlayerBar() {
   const [position, setPosition] = useState(0);
   const [volume, setVolume] = useState(80);
   const [muted, setMuted] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const posPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const barRef = useRef<HTMLDivElement | null>(null);
+  const isDraggingRef = useRef(false);
+
+  const dur = np?.duration || 1;
+
+  const getPosFromClientX = useCallback((clientX: number) => {
+    const rect = barRef.current?.getBoundingClientRect();
+    if (!rect) return -1;
+    const frac = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    return frac * dur;
+  }, [dur]);
 
   const startPolling = useCallback(() => {
     const poll = async () => {
@@ -43,18 +56,46 @@ export function PlayerBar() {
   useEffect(() => {
     bridge.getVolume().then((r) => { if (r.ok && r.data) setVolume(r.data.volume); });
     startPolling();
+
+    const pollPos = async () => {
+      if (isDraggingRef.current) return;
+      const res = await bridge.getPlaybackPosition();
+      setPosition(res.position);
+    };
+    pollPos();
+    posPollRef.current = setInterval(pollPos, 200);
+
     return () => {
       if (pollingRef.current) clearInterval(pollingRef.current);
+      if (posPollRef.current) clearInterval(posPollRef.current);
     };
   }, [startPolling]);
 
   useEffect(() => {
-    if (!np?.is_playing) return;
-    const interval = setInterval(() => {
-      setPosition(prev => prev + 1);
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [np?.is_playing, np?.id]);
+    isDraggingRef.current = isDragging;
+  }, [isDragging]);
+
+  useEffect(() => {
+    if (!isDragging) return;
+    const handleMove = (e: MouseEvent) => {
+      const pos = getPosFromClientX(e.clientX);
+      if (pos >= 0) setPosition(pos);
+    };
+    const handleUp = (e: MouseEvent) => {
+      setIsDragging(false);
+      const pos = getPosFromClientX(e.clientX);
+      if (pos >= 0) {
+        setPosition(pos);
+        bridge.seekSong(pos);
+      }
+    };
+    window.addEventListener("mousemove", handleMove);
+    window.addEventListener("mouseup", handleUp);
+    return () => {
+      window.removeEventListener("mousemove", handleMove);
+      window.removeEventListener("mouseup", handleUp);
+    };
+  }, [isDragging, getPosFromClientX]);
 
   const refreshNowPlaying = useCallback(async () => {
     const res = await bridge.getNowPlaying();
@@ -105,15 +146,24 @@ export function PlayerBar() {
     }
   };
 
+  const handleBarMouseDown = (e: React.MouseEvent) => {
+    if (!np) return;
+    setIsDragging(true);
+    const pos = getPosFromClientX(e.clientX);
+    if (pos >= 0) setPosition(pos);
+    e.preventDefault();
+  };
+
   const fmt = (s: number) => {
     const m = Math.floor(s / 60);
-    const sec = s % 60;
+    const sec = Math.floor(s % 60);
     return `${m}:${sec.toString().padStart(2, "0")}`;
   };
 
   const hasSong = !!np;
-  const dur = np?.duration || 1;
-  const progress = Math.min(position / dur, 1);
+  const displayPosition = Math.min(position, dur);
+  const progress = Math.min(displayPosition / dur, 1);
+  const showTransition = !isDragging;
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 glass border-t border-border/40 px-4 py-2 flex items-center gap-4">
@@ -150,14 +200,22 @@ export function PlayerBar() {
           </button>
         </div>
         <div className="flex items-center gap-2 w-full">
-          <span className="text-xs font-mono text-muted-foreground w-8 text-right tabular-nums">{fmt(Math.floor(position))}</span>
-          <div className="flex-1 relative">
-            <div className="h-1 rounded-full bg-muted/40 overflow-hidden">
+          <span className="text-xs font-mono text-muted-foreground w-8 text-right tabular-nums">{fmt(displayPosition)}</span>
+          <div
+            ref={barRef}
+            className="flex-1 relative group cursor-pointer"
+            onMouseDown={handleBarMouseDown}
+          >
+            <div className={`h-1.5 rounded-full bg-muted/40 overflow-hidden ${showTransition ? "transition-all duration-75" : ""}`}>
               <div
-                className="h-full bg-primary transition-all duration-300"
+                className={`h-full bg-primary ${showTransition ? "transition-all duration-75" : ""}`}
                 style={{ width: `${progress * 100}%` }}
               />
             </div>
+            <div
+              className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-primary opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
+              style={{ left: `calc(${progress * 100}% - 6px)` }}
+            />
           </div>
           <span className="text-xs font-mono text-muted-foreground w-8 tabular-nums">{fmt(dur)}</span>
         </div>
