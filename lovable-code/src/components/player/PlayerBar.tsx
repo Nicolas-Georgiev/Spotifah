@@ -19,25 +19,25 @@ export function PlayerBar() {
   const [volume, setVolume] = useState(80);
   const [muted, setMuted] = useState(false);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const posRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const startPolling = useCallback(() => {
     const poll = async () => {
       const res = await bridge.getNowPlaying();
-      if (res.ok && res.data) setNp(res.data as NowPlayingInfo);
-      else setNp(null);
+      if (res.ok && res.data) {
+        const data = res.data as NowPlayingInfo;
+        setNp(prev => {
+          if (prev?.id !== data.id) {
+            setPosition(data.position);
+          }
+          return data;
+        });
+      } else {
+        setNp(null);
+      }
     };
     poll();
     if (pollingRef.current) clearInterval(pollingRef.current);
     pollingRef.current = setInterval(poll, 2000);
-
-    const pollPos = async () => {
-      const pos = await bridge.getPlaybackPosition();
-      setPosition(pos.position);
-    };
-    pollPos();
-    if (posRef.current) clearInterval(posRef.current);
-    posRef.current = setInterval(pollPos, 1000);
   }, []);
 
   useEffect(() => {
@@ -45,21 +45,46 @@ export function PlayerBar() {
     startPolling();
     return () => {
       if (pollingRef.current) clearInterval(pollingRef.current);
-      if (posRef.current) clearInterval(posRef.current);
     };
   }, [startPolling]);
 
+  useEffect(() => {
+    if (!np?.is_playing) return;
+    const interval = setInterval(() => {
+      setPosition(prev => prev + 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [np?.is_playing, np?.id]);
+
+  const refreshNowPlaying = useCallback(async () => {
+    const res = await bridge.getNowPlaying();
+    if (res.ok && res.data) {
+      const data = res.data as NowPlayingInfo;
+      setNp(prev => {
+        if (prev?.id !== data.id) {
+          setPosition(data.position);
+        }
+        return data;
+      });
+    } else {
+      setNp(null);
+    }
+  }, []);
+
   const handlePlayPause = async () => {
-    if (np?.is_playing) await bridge.pauseSong();
-    else if (np) await bridge.resumeSong();
-    else {
+    if (np?.is_playing) {
+      await bridge.pauseSong();
+    } else if (np) {
+      await bridge.resumeSong();
+    } else {
       const songs = await bridge.getSongs();
       if (songs.length) await bridge.playSong(songs[0].id);
     }
+    await refreshNowPlaying();
   };
 
-  const handlePrev = async () => { await bridge.prevSong(); };
-  const handleNext = async () => { await bridge.nextSong(); };
+  const handlePrev = async () => { await bridge.prevSong(); await refreshNowPlaying(); };
+  const handleNext = async () => { await bridge.nextSong(); await refreshNowPlaying(); };
 
   const handleVolume = async (v: number[]) => {
     const val = v[0];
