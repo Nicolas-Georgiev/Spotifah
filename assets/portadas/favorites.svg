@@ -1,0 +1,25 @@
+<svg width="100%" viewBox="0 0 320 320" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1a0a2e"/>
+      <stop offset="100%" stop-color="#2d1060"/>
+    </linearGradient>
+    <linearGradient id="glowTop" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#7c3aed" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#1a0a2e" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="0" y="0" width="320" height="320" fill="url(#bg)"/>
+
+  <!-- Glow rings -->
+  <circle cx="160" cy="160" r="200" fill="none" stroke="#7c3aed" stroke-width="50" opacity="0.07"/>
+  <circle cx="160" cy="160" r="130" fill="none" stroke="#a855f7" stroke-width="35" opacity="0.09"/>
+  <circle cx="160" cy="160" r="70" fill="none" stroke="#c084fc" stroke-width="22" opacity="0.12"/>
+  <rect x="0" y="0" width="320" height="180" fill="url(#glowTop)" opacity="0.5"/>
+
+  <!-- Large heart centered -->
+  <path d="M160 175 C160 140 128 118 112 118 C92 118 74 133 74 152 C74 177 104 204 160 238 C216 204 246 177 246 152 C246 133 228 118 208 118 C192 118 160 140 160 175 Z" fill="#7c3aed" opacity="0.25"/>
+  <path d="M160 172 C160 139 130 118 114 118 C95 118 78 132 78 150 C78 175 106 200 160 233 C214 200 242 175 242 150 C242 132 225 118 206 118 C190 118 160 139 160 172 Z" fill="none" stroke="#c084fc" stroke-width="2.5" stroke-linejoin="round"/>
+  <ellipse cx="110" cy="137" rx="14" ry="7" fill="white" opacity="0.13" transform="rotate(-35 110 137)"/>
+</svg>
