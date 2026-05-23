@@ -84,46 +84,7 @@ CREATE TABLE IF NOT EXISTS descargas (
 
 INSERT OR IGNORE INTO usuarios (id_usuario, nombre_usuario, correo, contraseña_hash, pais, preferencias_generos, preferencias_artistas)
 VALUES
-(1,'Juan','juan@mail.com','hash123','España','["Pop","Rock"]','["Artista A","Artista B"]'),
-(2,'Ana','ana@mail.com','hash456','México','["Jazz","Pop"]','["Artista C"]'),
-(3,'Luis','luis@mail.com','hash789','Argentina','["Electrónica","Rock"]','["Artista A","Artista D"]');
-
-INSERT OR IGNORE INTO canciones (id_cancion, titulo, artista, album, duracion_seg, genero, plataforma_origen, caratula_url)
-VALUES
-(1,'Canción 1','Artista A','Album X',210,'Pop','Spotify','https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=400&h=400&fit=crop'),
-(2,'Canción 2','Artista B','Album Y',180,'Rock','YouTube','https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=400&h=400&fit=crop'),
-(3,'Canción 3','Artista C','Album Z',240,'Jazz','SoundCloud','https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=400&h=400&fit=crop'),
-(4,'Canción 4','Artista D','Album W',300,'Electrónica','Local','https://images.unsplash.com/photo-1465847899084-d164df4dedc6?w=400&h=400&fit=crop');
-
-INSERT OR IGNORE INTO playlists (id_playlist, id_usuario, nombre, descripcion, publica)
-VALUES
-(1,1,'Mis Favoritas','Canciones que me gustan',1),
-(2,2,'Jazz para la tarde','Playlist de Jazz relajante',1);
-
-INSERT OR IGNORE INTO playlist_canciones (id_playlist, id_cancion, orden)
-VALUES
-(1,1,1),
-(1,2,2),
-(2,3,1);
-
-INSERT OR IGNORE INTO historial_reproduccion (id_historial, id_usuario, id_cancion, duracion_reproducida)
-VALUES
-(1,1,1,210),
-(2,1,2,180),
-(3,2,3,240),
-(4,3,4,300);
-
-INSERT OR IGNORE INTO recomendaciones (id_recomendacion, id_usuario, id_cancion, score)
-VALUES
-(1,1,3,0.95),
-(2,2,1,0.85),
-(3,3,2,0.90);
-
-INSERT OR IGNORE INTO descargas (id_descarga, id_usuario, id_cancion, formato)
-VALUES
-(1,1,1,'mp3'),
-(2,1,2,'wav'),
-(3,2,3,'mp3');
+(1,'Usuario','usuario@mail.com','hash',NULL,NULL,NULL);
 """
 
 class Database:

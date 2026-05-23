@@ -340,11 +340,11 @@ export const bridge = {
 
   async getVolume(): Promise<{ ok: boolean; data?: VolumeData; error?: string }> {
     const api = getApi();
-    if (!api) return { ok: true, data: { volume: 80 } };
+        if (!api) return { ok: true, data: { volume: 100 } };
     try {
       return await api.get_volume();
     } catch {
-      return { ok: true, data: { volume: 80 } };
+      return { ok: true, data: { volume: 100 } };
     }
   },
 

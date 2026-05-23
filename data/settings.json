@@ -1,5 +1,6 @@
 {
-  "volume": 99,
+  "volume": 53,
   "theme": "dark",
-  "download_quality": "192"
-}}
+  "download_quality": "192",
+  "autoplay": false
+}

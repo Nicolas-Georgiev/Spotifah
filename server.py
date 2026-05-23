@@ -41,24 +41,44 @@ class SPAHandler(SimpleHTTPRequestHandler):
             self.send_response(404)
             self.end_headers()
             return
-        covers_dir = os.path.join(self.data_dir, "covers") if self.data_dir else None
-        if not covers_dir or not os.path.isdir(covers_dir):
+        parts = filename.rsplit(".", 1)
+        if len(parts) != 2:
             self.send_response(404)
             self.end_headers()
             return
-        filepath = os.path.join(covers_dir, filename)
-        if not os.path.isfile(filepath):
+        song_id_str, ext = parts
+        ctype = mimetypes.guess_type(f"x.{ext}")[0] or "image/jpeg"
+
+        db_path = os.path.join(self.data_dir, "BDD", "ekho.db") if self.data_dir else None
+        if not db_path or not os.path.isfile(db_path):
             self.send_response(404)
             self.end_headers()
             return
-        ctype, _ = mimetypes.guess_type(filepath)
-        self.send_response(200)
-        self.send_header("Content-Type", ctype or "image/jpeg")
-        self.send_header("Cache-Control", "max-age=86400")
-        self.send_header("Content-Length", os.path.getsize(filepath))
+
+        try:
+            import sqlite3
+            conn = sqlite3.connect(db_path)
+            conn.row_factory = sqlite3.Row
+            try:
+                cur = conn.cursor()
+                cur.execute("SELECT caratula_blob FROM canciones WHERE id_cancion = ?", (int(song_id_str),))
+                row = cur.fetchone()
+                if row and row["caratula_blob"]:
+                    blob = row["caratula_blob"]
+                    self.send_response(200)
+                    self.send_header("Content-Type", ctype)
+                    self.send_header("Content-Length", str(len(blob)))
+                    self.send_header("Cache-Control", "max-age=86400")
+                    self.end_headers()
+                    self.wfile.write(blob)
+                    return
+            finally:
+                conn.close()
+        except Exception:
+            pass
+
+        self.send_response(404)
         self.end_headers()
-        with open(filepath, "rb") as f:
-            self.wfile.write(f.read())
 
     def log_message(self, format, *args):
         pass

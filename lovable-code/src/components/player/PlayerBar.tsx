@@ -16,7 +16,7 @@ interface NowPlayingInfo {
 export function PlayerBar() {
   const [np, setNp] = useState<NowPlayingInfo | null>(null);
   const [position, setPosition] = useState(0);
-  const [volume, setVolume] = useState(80);
+  const [volume, setVolume] = useState(100);
   const [muted, setMuted] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -47,6 +47,10 @@ export function PlayerBar() {
       } else {
         setNp(null);
       }
+      const volRes = await bridge.getVolume();
+      if (volRes.ok && volRes.data !== undefined) {
+        setVolume(volRes.data.volume);
+      }
     };
     poll();
     if (pollingRef.current) clearInterval(pollingRef.current);
@@ -54,7 +58,6 @@ export function PlayerBar() {
   }, []);
 
   useEffect(() => {
-    bridge.getVolume().then((r) => { if (r.ok && r.data) setVolume(r.data.volume); });
     startPolling();
 
     const pollPos = async () => {

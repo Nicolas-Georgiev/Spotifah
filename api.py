@@ -126,30 +126,36 @@ class Api:
                 if f".{c}" in url_lower or f"image={c}" in url_lower:
                     ext = "jpeg" if c == "jpeg" else c
                     break
-            local_path = os.path.join(self._covers_dir, f"{song_id}.{ext}")
-            if not os.path.exists(local_path):
-                import urllib.request
-                urllib.request.urlretrieve(external_url, local_path)
             local_url = f"/api/covers/{song_id}.{ext}"
-            self._save_cover_to_db(song_id, local_url)
-            return local_url
-        except Exception:
-            return external_url
 
-    def _save_cover_to_db(self, song_id: int, cover_url: str):
-        try:
+            conn = self.db.get_connection()
+            try:
+                cur = conn.cursor()
+                cur.execute("SELECT caratula_blob FROM canciones WHERE id_cancion = ?", (song_id,))
+                row = cur.fetchone()
+                if row and row["caratula_blob"]:
+                    return local_url
+            finally:
+                conn.close()
+
+            import urllib.request
+            with urllib.request.urlopen(external_url) as response:
+                image_data = response.read()
+
             conn = self.db.get_connection()
             try:
                 cur = conn.cursor()
                 cur.execute(
-                    "UPDATE canciones SET caratula_url = ? WHERE id_cancion = ?",
-                    (cover_url, song_id),
+                    "UPDATE canciones SET caratula_blob = ?, caratula_url = ? WHERE id_cancion = ?",
+                    (image_data, local_url, song_id),
                 )
                 conn.commit()
             finally:
                 conn.close()
+
+            return local_url
         except Exception:
-            pass
+            return external_url
 
     def _ensure_cover(self, song_id: int, title: str, artist: str, album: str, mp3_path: str, plataforma: str) -> str:
         for meta_file in ["spotify_metadata.json", "youtube_metadata.json"]:
@@ -191,11 +197,17 @@ class Api:
                                 ext = "png"
                             elif tag.mime == "image/webp":
                                 ext = "webp"
-                            cover_path = os.path.join(self._covers_dir, f"{song_id}.{ext}")
-                            with open(cover_path, "wb") as f:
-                                f.write(tag.data)
                             local_url = f"/api/covers/{song_id}.{ext}"
-                            self._save_cover_to_db(song_id, local_url)
+                            conn = self.db.get_connection()
+                            try:
+                                cur = conn.cursor()
+                                cur.execute(
+                                    "UPDATE canciones SET caratula_blob = ?, caratula_url = ? WHERE id_cancion = ?",
+                                    (tag.data, local_url, song_id),
+                                )
+                                conn.commit()
+                            finally:
+                                conn.close()
                             return local_url
             except Exception:
                 pass
@@ -597,6 +609,9 @@ class Api:
             pygame.mixer.init()
             self.library = MusicLibrary(self._music_dir)
             self._music_controller = MusicController(self.library)
+            settings = self.get_settings()
+            saved_volume = settings.get("volume", 100)
+            pygame.mixer.music.set_volume(saved_volume / 100.0)
             self._pygame_inited = True
 
     def play_song(self, song_id: str) -> dict:
@@ -802,9 +817,9 @@ class Api:
     def get_volume(self) -> dict:
         try:
             settings = self.get_settings()
-            return {"ok": True, "data": {"volume": settings.get("volume", 80)}}
+            return {"ok": True, "data": {"volume": settings.get("volume", 100)}}
         except Exception:
-            return {"ok": True, "data": {"volume": 80}}
+            return {"ok": True, "data": {"volume": 100}}
 
     def get_recently_played(self, limit: int = 10) -> list:
         try:
@@ -852,9 +867,9 @@ class Api:
             if os.path.exists(self._settings_file):
                 with open(self._settings_file, "r", encoding="utf-8") as f:
                     return json.load(f)
-            return {"volume": 80, "theme": "dark", "download_quality": "192"}
+            return {"volume": 100, "theme": "dark", "download_quality": "192"}
         except Exception:
-            return {"volume": 80, "theme": "dark", "download_quality": "192"}
+            return {"volume": 100, "theme": "dark", "download_quality": "192"}
 
     def update_settings(self, data: dict) -> dict:
         try:
