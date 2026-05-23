@@ -21,12 +21,19 @@ class SPAHandler(SimpleHTTPRequestHandler):
             return str(Path(sys._MEIPASS) / "web")
         return str(Path(__file__).parent / "web")
 
+    @staticmethod
+    def _get_portadas_dir():
+        base = Path(sys._MEIPASS) if getattr(sys, "frozen", False) else Path(__file__).parent
+        return str(base / "assets" / "portadas")
+
     def do_GET(self):
         path = self.path.split("?")[0]
         if path.startswith("/api/covers/"):
             return self._serve_cover(path)
         if path.startswith("/api/playlist-covers/"):
             return self._serve_playlist_cover(path)
+        if path.startswith("/portadas/"):
+            return self._serve_portada(path)
         if path.startswith("/assets/") or path == "/favicon.ico":
             return super().do_GET()
         web_dir = self._get_web_dir()
@@ -147,6 +154,32 @@ class SPAHandler(SimpleHTTPRequestHandler):
 
         self.send_response(404)
         self.end_headers()
+
+    def _serve_portada(self, path):
+        filename = path.split("/portadas/")[-1]
+        if not filename or ".." in filename or "/" in filename:
+            self.send_response(404)
+            self.end_headers()
+            return
+        portadas_dir = self._get_portadas_dir()
+        filepath = os.path.join(portadas_dir, filename)
+        if not os.path.isfile(filepath):
+            self.send_response(404)
+            self.end_headers()
+            return
+        ctype = mimetypes.guess_type(filename)[0] or "image/svg+xml"
+        try:
+            with open(filepath, "rb") as f:
+                data = f.read()
+            self.send_response(200)
+            self.send_header("Content-Type", ctype)
+            self.send_header("Content-Length", str(len(data)))
+            self.send_header("Cache-Control", "max-age=86400")
+            self.end_headers()
+            self.wfile.write(data)
+        except Exception:
+            self.send_response(404)
+            self.end_headers()
 
     def log_message(self, format, *args):
         pass

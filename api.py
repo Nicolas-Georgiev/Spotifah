@@ -742,16 +742,19 @@ class Api:
                 cur.execute(
                     "SELECT id_playlist, nombre, descripcion, publica FROM playlists ORDER BY id_playlist"
                 )
-                playlists = [
-                    {
-                        "id": str(row["id_playlist"]),
+                playlists = []
+                for row in cur.fetchall():
+                    pid = str(row["id_playlist"])
+                    cover = self._playlist_cover_url(row["id_playlist"])
+                    if not cover and row["nombre"] == "Favoritos":
+                        cover = "/portadas/favorites.svg"
+                    playlists.append({
+                        "id": pid,
                         "name": row["nombre"],
                         "description": row["descripcion"] or "",
                         "is_public": bool(row["publica"]),
-                        "cover_url": self._playlist_cover_url(row["id_playlist"]),
-                    }
-                    for row in cur.fetchall()
-                ]
+                        "cover_url": cover,
+                    })
                 playlists.insert(
                     0,
                     {
@@ -759,7 +762,7 @@ class Api:
                         "name": "Todas mis canciones",
                         "description": "Todas las canciones en tu biblioteca",
                         "is_public": False,
-                        "cover_url": "",
+                        "cover_url": "/portadas/all-songs.svg",
                     },
                 )
                 return playlists
@@ -772,7 +775,7 @@ class Api:
                     "name": "Todas mis canciones",
                     "description": "",
                     "is_public": False,
-                    "cover_url": "",
+                    "cover_url": "/portadas/all-songs.svg",
                 }
             ]
 
