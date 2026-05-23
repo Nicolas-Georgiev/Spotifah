@@ -1,7 +1,8 @@
 
 __pycache__/
 
-data/
+data\BDD\ekho.db
+data\settings.json
 # Logs
 logs
 *.log
