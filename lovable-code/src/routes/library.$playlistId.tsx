@@ -52,6 +52,10 @@ function PlaylistDetail() {
     setSongs((prev) => prev.filter((s) => s.id !== songId));
   };
 
+  const handleSongDeleted = async (songId: string) => {
+    setSongs((prev) => prev.filter((s) => s.id !== songId));
+  };
+
   return (
     <div className="space-y-8">
       <Link to="/library" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
@@ -72,6 +76,7 @@ function PlaylistDetail() {
         fmtDuration={fmtDuration}
         playlistId={playlist.id}
         onRemoveFromPlaylist={handleRemove}
+        onSongDeleted={handleSongDeleted}
       />
     </div>
   );
