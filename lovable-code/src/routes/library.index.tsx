@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { PlaylistGrid } from "../components/library/PlaylistGrid";
 import { useAppData } from "../lib/app-data";
 
@@ -8,6 +9,10 @@ export const Route = createFileRoute("/library/")({
 
 function LibraryPage() {
   const { playlists, refreshPlaylists } = useAppData();
+
+  useEffect(() => {
+    refreshPlaylists();
+  }, []);
 
   return (
     <div className="space-y-8">

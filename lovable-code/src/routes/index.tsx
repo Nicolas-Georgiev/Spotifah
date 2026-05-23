@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { Greeting } from "../components/home/Greeting";
 import { QuickAccessSection } from "../components/home/QuickAccessSection";
 import { RecentSongsSection } from "../components/home/RecentSongsSection";
@@ -9,7 +10,12 @@ export const Route = createFileRoute("/")({
 });
 
 function Home() {
-  const { playlists, recentSongs } = useAppData();
+  const { playlists, recentSongs, refreshPlaylists, refreshRecentSongs } = useAppData();
+
+  useEffect(() => {
+    refreshPlaylists();
+    refreshRecentSongs();
+  }, []);
 
   return (
     <div className="space-y-10">
