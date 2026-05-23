@@ -42,31 +42,9 @@ class Spotify2MP3Controller(BaseController):
     
     def process_conversion(self, spotify_url: str) -> str: # type: ignore
         """Procesar conversión de Spotify a MP3"""
-        try:
-            # Iniciar sesión de descarga
-            self.show_progress("🎵 Iniciando sesión de conversión...")
-            self.model.start_download_session(is_batch=False)
-            
-            # Mostrar pasos del proceso
-            self.view.show_conversion_steps()
-            
-            # Procesar conversión
-            self.show_progress("🔍 Extrayendo metadatos de Spotify...")
-            result_path = self.model.convert(spotify_url)
-            
-            # Finalizar sesión
-            self.model.finish_download_session()
-            
-            return result_path
-            
-        except Exception as e:
-            # Limpiar sesión en caso de error
-            if hasattr(self.model, 'finish_download_session'):
-                try:
-                    self.model.finish_download_session()
-                except:
-                    pass
-            raise e
+        self.view.show_conversion_steps()
+        self.show_progress("🔍 Extrayendo metadatos de Spotify...")
+        return self.model.convert(spotify_url)
     
     def convert_single_track(self) -> bool:
         """Convertir una sola pista - retorna True si fue exitoso"""

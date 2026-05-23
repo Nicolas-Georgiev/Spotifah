@@ -17,6 +17,13 @@ import urllib.request
 import datetime
 from pathlib import Path
 
+# yt-dlp Python API (preferido sobre el subprocess)
+try:
+    import yt_dlp
+    _HAS_YTDLP_API = True
+except ImportError:
+    _HAS_YTDLP_API = False
+
 # Importar BaseModel
 try:
     import sys as _sys
@@ -594,34 +601,53 @@ class SoundCloudConverter(BaseModel):
             print(f"❌ Excepción con scdl: {e}")
             return False
     
-    def download_with_ytdlp(self, url, output_path):
-        """Descarga usando yt-dlp como respaldo"""
+    def download_with_ytdlp(self, url, output_path, filename_tmpl=None):
+        """Descarga usando la API Python de yt-dlp (no subprocess)"""
+        # Plantilla: si se pasa filename_tmpl, ├║sala directamente; si no, %(title)s.%(ext)s dentro de output_path
+        if filename_tmpl:
+            outtmpl = str(filename_tmpl)
+        else:
+            outtmpl = str(Path(output_path) / '%(title)s.%(ext)s')
+
+        ydl_opts = {
+            'format': 'bestaudio/best',
+            'outtmpl': outtmpl,
+            'postprocessors': [{
+                'key': 'FFmpegExtractAudio',
+                'preferredcodec': 'mp3',
+                'preferredquality': '0',
+            }],
+            'quiet': True,
+            'no_warnings': True,
+            'noplaylist': True,
+        }
+
+        if _HAS_YTDLP_API:
+            try:
+                print(f'\U0001f3b5 Descargando con yt-dlp API: {url}')
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    ydl.download([url])
+                print('\u2705 Descarga exitosa con yt-dlp')
+                return True
+            except Exception as e:
+                print(f'\u274c Error con yt-dlp API: {e}')
+                return False
+
+        # Fallback: subprocess (solo si la API no est├í disponible)
         try:
             cmd = [
-                "yt-dlp",
-                "-x", "--audio-format", "mp3",
-                "--audio-quality", "0",
-                "--embed-thumbnail",
-                "--add-metadata",
-                "-o", str(output_path / "%(title)s.%(ext)s"),
-                url
+                'yt-dlp', '-x', '--audio-format', 'mp3', '--audio-quality', '0',
+                '--no-playlist', '-o', outtmpl, url
             ]
-            
-            print(f"🎵 Descargando con yt-dlp: {url}")
+            print(f'\U0001f3b5 Descargando con yt-dlp CLI: {url}')
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
-            
             if result.returncode == 0:
-                print("✅ Descarga exitosa con yt-dlp")
+                print('\u2705 Descarga exitosa con yt-dlp')
                 return True
-            else:
-                print(f"❌ Error con yt-dlp: {result.stderr}")
-                return False
-                
-        except subprocess.TimeoutExpired:
-            print("❌ Timeout en la descarga con yt-dlp")
+            print(f'\u274c Error con yt-dlp: {result.stderr}')
             return False
         except Exception as e:
-            print(f"❌ Excepción con yt-dlp: {e}")
+            print(f'\u274c Excepci├│n con yt-dlp: {e}')
             return False
     
     def get_track_info(self, url):
@@ -914,67 +940,69 @@ class SoundCloudConverter(BaseModel):
     def convert(self, url, custom_name=None):
         """Convierte un link de SoundCloud a MP3"""
         if not self.validate_soundcloud_url(url):
-            print("❌ URL no válida de SoundCloud")
+            print('\u274c URL no v\u00e1lida de SoundCloud')
             return None
-        
-        print(f"🎵 Iniciando conversión: {url}")
-        
+
+        print(f'\U0001f3b5 Iniciando conversi\u00f3n: {url}')
+
         # Verificar dependencias
         deps = self.check_dependencies()
-        print(f"📋 Dependencias: {deps}")
-        
         if not any(deps.values()):
-            print("❌ No hay herramientas de descarga disponibles")
-            print("Instala: pip install scdl o pip install yt-dlp")
+            print('\u274c No hay herramientas de descarga disponibles')
             return None
-        
-        # Obtener información del track en formato canónico
+
+        # Obtener info del track
         track_info = self.get_track_info(url)
-        print(f"📝 Info extraída: {track_info['titulo']} - {track_info['artista']}")
-        
-        # Crear carpeta específica para este download
-        safe_name = re.sub(r'[^\w\s-]', '', f"{track_info['artista']} - {track_info['titulo']}")
-        safe_name = re.sub(r'[-\s]+', '-', safe_name).strip('-')
-        
+        print(f'\U0001f4dd Info: {track_info["titulo"]} - {track_info["artista"]}')
+
+        # Nombre final del archivo
         if custom_name:
-            safe_name = re.sub(r'[^\w\s-]', '', custom_name)
-            safe_name = re.sub(r'[-\s]+', '-', safe_name).strip('-')
-        
-        output_path = self.download_folder / safe_name
-        output_path.mkdir(exist_ok=True)
-        
-        # Intentar descarga con diferentes métodos
+            base_name = re.sub(r'[<>:"/\\|?*]', '', custom_name).strip()
+        else:
+            raw = f'{track_info["artista"]} - {track_info["titulo"]}'
+            base_name = re.sub(r'[<>:"/\\|?*]', '', raw).strip()
+            base_name = base_name[:100]  # limitar longitud
+
+        final_path = self.download_folder / f'{base_name}.mp3'
+        # Plantilla para yt-dlp: fichero exacto sin extensi\u00f3n (yt-dlp a\u00f1ade .mp3)
+        outtmpl = str(self.download_folder / f'{base_name}.%(ext)s')
+
+        # Intentar descarga
         download_success = False
-        
+
         if deps['scdl']:
-            download_success = self.download_with_scdl(url, output_path)
-        
+            # scdl descarga a una carpeta temporal y luego buscamos el fichero
+            tmp_dir = self.download_folder / f'_tmp_{base_name}'
+            tmp_dir.mkdir(exist_ok=True)
+            if self.download_with_scdl(url, tmp_dir):
+                mp3s = sorted(tmp_dir.glob('*.mp3'), key=lambda x: x.stat().st_mtime, reverse=True)
+                if mp3s:
+                    mp3s[0].replace(final_path)
+                    download_success = True
+            # Limpiar carpeta temporal
+            try:
+                shutil.rmtree(tmp_dir, ignore_errors=True)
+            except Exception:
+                pass
+
         if not download_success and deps['yt-dlp']:
-            download_success = self.download_with_ytdlp(url, output_path)
-        
+            download_success = self.download_with_ytdlp(url, self.download_folder, filename_tmpl=outtmpl)
+
         if not download_success:
-            print("❌ Falló la descarga con todos los métodos")
+            print('\u274c Fall\u00f3 la descarga con todos los m\u00e9todos')
             return None
-        
-        # Encontrar archivo descargado
-        mp3_files = self.find_downloaded_files(output_path)
-        
-        if not mp3_files:
-            print("❌ No se encontraron archivos MP3")
+
+        if not final_path.exists():
+            print(f'\u274c Archivo esperado no encontrado: {final_path}')
             return None
-        
-        downloaded_file = mp3_files[0]
-        print(f"📁 Archivo descargado: {downloaded_file}")
-        
-        # Mejorar metadatos del archivo
+
+        # Mejorar metadatos
         if HAS_METADATA:
-            self.enhance_metadata(downloaded_file, track_info)
-        
-        # Organizar archivo: mover a data/music
-        final_path = self.organize_downloaded_file(downloaded_file)
+            self.enhance_metadata(final_path, track_info)
+
         mp3_abs = os.path.normpath(os.path.abspath(str(final_path)))
-        
-        # ── Guardar en BD (mismo patrón que spotify2mp3 y youtube2mp3) ──
+
+        # Guardar en BD
         if _DB_ADAPTER_OK:
             try:
                 metadata_bd = {
@@ -991,10 +1019,9 @@ class SoundCloudConverter(BaseModel):
                 id_cancion = upsert_cancion(metadata_bd)
                 registrar_descarga(id_cancion, formato='mp3')
             except Exception as _bd_err:
-                print(f"⚠️ No se pudo guardar en BD: {_bd_err}")
-        # ─────────────────────────────────────────────────────────────────
-        
-        print(f"✅ Conversión completada: {final_path}")
+                print(f'\u26a0\ufe0f No se pudo guardar en BD: {_bd_err}')
+
+        print(f'\u2705 Conversi\u00f3n completada: {final_path}')
         return str(final_path)
 
 def convert_soundcloud(url, download_folder="data/music"):
