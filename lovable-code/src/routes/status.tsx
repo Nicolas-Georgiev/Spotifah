@@ -1,7 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Sparkles, Music2, Check, X } from "lucide-react";
+import { Sparkles, Music2, Check } from "lucide-react";
 import { bridge } from "../lib/bridge";
+import { LoadingMessage } from "../components/shared/LoadingMessage";
+import { StatCard } from "../components/status/StatCard";
+import { DependencyRow } from "../components/status/DependencyRow";
+import { GlassCard } from "../components/shared/GlassCard";
 
 export const Route = createFileRoute("/status")({
   component: StatusPage,
@@ -31,11 +35,7 @@ function StatusPage() {
   }, []);
 
   if (!status) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <p className="text-muted-foreground">Cargando estado del sistema...</p>
-      </div>
-    );
+    return <LoadingMessage message="Cargando estado del sistema..." />;
   }
 
   const depEntries = Object.entries(DEP_NAMES);
@@ -54,72 +54,34 @@ function StatusPage() {
       </header>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="glass rounded-2xl p-5">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Music2 className="w-4 h-4" />
-            <span>Biblioteca</span>
-          </div>
-          <p className="text-3xl font-semibold mt-4">{status.music_count}</p>
-          <p className="text-xs text-muted-foreground mt-3">canciones en tu biblioteca</p>
-        </div>
-        <div className="glass rounded-2xl p-5">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Check className="w-4 h-4" />
-            <span>Dependencias</span>
-          </div>
-          <p className="text-3xl font-semibold mt-4">{okCount}/{depEntries.length}</p>
-          <p className="text-xs text-muted-foreground mt-3">librerias instaladas</p>
-        </div>
-        <div className="glass rounded-2xl p-5">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Sparkles className="w-4 h-4" />
-            <span>FFmpeg</span>
-          </div>
-          <p className="text-3xl font-semibold mt-4">{status.ffmpeg ? "Si" : "No"}</p>
-          <p className="text-xs text-muted-foreground mt-3">motor de conversion de audio</p>
-        </div>
+        <StatCard
+          icon={<Music2 className="w-4 h-4" />}
+          label="Biblioteca"
+          value={status.music_count}
+          description="canciones en tu biblioteca"
+        />
+        <StatCard
+          icon={<Check className="w-4 h-4" />}
+          label="Dependencias"
+          value={`${okCount}/${depEntries.length}`}
+          description="librerias instaladas"
+        />
+        <StatCard
+          icon={<Sparkles className="w-4 h-4" />}
+          label="FFmpeg"
+          value={status.ffmpeg ? "Si" : "No"}
+          description="motor de conversion de audio"
+        />
       </div>
 
-      <section className="glass rounded-2xl p-6">
+      <GlassCard>
         <h2 className="text-base font-semibold mb-5">Dependencias del Sistema</h2>
         <div className="space-y-3">
-          {depEntries.map(([key, label]) => {
-            const ok = status.dependencies[key];
-            return (
-              <div key={key} className="flex items-center justify-between p-3 rounded-lg bg-muted/20">
-                <span className="text-sm font-mono">{label}</span>
-                {ok ? (
-                  <span className="inline-flex items-center gap-1 text-xs text-green-400">
-                    <Check className="w-3.5 h-3.5" /> Instalado
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 text-xs text-red-400">
-                    <X className="w-3.5 h-3.5" /> No instalado
-                  </span>
-                )}
-              </div>
-            );
-          })}
+          {depEntries.map(([key, label]) => (
+            <DependencyRow key={key} label={label} ok={!!status.dependencies[key]} />
+          ))}
         </div>
-      </section>
-
-      <section className="glass rounded-2xl p-6">
-        <h2 className="text-base font-semibold mb-5">Componentes del Sistema</h2>
-        <div className="space-y-3">
-          <div className="flex items-center justify-between p-3 rounded-lg bg-muted/20">
-            <span className="text-sm font-mono">FFmpeg</span>
-            {status.ffmpeg ? (
-              <span className="inline-flex items-center gap-1 text-xs text-green-400">
-                <Check className="w-3.5 h-3.5" /> Disponible
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1 text-xs text-red-400">
-                <X className="w-3.5 h-3.5" /> No encontrado en PATH
-              </span>
-            )}
-          </div>
-        </div>
-      </section>
+      </GlassCard>
     </div>
   );
 }
