@@ -1,5 +1,5 @@
 .env
-data/
+data/settings.json
 data/BDD/ekho.db
 
 # Python cache
