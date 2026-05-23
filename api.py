@@ -689,7 +689,7 @@ class Api:
         result = guardar_playlist_json_completa(
             id_usuario=1,
             nombre=task["playlist_name"],
-            descripcion=f'Importada de {platform_name} | {url}',
+            descripcion=f'Importada de {platform_name} ',
             canciones=song_ids,
             caratula_url=cover_url,
         )
