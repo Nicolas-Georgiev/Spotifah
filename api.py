@@ -13,6 +13,7 @@ import io
 with contextlib.redirect_stdout(io.StringIO()):
     from model.spotify2mp3_model import Spotify2MP3Converter
     from model.youtube2mp3_model import YouTube2MP3Converter
+    from model.soundcloud2mp3 import SoundCloudConverter
     from controller.music_controller import MusicController
     from model.music_library import MusicLibrary
     from databaseManager.db import Database
@@ -45,6 +46,8 @@ class Api:
         self._player_lock = threading.Lock()
 
         threading.Thread(target=self._ensure_system_playlists, daemon=True).start()
+
+        self._current_song_id = None
 
     def _resolve_data_dir(self):
         if self._is_frozen:
@@ -87,6 +90,29 @@ class Api:
                 conn.close()
         except Exception:
             pass
+
+    def _ensure_favorites_playlist(self):
+        try:
+            conn = self.db.get_connection()
+            try:
+                cur = conn.cursor()
+                cur.execute(
+                    "SELECT id_playlist FROM playlists WHERE nombre = ? AND id_usuario = ?",
+                    ("Favoritos", 1),
+                )
+                row = cur.fetchone()
+                if row:
+                    return row["id_playlist"]
+                cur.execute(
+                    "INSERT INTO playlists (id_usuario, nombre, descripcion, publica) VALUES (?, ?, ?, ?)",
+                    (1, "Favoritos", "Tus canciones favoritas", 0),
+                )
+                conn.commit()
+                return cur.lastrowid
+            finally:
+                conn.close()
+        except Exception:
+            return None
 
     # ── Cover extraction & local caching ────────────────────────
 
@@ -202,6 +228,25 @@ class Api:
             f = io.StringIO()
             with contextlib.redirect_stdout(f), contextlib.redirect_stderr(f):
                 converter = Spotify2MP3Converter()
+                result_path = converter.convert(url)
+            return {
+                "ok": True,
+                "data": {
+                    "path": result_path,
+                    "filename": os.path.basename(result_path),
+                    "log": f.getvalue(),
+                },
+            }
+        except Exception as e:
+            return {"ok": False, "error": str(e)}
+
+    # ── SoundCloud → MP3 ───────────────────────────────────────
+
+    def convert_soundcloud(self, url: str) -> dict:
+        try:
+            f = io.StringIO()
+            with contextlib.redirect_stdout(f), contextlib.redirect_stderr(f):
+                converter = SoundCloudConverter(self._music_dir)
                 result_path = converter.convert(url)
             return {
                 "ok": True,
@@ -351,6 +396,147 @@ class Api:
         except Exception as e:
             return {"ok": False, "error": str(e)}
 
+    # ── Playlist CRUD ─────────────────────────────────────────
+
+    def create_playlist(self, name: str, description: str = "") -> dict:
+        try:
+            conn = self.db.get_connection()
+            try:
+                cur = conn.cursor()
+                cur.execute(
+                    "INSERT INTO playlists (id_usuario, nombre, descripcion, publica) VALUES (?, ?, ?, ?)",
+                    (1, name.strip(), description.strip(), 0),
+                )
+                conn.commit()
+                new_id = cur.lastrowid
+                return {
+                    "ok": True,
+                    "data": {
+                        "id": str(new_id),
+                        "name": name.strip(),
+                        "description": description.strip(),
+                        "is_public": False,
+                    },
+                }
+            finally:
+                conn.close()
+        except Exception as e:
+            return {"ok": False, "error": str(e)}
+
+    def delete_playlist(self, playlist_id: str) -> dict:
+        if playlist_id in ("all", "favorites"):
+            return {"ok": False, "error": "No se puede eliminar esta playlist"}
+        try:
+            conn = self.db.get_connection()
+            try:
+                cur = conn.cursor()
+                cur.execute(
+                    "DELETE FROM playlists WHERE id_playlist = ?",
+                    (int(playlist_id),),
+                )
+                conn.commit()
+                if cur.rowcount:
+                    return {"ok": True, "data": {"message": "Playlist eliminada"}}
+                return {"ok": False, "error": "Playlist no encontrada"}
+            finally:
+                conn.close()
+        except Exception as e:
+            return {"ok": False, "error": str(e)}
+
+    def rename_playlist(self, playlist_id: str, name: str) -> dict:
+        if playlist_id in ("all",):
+            return {"ok": False, "error": "No se puede renombrar esta playlist"}
+        try:
+            conn = self.db.get_connection()
+            try:
+                cur = conn.cursor()
+                cur.execute(
+                    "UPDATE playlists SET nombre = ? WHERE id_playlist = ?",
+                    (name.strip(), int(playlist_id)),
+                )
+                conn.commit()
+                if cur.rowcount:
+                    return {"ok": True, "data": {"message": "Playlist renombrada"}}
+                return {"ok": False, "error": "Playlist no encontrada"}
+            finally:
+                conn.close()
+        except Exception as e:
+            return {"ok": False, "error": str(e)}
+
+    def search_songs(self, query: str) -> list:
+        try:
+            conn = self.db.get_connection()
+            try:
+                cur = conn.cursor()
+                pattern = f"%{query}%"
+                cur.execute(
+                    """SELECT id_cancion, titulo, artista, album, duracion_seg,
+                              genero, plataforma_origen, ruta_local, caratula_url
+                       FROM canciones
+                       WHERE titulo LIKE ? OR artista LIKE ? OR album LIKE ?
+                       ORDER BY titulo LIMIT 50""",
+                    (pattern, pattern, pattern),
+                )
+                rows = cur.fetchall()
+                result = []
+                for row in rows:
+                    sid = row["id_cancion"]
+                    cover = row["caratula_url"] or ""
+                    if not cover:
+                        cover = self._ensure_cover(sid, row["titulo"], row["artista"] or "", row["album"] or "", row["ruta_local"] or "", row["plataforma_origen"] or "")
+                    cover = self._localize_cover(sid, cover)
+                    result.append({
+                        "id": str(sid),
+                        "title": row["titulo"],
+                        "artist": row["artista"] or "",
+                        "album": row["album"] or "",
+                        "duration": row["duracion_seg"] or 0,
+                        "genre": row["genero"] or "",
+                        "source": row["plataforma_origen"] or "",
+                        "path": row["ruta_local"] or "",
+                        "cover_url": cover,
+                    })
+                return result
+            finally:
+                conn.close()
+        except Exception:
+            return []
+
+    def toggle_favorite(self, song_id: str) -> dict:
+        try:
+            fav_id = self._ensure_favorites_playlist()
+            if not fav_id:
+                return {"ok": False, "error": "No se pudo obtener la playlist de favoritos"}
+            conn = self.db.get_connection()
+            try:
+                cur = conn.cursor()
+                cur.execute(
+                    "SELECT 1 FROM playlist_canciones WHERE id_playlist = ? AND id_cancion = ?",
+                    (fav_id, int(song_id)),
+                )
+                is_fav = cur.fetchone() is not None
+                if is_fav:
+                    cur.execute(
+                        "DELETE FROM playlist_canciones WHERE id_playlist = ? AND id_cancion = ?",
+                        (fav_id, int(song_id)),
+                    )
+                else:
+                    cur.execute(
+                        "SELECT COALESCE(MAX(orden), 0) + 1 FROM playlist_canciones WHERE id_playlist = ?",
+                        (fav_id,),
+                    )
+                    nxt = cur.fetchone()[0]
+                    cur.execute(
+                        "INSERT INTO playlist_canciones (id_playlist, id_cancion, orden) VALUES (?, ?, ?)",
+                        (fav_id, int(song_id), nxt),
+                    )
+                conn.commit()
+                return {"ok": True, "data": {"favorite": not is_fav}}
+            finally:
+                conn.close()
+        except Exception as e:
+            return {"ok": False, "error": str(e)}
+
     # ── Playback ───────────────────────────────────────────────
 
     def _init_player(self):
@@ -370,7 +556,7 @@ class Api:
             try:
                 cur = conn.cursor()
                 cur.execute(
-                    "SELECT ruta_local FROM canciones WHERE id_cancion = ?",
+                    "SELECT ruta_local, titulo FROM canciones WHERE id_cancion = ?",
                     (int(song_id),),
                 )
                 row = cur.fetchone()
@@ -383,6 +569,12 @@ class Api:
                         break
                 with self._player_lock:
                     self._music_controller.play()
+                self._current_song_id = song_id
+                cur.execute(
+                    "INSERT INTO historial_reproduccion (id_usuario, id_cancion) VALUES (?, ?)",
+                    (1, int(song_id)),
+                )
+                conn.commit()
                 return {
                     "ok": True,
                     "data": {
@@ -424,11 +616,37 @@ class Api:
         except Exception as e:
             return {"ok": False, "error": str(e)}
 
+    def _sync_current_song_from_player(self):
+        try:
+            idx = self._music_controller.current_index
+            if 0 <= idx < len(self.library.tracks):
+                track_path = os.path.normpath(self.library.tracks[idx])
+                conn = self.db.get_connection()
+                try:
+                    cur = conn.cursor()
+                    cur.execute(
+                        "SELECT id_cancion FROM canciones WHERE ruta_local = ?",
+                        (track_path,),
+                    )
+                    row = cur.fetchone()
+                    if row:
+                        self._current_song_id = str(row["id_cancion"])
+                        cur.execute(
+                            "INSERT INTO historial_reproduccion (id_usuario, id_cancion) VALUES (?, ?)",
+                            (1, row["id_cancion"]),
+                        )
+                        conn.commit()
+                finally:
+                    conn.close()
+        except Exception:
+            pass
+
     def next_song(self) -> dict:
         try:
             self._init_player()
             with self._player_lock:
                 self._music_controller.next_track()
+            self._sync_current_song_from_player()
             return {"ok": True, "data": {"message": "Siguiente cancion"}}
         except Exception as e:
             return {"ok": False, "error": str(e)}
@@ -438,11 +656,127 @@ class Api:
             self._init_player()
             with self._player_lock:
                 self._music_controller.previous_track()
+            self._sync_current_song_from_player()
             return {"ok": True, "data": {"message": "Cancion anterior"}}
         except Exception as e:
             return {"ok": False, "error": str(e)}
 
-    # ── Settings ───────────────────────────────────────────────
+    # ── Now Playing / Position / Volume ───────────────────────
+
+    def get_now_playing(self) -> dict:
+        try:
+            if not self._pygame_inited or not self._music_controller or self._current_song_id is None:
+                return {"ok": True, "data": None}
+            import pygame
+            is_playing = pygame.mixer.music.get_busy()
+            if not is_playing:
+                return {"ok": True, "data": None}
+            conn = self.db.get_connection()
+            try:
+                cur = conn.cursor()
+                cur.execute(
+                    """SELECT id_cancion, titulo, artista, album, duracion_seg,
+                              genero, plataforma_origen, ruta_local, caratula_url
+                       FROM canciones WHERE id_cancion = ?""",
+                    (int(self._current_song_id),),
+                )
+                row = cur.fetchone()
+                if not row:
+                    return {"ok": True, "data": None}
+                pos = pygame.mixer.music.get_pos() // 1000
+                cover = row["caratula_url"] or ""
+                if not cover:
+                    cover = self._ensure_cover(row["id_cancion"], row["titulo"], row["artista"] or "", row["album"] or "", row["ruta_local"] or "", row["plataforma_origen"] or "")
+                cover = self._localize_cover(row["id_cancion"], cover)
+                return {
+                    "ok": True,
+                    "data": {
+                        "id": str(row["id_cancion"]),
+                        "title": row["titulo"],
+                        "artist": row["artista"] or "",
+                        "album": row["album"] or "",
+                        "duration": row["duracion_seg"] or 0,
+                        "cover_url": cover,
+                        "is_playing": bool(is_playing),
+                        "position": pos,
+                    },
+                }
+            finally:
+                conn.close()
+        except Exception:
+            return {"ok": True, "data": None}
+
+    def get_playback_position(self) -> dict:
+        try:
+            if not self._pygame_inited:
+                return {"ok": True, "data": {"position": 0, "is_playing": False}}
+            import pygame
+            pos = pygame.mixer.music.get_pos() // 1000
+            busy = bool(pygame.mixer.music.get_busy())
+            return {"ok": True, "data": {"position": max(0, pos), "is_playing": busy}}
+        except Exception:
+            return {"ok": True, "data": {"position": 0, "is_playing": False}}
+
+    def set_volume(self, volume: int) -> dict:
+        try:
+            v = max(0, min(100, int(volume)))
+            if self._pygame_inited:
+                import pygame
+                pygame.mixer.music.set_volume(v / 100.0)
+            settings = self.get_settings()
+            settings["volume"] = v
+            self.update_settings({"volume": v})
+            return {"ok": True, "data": {"volume": v}}
+        except Exception as e:
+            return {"ok": False, "error": str(e)}
+
+    def get_volume(self) -> dict:
+        try:
+            settings = self.get_settings()
+            return {"ok": True, "data": {"volume": settings.get("volume", 80)}}
+        except Exception:
+            return {"ok": True, "data": {"volume": 80}}
+
+    def get_recently_played(self, limit: int = 10) -> list:
+        try:
+            conn = self.db.get_connection()
+            try:
+                cur = conn.cursor()
+                cur.execute(
+                    """SELECT c.id_cancion, c.titulo, c.artista, c.album, c.duracion_seg,
+                              c.genero, c.plataforma_origen, c.ruta_local, c.caratula_url
+                       FROM historial_reproduccion h
+                       JOIN canciones c ON h.id_cancion = c.id_cancion
+                       WHERE h.id_usuario = 1
+                       GROUP BY c.id_cancion
+                       ORDER BY MAX(h.fecha_reproduccion) DESC
+                       LIMIT ?""",
+                    (limit,),
+                )
+                rows = cur.fetchall()
+                result = []
+                for row in rows:
+                    sid = row["id_cancion"]
+                    cover = row["caratula_url"] or ""
+                    if not cover:
+                        cover = self._ensure_cover(sid, row["titulo"], row["artista"] or "", row["album"] or "", row["ruta_local"] or "", row["plataforma_origen"] or "")
+                    cover = self._localize_cover(sid, cover)
+                    result.append({
+                        "id": str(sid),
+                        "title": row["titulo"],
+                        "artist": row["artista"] or "",
+                        "album": row["album"] or "",
+                        "duration": row["duracion_seg"] or 0,
+                        "genre": row["genero"] or "",
+                        "source": row["plataforma_origen"] or "",
+                        "path": row["ruta_local"] or "",
+                        "cover_url": cover,
+                    })
+                return result
+            finally:
+                conn.close()
+        except Exception:
+            return []
 
     def get_settings(self) -> dict:
         try:
