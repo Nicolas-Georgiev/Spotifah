@@ -185,10 +185,13 @@ export const bridge = {
     }
   },
 
-  async playSong(songId: string): Promise<ActionResult> {
+  async playSong(songId: string, songIds?: string[]): Promise<ActionResult> {
     const api = getApi();
     if (!api) return { ok: false, error: "PyWebView no disponible" };
     try {
+      if (songIds && songIds.length > 0) {
+        return await api.play_song(songId, songIds);
+      }
       return await api.play_song(songId);
     } catch (e: any) {
       return { ok: false, error: e?.message ?? "Error al reproducir" };

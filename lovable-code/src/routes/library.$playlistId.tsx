@@ -44,7 +44,7 @@ function PlaylistDetail() {
 
   const handlePlay = (songId: string) => {
     setPlayingId(songId);
-    bridge.playSong(songId);
+    bridge.playSong(songId, songs.map((s) => s.id));
   };
 
   const handleRemove = async (songId: string) => {

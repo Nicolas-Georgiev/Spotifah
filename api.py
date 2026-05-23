@@ -914,6 +914,9 @@ class Api:
                     except Exception:
                         pass
 
+                if hasattr(self, '_music_controller') and self._music_controller:
+                    self._music_controller.remove_from_queue(int(song_id))
+
                 return {"ok": True, "data": {"message": "Cancion eliminada"}}
             finally:
                 conn.close()
@@ -1099,7 +1102,7 @@ class Api:
             pygame.mixer.music.set_volume(saved_volume / 100.0)
             self._pygame_inited = True
 
-    def play_song(self, song_id: str) -> dict:
+    def play_song(self, song_id: str, song_ids: list = None) -> dict:
         try:
             self._init_player()
             self.library.reload_tracks()
@@ -1123,10 +1126,43 @@ class Api:
                             "UPDATE canciones SET ruta_local = ? WHERE id_cancion = ?",
                             (song_path, int(song_id)),
                         )
-                with self._player_lock:
-                    ok = self._music_controller.play_file(song_path)
-                if not ok:
-                    return {"ok": False, "error": f"No se pudo reproducir: {song_path}"}
+
+                if song_ids and len(song_ids) > 0:
+                    queue_paths = []
+                    queue_ids = []
+                    start_index = 0
+                    for sid in song_ids:
+                        sid_int = int(sid)
+                        cur.execute(
+                            "SELECT ruta_local FROM canciones WHERE id_cancion = ?",
+                            (sid_int,),
+                        )
+                        row2 = cur.fetchone()
+                        if row2 and row2["ruta_local"]:
+                            p = row2["ruta_local"]
+                            if not os.path.exists(p):
+                                fn = os.path.basename(p)
+                                alt = os.path.join(self._music_dir, fn)
+                                if os.path.exists(alt):
+                                    p = os.path.normpath(alt)
+                            p = os.path.normpath(os.path.abspath(p))
+                            queue_paths.append(p)
+                            queue_ids.append(sid_int)
+                            if sid == song_id:
+                                start_index = len(queue_paths) - 1
+                    with self._player_lock:
+                        self._music_controller.set_queue(
+                            queue_paths, queue_ids, start_index
+                        )
+                        ok = self._music_controller.play_from_queue()
+                        if not ok:
+                            return {"ok": False, "error": "No se pudo reproducir desde la cola"}
+                else:
+                    with self._player_lock:
+                        ok = self._music_controller.play_file(song_path)
+                    if not ok:
+                        return {"ok": False, "error": f"No se pudo reproducir: {song_path}"}
+
                 self._current_song_id = song_id
                 cur.execute(
                     "INSERT INTO historial_reproduccion (id_usuario, id_cancion) VALUES (?, ?)",
@@ -1188,6 +1224,24 @@ class Api:
 
     def _sync_current_song_from_player(self):
         try:
+            if self._music_controller.has_queue():
+                idx = self._music_controller._queue_index
+                ids = self._music_controller._queue_ids
+                if 0 <= idx < len(ids):
+                    song_id = ids[idx]
+                    self._current_song_id = str(song_id)
+                    conn = self.db.get_connection()
+                    try:
+                        cur = conn.cursor()
+                        cur.execute(
+                            "INSERT INTO historial_reproduccion (id_usuario, id_cancion) VALUES (?, ?)",
+                            (1, song_id),
+                        )
+                        conn.commit()
+                    finally:
+                        conn.close()
+                    return
+
             idx = self._music_controller.current_index
             if 0 <= idx < len(self.library.tracks):
                 track_path = os.path.normpath(self.library.tracks[idx])

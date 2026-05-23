@@ -122,7 +122,7 @@ export function PlayerBar() {
       await bridge.resumeSong();
     } else {
       const songs = await bridge.getSongs();
-      if (songs.length) await bridge.playSong(songs[0].id);
+      if (songs.length) await bridge.playSong(songs[0].id, songs.map((s) => s.id));
     }
     await refreshNowPlaying();
   };
