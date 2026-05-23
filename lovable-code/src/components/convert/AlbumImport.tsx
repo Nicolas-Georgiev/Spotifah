@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import {
-  Music, ListMusic, ExternalLink, Clock, User, Album,
+  Music, ListMusic, ExternalLink, Clock, Album,
   ChevronDown, ChevronUp, Search,
 } from "lucide-react";
 import { bridge, type AlbumPreviewData, type TrackPreview } from "../../lib/bridge";
@@ -164,12 +164,6 @@ export function AlbumImport({ onNavigateToPlaylist }: Props) {
                   <PlatformBadges platform={preview.platform} />
                 </div>
                 <h3 className="text-2xl font-bold">{preview.name}</h3>
-                {preview.artist && (
-                  <p className="text-muted-foreground flex items-center gap-2">
-                    <User className="w-4 h-4" />
-                    {preview.artist}
-                  </p>
-                )}
                 {preview.year && (
                   <p className="text-muted-foreground text-sm">{preview.year}</p>
                 )}

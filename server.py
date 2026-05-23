@@ -51,6 +51,27 @@ class SPAHandler(SimpleHTTPRequestHandler):
         song_id_str, ext = parts
         ctype = mimetypes.guess_type(f"x.{ext}")[0] or "image/jpeg"
 
+        if song_id_str.startswith("preview_"):
+            covers_dir = os.path.join(self.data_dir, "covers") if self.data_dir else None
+            if covers_dir:
+                filepath = os.path.join(covers_dir, filename)
+                if os.path.isfile(filepath):
+                    try:
+                        with open(filepath, "rb") as f:
+                            data = f.read()
+                        self.send_response(200)
+                        self.send_header("Content-Type", ctype)
+                        self.send_header("Content-Length", str(len(data)))
+                        self.send_header("Cache-Control", "max-age=86400")
+                        self.end_headers()
+                        self.wfile.write(data)
+                        return
+                    except Exception:
+                        pass
+            self.send_response(404)
+            self.end_headers()
+            return
+
         db_path = os.path.join(self.data_dir, "BDD", "ekho.db") if self.data_dir else None
         if not db_path or not os.path.isfile(db_path):
             self.send_response(404)

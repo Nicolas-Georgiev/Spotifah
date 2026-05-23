@@ -358,9 +358,27 @@ class Api:
 
     # ── Album Preview ────────────────────────────────────────────
 
+    def _localize_preview_cover(self, cover_url: str) -> str:
+        if not cover_url or cover_url.startswith("/api/"):
+            return cover_url
+        import hashlib, urllib.request
+        h = hashlib.md5(cover_url.encode()).hexdigest()[:16]
+        ext = "jpg"
+        local = f"/api/covers/preview_{h}.{ext}"
+        local_path = os.path.join(self._covers_dir, f"preview_{h}.{ext}")
+        if os.path.exists(local_path):
+            return local
+        try:
+            with urllib.request.urlopen(cover_url, timeout=10) as r:
+                data = r.read()
+            with open(local_path, "wb") as f:
+                f.write(data)
+            return local
+        except Exception:
+            return cover_url
+
     def _get_spotify_album_preview(self, url: str) -> dict:
         from model.spotify2mp3_model import Spotify2MP3Converter
-        import json as _json
 
         converter = Spotify2MP3Converter()
         songs = converter.get_playlist_songs(url)
@@ -370,13 +388,15 @@ class Api:
         cover_url = converter._get_spotify_playlist_cover(url)
         if not cover_url:
             cover_url = getattr(first, 'cover_url', '') or ''
+        cover_url = self._localize_preview_cover(cover_url)
 
+        is_album = '/album/' in url
         tracks = []
         for song in songs:
             artists = getattr(song, 'artists', []) or []
             tracks.append({
                 "title": getattr(song, 'name', '?'),
-                "artist": artists[0] if artists else '?',
+                "artist": artists[0] if artists else '',
                 "duration": getattr(song, 'duration', 0) or 0,
             })
 
@@ -388,6 +408,7 @@ class Api:
                        (getattr(first, 'artists', []) or [None])[0] or ''),
             "year": getattr(first, 'year', None),
             "cover_url": cover_url,
+            "is_album": is_album,
             "total_tracks": len(tracks),
             "tracks": tracks,
         }
@@ -407,13 +428,10 @@ class Api:
             playlist_data = ydl.extract_info(playlist_url, download=False)
 
         tracks = []
-        artist = ''
         entries = playlist_data.get('entries', []) if playlist_data else []
         for e in entries:
             if not e:
                 continue
-            if not artist:
-                artist = e.get('channel', '') or e.get('uploader', '') or ''
             tracks.append({
                 "title": e.get('title', '?'),
                 "artist": e.get('channel', '') or e.get('uploader', '') or '',
@@ -423,9 +441,10 @@ class Api:
         return {
             "platform": "youtube",
             "name": info['nombre'],
-            "artist": artist,
+            "artist": '',
             "year": None,
-            "cover_url": info['cover_url'],
+            "cover_url": self._localize_preview_cover(info['cover_url']),
+            "is_album": False,
             "total_tracks": len(tracks),
             "tracks": tracks,
         }
@@ -443,13 +462,10 @@ class Api:
             playlist_data = ydl.extract_info(url, download=False)
 
         tracks = []
-        artist = ''
         entries = playlist_data.get('entries', []) if playlist_data else []
         for e in entries:
             if not e:
                 continue
-            if not artist:
-                artist = e.get('uploader', '') or e.get('user', '') or ''
             tracks.append({
                 "title": e.get('title', '?'),
                 "artist": e.get('uploader', '') or '',
@@ -459,9 +475,10 @@ class Api:
         return {
             "platform": "soundcloud",
             "name": info['nombre'],
-            "artist": artist,
+            "artist": '',
             "year": None,
-            "cover_url": info['cover_url'],
+            "cover_url": self._localize_preview_cover(info['cover_url']),
+            "is_album": False,
             "total_tracks": len(tracks),
             "tracks": tracks,
         }

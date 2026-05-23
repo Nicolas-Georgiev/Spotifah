@@ -105,6 +105,7 @@ export interface AlbumPreviewData {
   artist: string;
   year: number | null;
   cover_url: string;
+  is_album: boolean;
   total_tracks: number;
   tracks: TrackPreview[];
 }
