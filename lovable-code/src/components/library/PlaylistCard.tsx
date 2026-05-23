@@ -19,6 +19,7 @@ import {
 } from "../ui/dialog";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
+import { Textarea } from "../ui/textarea";
 
 interface Props {
   playlist: Playlist;
@@ -30,10 +31,11 @@ export function PlaylistCard({ playlist, onRename, onDelete }: Props) {
   const isSpecial = playlist.id === "all" || playlist.name === "Favoritos";
   const [renameOpen, setRenameOpen] = useState(false);
   const [newName, setNewName] = useState(playlist.name);
+  const [newDescription, setNewDescription] = useState(playlist.description);
 
   const handleRename = async () => {
     if (!newName.trim()) return;
-    await bridge.renamePlaylist(playlist.id, newName.trim());
+    await bridge.renamePlaylist(playlist.id, newName.trim(), newDescription.trim());
     setRenameOpen(false);
     onRename?.();
   };
@@ -85,10 +87,10 @@ export function PlaylistCard({ playlist, onRename, onDelete }: Props) {
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start">
-                <DropdownMenuItem onClick={() => { setNewName(playlist.name); setRenameOpen(true); }}>
+                <DropdownMenuItem onClick={() => { setNewName(playlist.name); setNewDescription(playlist.description); setRenameOpen(true); }} className="focus:bg-muted focus:text-foreground">
                   <Pencil className="w-4 h-4 mr-2" /> Renombrar
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleDelete} className="text-destructive focus:text-destructive">
+                <DropdownMenuItem onClick={handleDelete} className="text-destructive focus:bg-muted focus:text-destructive">
                   <Trash2 className="w-4 h-4 mr-2" /> Eliminar
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -109,6 +111,13 @@ export function PlaylistCard({ playlist, onRename, onDelete }: Props) {
               onChange={(e) => setNewName(e.target.value)}
               autoFocus
               onKeyDown={(e) => { if (e.key === "Enter") handleRename(); }}
+            />
+            <Textarea
+              value={newDescription}
+              onChange={(e) => setNewDescription(e.target.value)}
+              placeholder="Descripción (opcional)"
+              className="resize-none"
+              rows={3}
             />
             <div className="flex justify-end gap-2">
               <DialogClose asChild>

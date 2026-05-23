@@ -968,7 +968,7 @@ class Api:
         except Exception as e:
             return {"ok": False, "error": str(e)}
 
-    def rename_playlist(self, playlist_id: str, name: str) -> dict:
+    def rename_playlist(self, playlist_id: str, name: str, description: str = "") -> dict:
         if playlist_id == "all":
             return {"ok": False, "error": "No se puede renombrar esta playlist"}
         try:
@@ -982,8 +982,8 @@ class Api:
                 if row["nombre"] == "Favoritos":
                     return {"ok": False, "error": "No se puede renombrar la playlist de favoritos"}
                 cur.execute(
-                    "UPDATE playlists SET nombre = ? WHERE id_playlist = ?",
-                    (name.strip(), int(playlist_id)),
+                    "UPDATE playlists SET nombre = ?, descripcion = ? WHERE id_playlist = ?",
+                    (name.strip(), description.strip(), int(playlist_id)),
                 )
                 conn.commit()
                 return {"ok": True, "data": {"message": "Playlist renombrada"}}

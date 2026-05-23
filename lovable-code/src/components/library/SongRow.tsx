@@ -223,11 +223,11 @@ export function SongRow({ song, index, isActive, onPlay, fmtDuration, playlistId
         </li>
       </ContextMenuTrigger>
       <ContextMenuContent>
-        <ContextMenuItem onClick={() => onPlay(song.id)}>
+        <ContextMenuItem onClick={() => onPlay(song.id)} className="focus:bg-accent focus:text-accent-foreground">
           <Play className="w-4 h-4 mr-2" /> Reproducir
         </ContextMenuItem>
         <ContextMenuSeparator />
-        <ContextMenuItem onClick={toggleFav}>
+        <ContextMenuItem onClick={toggleFav} className="focus:bg-accent focus:text-accent-foreground">
           <Heart className={`w-4 h-4 mr-2 ${favorite ? "fill-primary text-primary" : ""}`} />
           {favorite ? "Quitar de favoritos" : "Añadir a favoritos"}
         </ContextMenuItem>
@@ -236,7 +236,7 @@ export function SongRow({ song, index, isActive, onPlay, fmtDuration, playlistId
             <ContextMenuSeparator />
             <ContextMenuItem
               onClick={(e) => { e.stopPropagation(); onRemoveFromPlaylist(song.id); }}
-              className="text-destructive focus:text-destructive"
+              className="text-destructive focus:bg-muted focus:text-destructive"
             >
               Eliminar de playlist
             </ContextMenuItem>

@@ -387,11 +387,11 @@ export const bridge = {
     }
   },
 
-  async renamePlaylist(playlistId: string, name: string): Promise<ActionResult> {
+  async renamePlaylist(playlistId: string, name: string, description: string = ""): Promise<ActionResult> {
     const api = getApi();
     if (!api) return { ok: false, error: "PyWebView no disponible" };
     try {
-      return await api.rename_playlist(playlistId, name);
+      return await api.rename_playlist(playlistId, name, description);
     } catch (e: any) {
       return { ok: false, error: e?.message ?? "Error al renombrar" };
     }
