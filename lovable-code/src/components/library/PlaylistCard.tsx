@@ -27,7 +27,7 @@ interface Props {
 }
 
 export function PlaylistCard({ playlist, onRename, onDelete }: Props) {
-  const isSpecial = playlist.id === "all" || playlist.id === "favorites";
+  const isSpecial = playlist.id === "all" || playlist.name === "Favoritos";
   const [renameOpen, setRenameOpen] = useState(false);
   const [newName, setNewName] = useState(playlist.name);
 

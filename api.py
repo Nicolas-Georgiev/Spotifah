@@ -945,40 +945,45 @@ class Api:
             return {"ok": False, "error": str(e)}
 
     def delete_playlist(self, playlist_id: str) -> dict:
-        if playlist_id in ("all", "favorites"):
+        if playlist_id == "all":
             return {"ok": False, "error": "No se puede eliminar esta playlist"}
         try:
             conn = self.db.get_connection()
             try:
                 cur = conn.cursor()
-                cur.execute(
-                    "DELETE FROM playlists WHERE id_playlist = ?",
-                    (int(playlist_id),),
-                )
+                cur.execute("SELECT nombre FROM playlists WHERE id_playlist = ?", (int(playlist_id),))
+                row = cur.fetchone()
+                if not row:
+                    return {"ok": False, "error": "Playlist no encontrada"}
+                if row["nombre"] == "Favoritos":
+                    return {"ok": False, "error": "No se puede eliminar la playlist de favoritos"}
+                cur.execute("DELETE FROM playlists WHERE id_playlist = ?", (int(playlist_id),))
                 conn.commit()
-                if cur.rowcount:
-                    return {"ok": True, "data": {"message": "Playlist eliminada"}}
-                return {"ok": False, "error": "Playlist no encontrada"}
+                return {"ok": True, "data": {"message": "Playlist eliminada"}}
             finally:
                 conn.close()
         except Exception as e:
             return {"ok": False, "error": str(e)}
 
     def rename_playlist(self, playlist_id: str, name: str) -> dict:
-        if playlist_id in ("all",):
+        if playlist_id == "all":
             return {"ok": False, "error": "No se puede renombrar esta playlist"}
         try:
             conn = self.db.get_connection()
             try:
                 cur = conn.cursor()
+                cur.execute("SELECT nombre FROM playlists WHERE id_playlist = ?", (int(playlist_id),))
+                row = cur.fetchone()
+                if not row:
+                    return {"ok": False, "error": "Playlist no encontrada"}
+                if row["nombre"] == "Favoritos":
+                    return {"ok": False, "error": "No se puede renombrar la playlist de favoritos"}
                 cur.execute(
                     "UPDATE playlists SET nombre = ? WHERE id_playlist = ?",
                     (name.strip(), int(playlist_id)),
                 )
                 conn.commit()
-                if cur.rowcount:
-                    return {"ok": True, "data": {"message": "Playlist renombrada"}}
-                return {"ok": False, "error": "Playlist no encontrada"}
+                return {"ok": True, "data": {"message": "Playlist renombrada"}}
             finally:
                 conn.close()
         except Exception as e:

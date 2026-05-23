@@ -23,7 +23,7 @@ interface Props {
 export function PlaylistHeader({ playlist, songs, totalMin, onPlayAll }: Props) {
   const navigate = useNavigate();
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const isSpecial = playlist.id === "all" || playlist.id === "favorites";
+  const isSpecial = playlist.id === "all" || playlist.name === "Favoritos";
 
   const handleDelete = async () => {
     await bridge.deletePlaylist(playlist.id);
