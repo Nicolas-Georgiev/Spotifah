@@ -54,9 +54,26 @@ except ImportError:
         print("   📦 INSTALAR: pip install spotdl")
         raise ImportError("spotdl es requerido para el funcionamiento")
 
+# Singleton de SpotifyInfoExtractor — spotdl usa SpotifyClient global internamente,
+# por lo que crear múltiples instancias de Spotdl() causa conflictos.
+# Compartir una única instancia permite tener varios Spotify2MP3Converter simultáneos.
+_SHARED_INFO_EXTRACTOR: 'SpotifyInfoExtractor | None' = None
+_EXTRACTOR_LOCK = __import__('threading').Lock()
+
+
+def _get_shared_extractor() -> 'SpotifyInfoExtractor':
+    """Devuelve (o crea) el SpotifyInfoExtractor compartido (thread-safe)."""
+    global _SHARED_INFO_EXTRACTOR
+    if _SHARED_INFO_EXTRACTOR is None:
+        with _EXTRACTOR_LOCK:
+            if _SHARED_INFO_EXTRACTOR is None:
+                _SHARED_INFO_EXTRACTOR = SpotifyInfoExtractor()
+    return _SHARED_INFO_EXTRACTOR
+
+
 class SpotifyInfoExtractor:
     """Extrae información de Spotify usando spotdl como método principal y métodos alternativos como fallback"""
-    
+
     def __init__(self):
         self.session = requests.Session()
         self.session.headers.update({
@@ -650,7 +667,10 @@ class Spotify2MP3Converter(BaseModel):
     def __init__(self):
         super().__init__(self.ORIGIN_SPOTIFY)
         self.current_track_id = None
-        self.info_extractor = SpotifyInfoExtractor()
+        # Compartir el extractor (y su instancia de Spotdl) entre todos los conversores.
+        # Spotdl usa SpotifyClient como singleton global, así que crear varias instancias
+        # de Spotdl() causa conflictos. El singleton resuelve el problema.
+        self.info_extractor = _get_shared_extractor()
 
     def get_supported_urls(self):
         """Retorna lista de patrones de URL soportados por Spotify"""
@@ -1056,9 +1076,22 @@ class Spotify2MP3Converter(BaseModel):
     # ── Soporte de playlists / álbumes ──────────────────────────────────────
 
     @staticmethod
+    def _normalize_spotify_url(url: str) -> str:
+        """Elimina el prefijo de localización intl-xx/ de las URLs de Spotify.
+
+        Ejemplo: open.spotify.com/intl-es/album/xxx → open.spotify.com/album/xxx
+        """
+        return re.sub(r'(open\.spotify\.com/)intl-\w+/', r'\1', url.strip())
+
+    @staticmethod
     def is_playlist_url(url: str) -> bool:
-        """Devuelve True si la URL es una playlist o álbum de Spotify."""
+        """Devuelve True si la URL es una playlist o álbum de Spotify.
+        Soporta URLs con prefijo intl-xx/ (p.ej. intl-es/album/...).
+        """
         url = url.strip()
+        # Manejo de URLs con localización (intl-es/, intl-pt/, etc.)
+        if re.search(r'open\.spotify\.com/intl-\w+/(playlist|album)/', url):
+            return True
         return ('open.spotify.com/playlist/' in url or
                 'open.spotify.com/album/'    in url or
                 'spotify:playlist:'          in url or
@@ -1066,30 +1099,20 @@ class Spotify2MP3Converter(BaseModel):
 
     def get_playlist_songs(self, url: str):
         """Devuelve lista de objetos Song de spotdl para una playlist/álbum."""
-        if SPOTDL_API_MODE == 'legacy_spotdl_class':
-            songs = self.info_extractor.spotdl.search([url])  # type: ignore
-        elif SPOTDL_API_MODE == 'song_gatherer':
-            result = spotdl_from_spotify_url(url)
-            if result is None:
-                raise RuntimeError(f'No se encontraron canciones en: {url}')
-            if isinstance(result, (list, tuple)):
-                songs = list(result)
-            else:
-                try:
-                    songs = list(result)
-                except TypeError:
-                    songs = [result]
-        else:
+        if SPOTDL_API_MODE != 'legacy_spotdl_class':
             raise RuntimeError('La versión de spotdl instalada no soporta búsqueda de playlists')
+        clean_url = self._normalize_spotify_url(url)
+        songs = self.info_extractor.spotdl.search([clean_url])  # type: ignore
         if not songs:
-            raise RuntimeError(f'No se encontraron canciones en: {url}')
+            raise RuntimeError(f'No se encontraron canciones en: {clean_url}')
         return songs
 
     def _get_spotify_playlist_cover(self, url: str) -> str:
         """Obtiene la URL de portada de una playlist/álbum de Spotify via OEmbed (sin auth)."""
+        clean_url = self._normalize_spotify_url(url)
         try:
             resp = requests.get(
-                f'https://open.spotify.com/oembed?url={url}',
+                f'https://open.spotify.com/oembed?url={clean_url}',
                 timeout=10,
                 headers={'User-Agent': 'Mozilla/5.0'},
             )
@@ -1106,6 +1129,7 @@ class Spotify2MP3Converter(BaseModel):
         - on_progress: callback(actual, total, titulo) llamado tras cada canción
         Devuelve lista de rutas de archivos descargados.
         """
+        url = self._normalize_spotify_url(url)
         print(f'\n🎵 Obteniendo canciones de la playlist: {url}')
         songs = self.get_playlist_songs(url)
         total = len(songs)
