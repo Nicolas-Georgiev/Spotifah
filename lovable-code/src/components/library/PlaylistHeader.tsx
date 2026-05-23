@@ -1,5 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
-import { Play, Trash2 } from "lucide-react";
+import { Play, Trash2, Music } from "lucide-react";
 import { useState } from "react";
 import type { Playlist, Song } from "../../lib/bridge";
 import { bridge } from "../../lib/bridge";
@@ -34,8 +34,17 @@ export function PlaylistHeader({ playlist, songs, totalMin, onPlayAll }: Props) 
   return (
     <>
       <header className="flex flex-col sm:flex-row gap-6 items-center sm:items-end">
-        <div className="w-40 h-40 sm:w-48 sm:h-48 rounded-2xl bg-primary/20 flex items-center justify-center text-6xl shadow-2xl">
-          ♪
+        <div className="w-40 h-40 sm:w-48 sm:h-48 rounded-2xl bg-primary/20 flex items-center justify-center text-6xl shadow-2xl overflow-hidden">
+          {playlist.cover_url ? (
+            <img
+              src={playlist.cover_url}
+              alt={playlist.name}
+              className="w-full h-full object-cover"
+              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+            />
+          ) : (
+            <Music className="w-16 h-16 text-muted-foreground/40" />
+          )}
         </div>
         <div className="text-center sm:text-left flex-1">
           <div className="flex flex-wrap items-center gap-2 justify-center sm:justify-start">

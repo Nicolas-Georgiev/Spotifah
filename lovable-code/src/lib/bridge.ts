@@ -15,6 +15,7 @@ export interface Playlist {
   name: string;
   description: string;
   is_public: boolean;
+  cover_url: string;
 }
 
 interface ConvertResult {
@@ -90,6 +91,28 @@ interface ImportProgress {
   playlist_id: number | null;
   error: string | null;
   log: string;
+}
+
+export interface TrackPreview {
+  title: string;
+  artist: string;
+  duration: number;
+}
+
+export interface AlbumPreviewData {
+  platform: string;
+  name: string;
+  artist: string;
+  year: number | null;
+  cover_url: string;
+  total_tracks: number;
+  tracks: TrackPreview[];
+}
+
+interface AlbumPreviewResult {
+  ok: boolean;
+  data?: AlbumPreviewData;
+  error?: string;
 }
 
 function getApi() {
@@ -294,6 +317,26 @@ export const bridge = {
       return await api.import_playlist(url);
     } catch (e: any) {
       return { ok: false, error: e?.message ?? "Error al importar playlist" };
+    }
+  },
+
+  async getAlbumPreview(url: string): Promise<AlbumPreviewResult> {
+    const api = getApi();
+    if (!api) return { ok: false, error: "PyWebView no disponible" };
+    try {
+      return await api.get_album_preview(url);
+    } catch (e: any) {
+      return { ok: false, error: e?.message ?? "Error al obtener vista previa" };
+    }
+  },
+
+  async importAlbum(url: string): Promise<ImportPlaylistResult> {
+    const api = getApi();
+    if (!api) return { ok: false, error: "PyWebView no disponible" };
+    try {
+      return await api.import_album(url);
+    } catch (e: any) {
+      return { ok: false, error: e?.message ?? "Error al importar álbum" };
     }
   },
 

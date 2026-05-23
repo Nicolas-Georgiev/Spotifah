@@ -356,6 +356,142 @@ class Api:
 
     # ── Importación de playlists ──────────────────────────────
 
+    # ── Album Preview ────────────────────────────────────────────
+
+    def _get_spotify_album_preview(self, url: str) -> dict:
+        from model.spotify2mp3_model import Spotify2MP3Converter
+        import json as _json
+
+        converter = Spotify2MP3Converter()
+        songs = converter.get_playlist_songs(url)
+        if not songs:
+            raise RuntimeError("No se encontraron canciones en el álbum")
+        first = songs[0]
+        cover_url = converter._get_spotify_playlist_cover(url)
+        if not cover_url:
+            cover_url = getattr(first, 'cover_url', '') or ''
+
+        tracks = []
+        for song in songs:
+            artists = getattr(song, 'artists', []) or []
+            tracks.append({
+                "title": getattr(song, 'name', '?'),
+                "artist": artists[0] if artists else '?',
+                "duration": getattr(song, 'duration', 0) or 0,
+            })
+
+        return {
+            "platform": "spotify",
+            "name": (getattr(first, 'list_name', None) or
+                     getattr(first, 'album_name', None) or 'Álbum Spotify'),
+            "artist": (getattr(first, 'album_artist', None) or
+                       (getattr(first, 'artists', []) or [None])[0] or ''),
+            "year": getattr(first, 'year', None),
+            "cover_url": cover_url,
+            "total_tracks": len(tracks),
+            "tracks": tracks,
+        }
+
+    def _get_youtube_album_preview(self, url: str) -> dict:
+        from model.youtube2mp3_model import YouTube2MP3Converter
+        import yt_dlp
+
+        converter = YouTube2MP3Converter()
+        info = converter.get_playlist_info(url)
+        playlist_url = YouTube2MP3Converter._normalize_playlist_url(url)
+        ydl_opts = {
+            'quiet': True, 'extract_flat': True,
+            'skip_download': True, 'no_warnings': True,
+        }
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            playlist_data = ydl.extract_info(playlist_url, download=False)
+
+        tracks = []
+        artist = ''
+        entries = playlist_data.get('entries', []) if playlist_data else []
+        for e in entries:
+            if not e:
+                continue
+            if not artist:
+                artist = e.get('channel', '') or e.get('uploader', '') or ''
+            tracks.append({
+                "title": e.get('title', '?'),
+                "artist": e.get('channel', '') or e.get('uploader', '') or '',
+                "duration": e.get('duration', 0) or 0,
+            })
+
+        return {
+            "platform": "youtube",
+            "name": info['nombre'],
+            "artist": artist,
+            "year": None,
+            "cover_url": info['cover_url'],
+            "total_tracks": len(tracks),
+            "tracks": tracks,
+        }
+
+    def _get_soundcloud_album_preview(self, url: str) -> dict:
+        import yt_dlp
+
+        converter = SoundCloudConverter(self._music_dir)
+        info = converter.get_playlist_info(url)
+        ydl_opts = {
+            'quiet': True, 'extract_flat': True,
+            'skip_download': True, 'no_warnings': True,
+        }
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            playlist_data = ydl.extract_info(url, download=False)
+
+        tracks = []
+        artist = ''
+        entries = playlist_data.get('entries', []) if playlist_data else []
+        for e in entries:
+            if not e:
+                continue
+            if not artist:
+                artist = e.get('uploader', '') or e.get('user', '') or ''
+            tracks.append({
+                "title": e.get('title', '?'),
+                "artist": e.get('uploader', '') or '',
+                "duration": e.get('duration', 0) or 0,
+            })
+
+        return {
+            "platform": "soundcloud",
+            "name": info['nombre'],
+            "artist": artist,
+            "year": None,
+            "cover_url": info['cover_url'],
+            "total_tracks": len(tracks),
+            "tracks": tracks,
+        }
+
+    def get_album_preview(self, url: str) -> dict:
+        detection = self._detect_url_type(url)
+        if not detection["platform"] or not detection["is_playlist"]:
+            return {"ok": False, "error": "La URL no corresponde a un álbum o playlist válida"}
+        if detection["platform"] == "spotify":
+            ok, msg = self._check_spotify_creds()
+            if not ok:
+                return {"ok": False, "error": msg}
+        try:
+            if detection["platform"] == "spotify":
+                preview = self._get_spotify_album_preview(url)
+            elif detection["platform"] == "youtube":
+                preview = self._get_youtube_album_preview(url)
+            elif detection["platform"] == "soundcloud":
+                preview = self._get_soundcloud_album_preview(url)
+            else:
+                return {"ok": False, "error": "Plataforma no soportada"}
+            return {"ok": True, "data": preview}
+        except Exception as e:
+            return {"ok": False, "error": str(e)}
+
+    def import_album(self, url: str) -> dict:
+        return self.import_playlist(url)
+
+    # ── Importación de playlists ──────────────────────────────
+
     def _detect_url_type(self, url: str) -> dict:
         from model.spotify2mp3_model import Spotify2MP3Converter
         from model.youtube2mp3_model import YouTube2MP3Converter
@@ -567,6 +703,20 @@ class Api:
 
     # ── Playlists ──────────────────────────────────────────────
 
+    def _playlist_cover_url(self, playlist_id: int) -> str:
+        conn = self.db.get_connection()
+        try:
+            cur = conn.cursor()
+            cur.execute("SELECT caratula_blob FROM playlists WHERE id_playlist = ?", (playlist_id,))
+            row = cur.fetchone()
+            if row and row["caratula_blob"]:
+                return f"/api/playlist-covers/{playlist_id}.jpg"
+        except Exception:
+            pass
+        finally:
+            conn.close()
+        return ""
+
     def get_playlists(self) -> list:
         try:
             conn = self.db.get_connection()
@@ -581,6 +731,7 @@ class Api:
                         "name": row["nombre"],
                         "description": row["descripcion"] or "",
                         "is_public": bool(row["publica"]),
+                        "cover_url": self._playlist_cover_url(row["id_playlist"]),
                     }
                     for row in cur.fetchall()
                 ]
@@ -591,6 +742,7 @@ class Api:
                         "name": "Todas mis canciones",
                         "description": "Todas las canciones en tu biblioteca",
                         "is_public": False,
+                        "cover_url": "",
                     },
                 )
                 return playlists
@@ -603,6 +755,7 @@ class Api:
                     "name": "Todas mis canciones",
                     "description": "",
                     "is_public": False,
+                    "cover_url": "",
                 }
             ]
 

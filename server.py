@@ -25,6 +25,8 @@ class SPAHandler(SimpleHTTPRequestHandler):
         path = self.path.split("?")[0]
         if path.startswith("/api/covers/"):
             return self._serve_cover(path)
+        if path.startswith("/api/playlist-covers/"):
+            return self._serve_playlist_cover(path)
         if path.startswith("/assets/") or path == "/favicon.ico":
             return super().do_GET()
         web_dir = self._get_web_dir()
@@ -62,6 +64,51 @@ class SPAHandler(SimpleHTTPRequestHandler):
             try:
                 cur = conn.cursor()
                 cur.execute("SELECT caratula_blob FROM canciones WHERE id_cancion = ?", (int(song_id_str),))
+                row = cur.fetchone()
+                if row and row["caratula_blob"]:
+                    blob = row["caratula_blob"]
+                    self.send_response(200)
+                    self.send_header("Content-Type", ctype)
+                    self.send_header("Content-Length", str(len(blob)))
+                    self.send_header("Cache-Control", "max-age=86400")
+                    self.end_headers()
+                    self.wfile.write(blob)
+                    return
+            finally:
+                conn.close()
+        except Exception:
+            pass
+
+        self.send_response(404)
+        self.end_headers()
+
+    def _serve_playlist_cover(self, path):
+        filename = path.split("/api/playlist-covers/")[-1]
+        if not filename or ".." in filename or "/" in filename:
+            self.send_response(404)
+            self.end_headers()
+            return
+        parts = filename.rsplit(".", 1)
+        if len(parts) != 2:
+            self.send_response(404)
+            self.end_headers()
+            return
+        playlist_id_str, ext = parts
+        ctype = mimetypes.guess_type(f"x.{ext}")[0] or "image/jpeg"
+
+        db_path = os.path.join(self.data_dir, "BDD", "ekho.db") if self.data_dir else None
+        if not db_path or not os.path.isfile(db_path):
+            self.send_response(404)
+            self.end_headers()
+            return
+
+        try:
+            import sqlite3
+            conn = sqlite3.connect(db_path)
+            conn.row_factory = sqlite3.Row
+            try:
+                cur = conn.cursor()
+                cur.execute("SELECT caratula_blob FROM playlists WHERE id_playlist = ?", (int(playlist_id_str),))
                 row = cur.fetchone()
                 if row and row["caratula_blob"]:
                     blob = row["caratula_blob"]

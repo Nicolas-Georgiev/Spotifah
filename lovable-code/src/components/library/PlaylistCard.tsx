@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { MoreHorizontal, Pencil, Trash2, Music } from "lucide-react";
 import type { Playlist } from "../../lib/bridge";
 import { bridge } from "../../lib/bridge";
 import {
@@ -52,7 +52,16 @@ export function PlaylistCard({ playlist, onRename, onDelete }: Props) {
           className="glass rounded-2xl overflow-hidden hover:-translate-y-1 transition block"
         >
           <div className="relative aspect-square overflow-hidden bg-muted/40 flex items-center justify-center">
-            <span className="text-6xl">♪</span>
+            {playlist.cover_url ? (
+              <img
+                src={playlist.cover_url}
+                alt={playlist.name}
+                className="w-full h-full object-cover"
+                onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+              />
+            ) : (
+              <Music className="w-16 h-16 text-muted-foreground/40" />
+            )}
             {isSpecial ? (
               <div className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-primary/30 backdrop-blur border border-primary/50 text-xs font-medium flex items-center gap-1">
                 ♪ Coleccion
