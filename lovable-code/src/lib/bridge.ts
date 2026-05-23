@@ -8,6 +8,8 @@ export interface Song {
   source: string;
   path: string;
   cover_url: string;
+  is_downloaded?: boolean;
+  download_date?: string;
 }
 
 export interface Playlist {

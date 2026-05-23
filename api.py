@@ -786,16 +786,27 @@ class Api:
                 cur = conn.cursor()
                 if playlist_id == "all":
                     cur.execute(
-                        """SELECT id_cancion, titulo, artista, album, duracion_seg,
-                                  genero, plataforma_origen, ruta_local, caratula_url
-                           FROM canciones ORDER BY titulo"""
+                        """SELECT c.id_cancion, c.titulo, c.artista, c.album, c.duracion_seg,
+                                  c.genero, c.plataforma_origen, c.ruta_local, c.caratula_url,
+                                  d.fecha_descarga
+                           FROM canciones c
+                           LEFT JOIN (
+                               SELECT id_cancion, MAX(fecha_descarga) as fecha_descarga
+                               FROM descargas GROUP BY id_cancion
+                           ) d ON c.id_cancion = d.id_cancion
+                           ORDER BY c.titulo"""
                     )
                 else:
                     cur.execute(
                         """SELECT c.id_cancion, c.titulo, c.artista, c.album, c.duracion_seg,
-                                  c.genero, c.plataforma_origen, c.ruta_local, c.caratula_url
+                                  c.genero, c.plataforma_origen, c.ruta_local, c.caratula_url,
+                                  d.fecha_descarga
                            FROM playlist_canciones pc
                            JOIN canciones c ON pc.id_cancion = c.id_cancion
+                           LEFT JOIN (
+                               SELECT id_cancion, MAX(fecha_descarga) as fecha_descarga
+                               FROM descargas GROUP BY id_cancion
+                           ) d ON c.id_cancion = d.id_cancion
                            WHERE pc.id_playlist = ?
                            ORDER BY pc.orden""",
                         (int(playlist_id),),
@@ -815,6 +826,8 @@ class Api:
                             plataforma=row["plataforma_origen"] or "",
                         )
                     cover_url = self._localize_cover(song_id, cover_url)
+                    fecha_descarga = row["fecha_descarga"] or ""
+                    is_downloaded = bool(fecha_descarga) and os.path.exists(row["ruta_local"] or "")
                     result.append({
                         "id": str(song_id),
                         "title": row["titulo"],
@@ -825,6 +838,8 @@ class Api:
                         "source": row["plataforma_origen"] or "",
                         "path": row["ruta_local"] or "",
                         "cover_url": cover_url,
+                        "is_downloaded": is_downloaded,
+                        "download_date": fecha_descarga,
                     })
                 return result
             finally:

@@ -48,6 +48,21 @@ interface Props {
   onSongDeleted?: (songId: string) => void;
 }
 
+function formatDownloadDate(date: string): string {
+  if (!date) return "";
+  try {
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return date;
+    return d.toLocaleDateString("es-ES", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+  } catch {
+    return date;
+  }
+}
+
 export function SongRow({ song, index, isActive, onPlay, fmtDuration, playlistId, onRemoveFromPlaylist, onSongDeleted }: Props) {
   const [favorite, setFavorite] = useState(false);
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
@@ -101,7 +116,7 @@ export function SongRow({ song, index, isActive, onPlay, fmtDuration, playlistId
       <ContextMenuTrigger>
         <li
           onClick={() => onPlay(song.id)}
-          className={`grid grid-cols-[40px_3fr_2fr_2fr_120px_80px_80px] gap-4 px-5 py-3 items-center hover:bg-muted/30 transition group cursor-pointer ${
+          className={`grid grid-cols-[40px_3fr_2fr_2fr_100px_80px_130px_80px] gap-4 px-5 py-3 items-center hover:bg-muted/30 transition group cursor-pointer ${
             isActive ? "bg-primary/10" : ""
           }`}
         >
@@ -126,6 +141,9 @@ export function SongRow({ song, index, isActive, onPlay, fmtDuration, playlistId
             <SourceBadge source={song.source} />
           </span>
           <span className="text-sm text-muted-foreground font-mono text-right">{fmtDuration(song.duration)}</span>
+          <span className="text-xs text-muted-foreground">
+            {song.download_date ? formatDownloadDate(song.download_date) : "-"}
+          </span>
           <div className="flex items-center gap-0 justify-end">
             <button
               onClick={toggleFav}
