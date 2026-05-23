@@ -3,6 +3,7 @@ import { useState } from "react";
 import { bridge } from "../lib/bridge";
 import { ConversionInput } from "../components/convert/ConversionInput";
 import { ConversionList } from "../components/convert/ConversionList";
+import type { ConvItem } from "../components/convert/ConversionItem";
 
 export const Route = createFileRoute("/convert")({
   component: ConvertPage,
@@ -16,14 +17,6 @@ function detectPlatform(url: string): Platform {
   if (u.includes("spotify.com")) return "spotify";
   if (u.includes("soundcloud.com")) return "soundcloud";
   return null;
-}
-
-interface ConvItem {
-  id: number;
-  title: string;
-  platform: Exclude<Platform, null>;
-  status: "processing" | "done" | "error";
-  error?: string;
 }
 
 function ConvertPage() {
@@ -54,12 +47,18 @@ function ConvertPage() {
 
       if (result.ok) {
         setItems((prev) =>
-          prev.map((i) => (i.id === id ? { ...i, status: "done" as const } : i))
+          prev.map((i) =>
+            i.id === id
+              ? { ...i, status: "done" as const, log: result.data?.log ?? result.log }
+              : i
+          )
         );
       } else {
         setItems((prev) =>
           prev.map((i) =>
-            i.id === id ? { ...i, status: "error" as const, error: result.error } : i
+            i.id === id
+              ? { ...i, status: "error" as const, error: result.error, log: (result as any).log ?? "" }
+              : i
           )
         );
       }

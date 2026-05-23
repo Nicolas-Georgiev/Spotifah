@@ -237,9 +237,26 @@ class Api:
             return False, f"Error al verificar ffmpeg: {e}"
 
     def _check_spotify_creds(self) -> tuple[bool, str]:
-        import os
         client_id = os.getenv("SPOTIFY_CLIENT_ID") or os.getenv("SPOTDL_CLIENT_ID")
         client_secret = os.getenv("SPOTIFY_CLIENT_SECRET") or os.getenv("SPOTDL_CLIENT_SECRET")
+        if not client_id or not client_secret:
+            try:
+                dotenv_path = os.path.join(self._project_root, '.env')
+                if os.path.exists(dotenv_path):
+                    with open(dotenv_path, 'r', encoding='utf-8') as f:
+                        for line in f:
+                            line = line.strip()
+                            if not line or line.startswith('#') or '=' not in line:
+                                continue
+                            k, v = line.split('=', 1)
+                            k = k.strip()
+                            v = v.strip().strip('"').strip("'")
+                            if k in ('SPOTIFY_CLIENT_ID', 'SPOTDL_CLIENT_ID') and not client_id:
+                                client_id = v
+                            if k in ('SPOTIFY_CLIENT_SECRET', 'SPOTDL_CLIENT_SECRET') and not client_secret:
+                                client_secret = v
+            except Exception:
+                pass
         if client_id and client_secret:
             return True, ""
         return False, (
@@ -256,8 +273,8 @@ class Api:
         ok, msg = self._check_ffmpeg()
         if not ok:
             return {"ok": False, "error": msg}
+        f = io.StringIO()
         try:
-            f = io.StringIO()
             with contextlib.redirect_stdout(f), contextlib.redirect_stderr(f):
                 converter = YouTube2MP3Converter()
                 result_path = converter.convert(url)
@@ -270,7 +287,11 @@ class Api:
                 },
             }
         except Exception as e:
-            return {"ok": False, "error": str(e)}
+            return {
+                "ok": False,
+                "error": str(e),
+                "log": f.getvalue(),
+            }
 
     # ── Spotify → MP3 ─────────────────────────────────────────
 
@@ -281,8 +302,8 @@ class Api:
         ok, msg = self._check_spotify_creds()
         if not ok:
             return {"ok": False, "error": msg}
+        f = io.StringIO()
         try:
-            f = io.StringIO()
             with contextlib.redirect_stdout(f), contextlib.redirect_stderr(f):
                 converter = Spotify2MP3Converter()
                 result_path = converter.convert(url)
@@ -295,7 +316,11 @@ class Api:
                 },
             }
         except Exception as e:
-            return {"ok": False, "error": str(e)}
+            return {
+                "ok": False,
+                "error": str(e),
+                "log": f.getvalue(),
+            }
 
     # ── SoundCloud → MP3 ───────────────────────────────────────
 
@@ -303,14 +328,13 @@ class Api:
         ok, msg = self._check_ffmpeg()
         if not ok:
             return {"ok": False, "error": msg}
+        f = io.StringIO()
         try:
-            f = io.StringIO()
             with contextlib.redirect_stdout(f), contextlib.redirect_stderr(f):
                 converter = SoundCloudConverter(self._music_dir)
                 result_path = converter.convert(url)
             if result_path is None:
-                log = f.getvalue()
-                return {"ok": False, "error": f"La conversión falló. Revisa los logs:\n{log}"}
+                return {"ok": False, "error": "La conversión falló", "log": f.getvalue()}
             return {
                 "ok": True,
                 "data": {
@@ -320,7 +344,11 @@ class Api:
                 },
             }
         except Exception as e:
-            return {"ok": False, "error": str(e)}
+            return {
+                "ok": False,
+                "error": str(e),
+                "log": f.getvalue(),
+            }
 
     # ── Playlists ──────────────────────────────────────────────
 

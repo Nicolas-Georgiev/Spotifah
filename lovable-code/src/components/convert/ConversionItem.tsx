@@ -1,12 +1,14 @@
-import { Youtube, Music2, Cloud } from "lucide-react";
+import { useState } from "react";
+import { Youtube, Music2, Cloud, ChevronDown, ChevronUp } from "lucide-react";
 import { ConversionStatusBadge } from "./ConversionStatusBadge";
 
-interface ConvItem {
+export interface ConvItem {
   id: number;
   title: string;
   platform: "youtube" | "spotify" | "soundcloud";
   status: "processing" | "done" | "error";
   error?: string;
+  log?: string;
 }
 
 interface Props {
@@ -20,16 +22,33 @@ const platformIcon: Record<string, { icon: typeof Youtube; color: string }> = {
 };
 
 export function ConversionItem({ item }: Props) {
+  const [showLog, setShowLog] = useState(false);
   const info = platformIcon[item.platform];
   const Icon = info.icon;
+  const hasLog = item.log && item.log.trim().length > 0;
 
   return (
-    <li className="flex items-center gap-3 p-3 rounded-lg bg-muted/20">
-      <div className="w-9 h-9 rounded-md bg-primary/15 grid place-items-center">
-        <Icon className={`w-4 h-4 ${info.color}`} />
+    <li className="p-3 rounded-lg bg-muted/20">
+      <div className="flex items-center gap-3">
+        <div className="w-9 h-9 rounded-md bg-primary/15 grid place-items-center shrink-0">
+          <Icon className={`w-4 h-4 ${info.color}`} />
+        </div>
+        <p className="flex-1 truncate text-sm font-mono">{item.title}</p>
+        <ConversionStatusBadge status={item.status} error={item.error} />
+        {hasLog && (
+          <button
+            onClick={() => setShowLog(!showLog)}
+            className="text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {showLog ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+          </button>
+        )}
       </div>
-      <p className="flex-1 truncate text-sm font-mono">{item.title}</p>
-      <ConversionStatusBadge status={item.status} error={item.error} />
+      {showLog && hasLog && (
+        <pre className="mt-2 p-2 rounded bg-black/40 text-xs text-muted-foreground font-mono whitespace-pre-wrap max-h-48 overflow-y-auto">
+          {item.log}
+        </pre>
+      )}
     </li>
   );
 }

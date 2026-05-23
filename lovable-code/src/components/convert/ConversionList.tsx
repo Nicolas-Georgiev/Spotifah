@@ -1,13 +1,5 @@
 import { Download } from "lucide-react";
-import { ConversionItem } from "./ConversionItem";
-
-interface ConvItem {
-  id: number;
-  title: string;
-  platform: "youtube" | "spotify" | "soundcloud";
-  status: "processing" | "done" | "error";
-  error?: string;
-}
+import { ConversionItem, type ConvItem } from "./ConversionItem";
 
 interface Props {
   items: ConvItem[];

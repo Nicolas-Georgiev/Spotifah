@@ -58,6 +58,10 @@ class SpotifyInfoExtractor:
     """Extrae información de Spotify usando spotdl como método principal y métodos alternativos como fallback"""
     
     def __init__(self):
+        self.session = requests.Session()
+        self.session.headers.update({
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        })
         # Configurar spotdl (OBLIGATORIO)
         try:
             if SPOTDL_API_MODE == "legacy_spotdl_class":
@@ -115,18 +119,74 @@ class SpotifyInfoExtractor:
             raise RuntimeError("SpotDL es obligatorio para el funcionamiento")
 
     def get_track_info(self, spotify_url: str):
-        """Obtiene información de una pista usando SpotDL únicamente"""
+        """Obtiene información de una pista usando SpotDL y métodos alternativos como fallback"""
         track_id = self._extract_spotify_id(spotify_url)
         if not track_id:
             return None
-        
-        # USAR SOLO SPOTDL (simplificado)
+
+        # 1. Intentar con SpotDL
         track_info = self._get_info_from_spotdl(spotify_url)
         if track_info and track_info.get('artista') != 'Artista Desconocido':
             print("✅ Metadatos obtenidos via SpotDL")
             return track_info
-        else:
-            raise RuntimeError(f"No se pudieron obtener metadatos de Spotify para: {spotify_url}")
+
+        print("⚠️ SpotDL falló, intentando métodos alternativos...")
+
+        # 2. Intentar extraer de la página principal de Spotify
+        track_info = self._get_info_from_main_page(track_id)
+        if track_info:
+            print("✅ Metadatos obtenidos via página principal")
+            return self._normalize_fallback_info(track_info, spotify_url)
+
+        # 3. Intentar con OEmbed
+        track_info = self._get_info_from_oembed(track_id)
+        if track_info:
+            print("✅ Metadatos obtenidos via OEmbed")
+            return self._normalize_fallback_info(track_info, spotify_url)
+
+        # 4. Intentar con página embed
+        track_info = self._get_info_from_embed(track_id)
+        if track_info:
+            print("✅ Metadatos obtenidos via embed")
+            return self._normalize_fallback_info(track_info, spotify_url)
+
+        # 5. Intentar con APIs alternativas (iTunes, etc.)
+        track_info = self._search_alternative_apis(track_id)
+        if track_info:
+            print("✅ Metadatos obtenidos via APIs alternativas")
+            return self._normalize_fallback_info(track_info, spotify_url)
+
+        raise RuntimeError(
+            f"No se pudieron obtener metadatos para: {spotify_url}. "
+            f"Verifica que la URL sea válida y que las credenciales de Spotify estén configuradas."
+        )
+
+    def _normalize_fallback_info(self, raw: dict, spotify_url: str) -> dict:
+        """Normaliza la información obtenida de métodos fallback al formato canónico"""
+        name = raw.get('name', raw.get('titulo', 'Título Desconocido'))
+        artist = raw.get('artist', raw.get('artista', 'Artista Desconocido'))
+        image = raw.get('image_url', raw.get('caratula_url', ''))
+        album = raw.get('album', 'Álbum Desconocido')
+        duration = raw.get('duration', raw.get('duracion_seg', 180))
+
+        return {
+            'titulo':           name,
+            'artista':          artist,
+            'caratula_url':     image,
+            'duracion_seg':     int(duration),
+            'genero':           '',
+            'plataforma_origen': 'Spotify',
+            'url_origen':       spotify_url,
+            'ruta_local':       '',
+            'letra':            '',
+            'album':            album,
+            'name':             name,
+            'artist':           artist,
+            'artists':          [artist],
+            'duration_ms':      int(duration) * 1000,
+            'images':           [{'url': image}] if image else [],
+            'image_url':        image,
+        }
 
     def _get_info_from_spotdl(self, spotify_url: str):
         """Método PRINCIPAL: Extraer información usando SpotDL"""
@@ -904,97 +964,94 @@ class Spotify2MP3Converter(BaseModel):
         downloads_dir = self.download_folder
         os.makedirs(downloads_dir, exist_ok=True)
         
+        # Extraer track_id para búsquedas mejoradas
         try:
-            # Extraer track_id para búsquedas mejoradas
+            track_id, _ = self.extract_spotify_id(spotify_url)
+            self.current_track_id = track_id
+        except Exception:
+            pass
+        
+        # 1. Obtener información de la pista de Spotify
+        print("🔍 Obteniendo información de Spotify...")
+        track_info = self.get_track_info(spotify_url)
+        if not track_info:
+            raise RuntimeError("No se pudo obtener información de la canción desde Spotify")
+        
+        titulo_final = track_info.get('titulo', track_info.get('name', 'desconocido'))
+        artista_final = track_info.get('artista', track_info.get('artist', 'desconocido'))
+        print(f"📀 Canción: {artista_final} - {titulo_final}")
+        
+        # 2. Buscar la pista en YouTube
+        print("🔍 Buscando en YouTube...")
+        youtube_info = self.search_on_youtube(titulo_final, artista_final)
+        print(f"✅ Encontrado en YouTube: {youtube_info['title']}")
+        
+        # 3. Descargar desde YouTube
+        safe_title_pre  = self._sanitize_filename(titulo_final)
+        safe_artist_pre = self._sanitize_filename(artista_final)
+        _outtmpl = os.path.join(downloads_dir, f"{safe_artist_pre} - {safe_title_pre}.%(ext)s")
+
+        print("⬇️ Descargando desde YouTube...")
+        mp3_path = self.download_from_youtube(youtube_info['url'], downloads_dir, filename_tmpl=_outtmpl)
+        print(f"✅ Audio descargado: {mp3_path}")
+        
+        # 4. Descargar portada del álbum
+        album_art_path = None
+        cover_url = track_info.get('caratula_url') or track_info.get('image_url', '')
+        if cover_url:
+            print("🖼️ Descargando portada del álbum...")
+            album_art_path = os.path.join(downloads_dir, "temp_cover.jpg")
+            album_art_path = self.download_album_art(cover_url, album_art_path)
+        
+        # 5. Añadir metadatos de Spotify
+        print("🏷️ Añadiendo metadatos...")
+        self.add_metadata_to_mp3(mp3_path, track_info, album_art_path)
+        
+        # 6. Limpiar archivo temporal de portada
+        if album_art_path and os.path.exists(album_art_path):
             try:
-                track_id, _ = self.extract_spotify_id(spotify_url)
-                self.current_track_id = track_id  # Guardar para búsquedas de YouTube
-            except:
-                pass
-            
-            # 1. Obtener información de la pista de Spotify
-            print("🔍 Obteniendo información de Spotify...")
-            track_info = self.get_track_info(spotify_url)
-            
-            # 2. Buscar la pista en YouTube
-            print("🔍 Buscando en YouTube...")
-            titulo_busqueda = track_info.get('titulo', track_info.get('name', ''))
-            artista_busqueda = track_info.get('artista', track_info.get('artist', ''))
-            youtube_info = self.search_on_youtube(titulo_busqueda, artista_busqueda)
-            
-            print(f"✅ Encontrado en YouTube: {youtube_info['title']}")
-            
-            # 3. Descargar desde YouTube usando el nombre final como outtmpl
-            # (evita que se devuelva un archivo antiguo del directorio)
-            safe_title_pre  = self._sanitize_filename(track_info.get('titulo',  track_info.get('name',   'track')))
-            safe_artist_pre = self._sanitize_filename(track_info.get('artista', track_info.get('artist', 'artista')))
-            _outtmpl = os.path.join(downloads_dir, f"{safe_artist_pre} - {safe_title_pre}.%(ext)s")
-
-            print("⬇️ Descargando desde YouTube...")
-            mp3_path = self.download_from_youtube(
-                youtube_info['url'],
-                downloads_dir,
-                filename_tmpl=_outtmpl,
-            )
-            
-            # 4. Descargar portada del álbum
-            album_art_path = None
-            cover_url = track_info.get('caratula_url') or track_info.get('image_url', '')
-            if cover_url:
-                print("🖼️ Descargando portada del álbum...")
-                album_art_path = os.path.join(downloads_dir, "temp_cover.jpg")
-                album_art_path = self.download_album_art(cover_url, album_art_path)
-            
-            # 5. Añadir metadatos de Spotify
-            print("🏷️ Añadiendo metadatos...")
-            self.add_metadata_to_mp3(mp3_path, track_info, album_art_path)
-            
-            # 6. Limpiar archivo temporal de portada
-            if album_art_path and os.path.exists(album_art_path):
                 os.remove(album_art_path)
-            
-            # 7. Asegurar que el archivo tiene el nombre final correcto
-            safe_title  = self._sanitize_filename(track_info.get('titulo',  track_info.get('name',   'track')))
-            safe_artist = self._sanitize_filename(track_info.get('artista', track_info.get('artist', 'artista')))
-            new_filename = f"{safe_artist} - {safe_title}.mp3"
-            new_path = os.path.join(downloads_dir, new_filename)
+            except Exception:
+                pass
+        
+        # 7. Asegurar nombre final correcto
+        safe_title  = self._sanitize_filename(titulo_final)
+        safe_artist = self._sanitize_filename(artista_final)
+        new_filename = f"{safe_artist} - {safe_title}.mp3"
+        new_path = os.path.join(downloads_dir, new_filename)
 
-            if os.path.abspath(mp3_path) != os.path.abspath(new_path):
-                try:
-                    os.rename(mp3_path, new_path)
-                    mp3_path = new_path
-                except Exception:
-                    pass  # si falla el rename, usar ruta anterior
-            
-            print(f"✅ Conversión completada: {mp3_path}")
+        if os.path.abspath(mp3_path) != os.path.abspath(new_path):
+            try:
+                os.rename(mp3_path, new_path)
+                mp3_path = new_path
+            except Exception:
+                pass
+        
+        print(f"✅ Conversión completada: {mp3_path}")
 
-            # ── Guardar en BD ──────────────────────────────────────────────
-            if _DB_ADAPTER_OK:
-                try:
-                    # album puede ser str o dict según la versión de spotdl
-                    _album = track_info.get('album', '')
-                    if isinstance(_album, dict):
-                        _album = _album.get('name', '')
-                    metadata_bd = {
-                        'titulo':            track_info.get('titulo', track_info.get('name', '')),
-                        'artista':           track_info.get('artista', track_info.get('artist', '')),
-                        'album':             _album,
-                        'duracion_seg':      track_info.get('duracion_seg') or (track_info.get('duration_ms') or 0) // 1000,
-                        'plataforma_origen': 'Spotify',
-                        'url_origen':        spotify_url,
-                        'ruta_local':        os.path.abspath(mp3_path),
-                        'caratula_url':      track_info.get('caratula_url') or track_info.get('image_url'),
-                    }
-                    id_cancion = upsert_cancion(metadata_bd)
-                    registrar_descarga(id_cancion, formato='mp3')
-                except Exception as _bd_err:
-                    print(f"⚠️ No se pudo guardar en BD: {_bd_err}")
-            # ───────────────────────────────────────────────────────────────
+        # ── Guardar en BD ──────────────────────────────────────────────
+        if _DB_ADAPTER_OK:
+            try:
+                _album = track_info.get('album', '')
+                if isinstance(_album, dict):
+                    _album = _album.get('name', '')
+                metadata_bd = {
+                    'titulo':            titulo_final,
+                    'artista':           artista_final,
+                    'album':             _album,
+                    'duracion_seg':      track_info.get('duracion_seg') or (track_info.get('duration_ms') or 0) // 1000,
+                    'plataforma_origen': 'Spotify',
+                    'url_origen':        spotify_url,
+                    'ruta_local':        os.path.abspath(mp3_path),
+                    'caratula_url':      cover_url,
+                }
+                id_cancion = upsert_cancion(metadata_bd)
+                registrar_descarga(id_cancion, formato='mp3')
+            except Exception as _bd_err:
+                print(f"⚠️ No se pudo guardar en BD: {_bd_err}")
+        # ───────────────────────────────────────────────────────────────
 
-            return mp3_path
-            
-        except Exception as e:
-            raise Exception(f"Error en la conversión: {e}")
+        return mp3_path
 
     # ── Soporte de playlists / álbumes ──────────────────────────────────────
 
