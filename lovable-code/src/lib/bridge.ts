@@ -30,6 +30,12 @@ interface ActionResult {
   error?: string;
 }
 
+interface AddToPlaylistResult {
+  ok: boolean;
+  data?: { message: string; already_exists: boolean };
+  error?: string;
+}
+
 interface SystemStatus {
   dependencies: Record<string, boolean>;
   ffmpeg: boolean;
@@ -271,7 +277,7 @@ export const bridge = {
     return await api.get_system_status();
   },
 
-  async addSongToPlaylist(playlistId: string, songId: string): Promise<ActionResult> {
+  async addSongToPlaylist(playlistId: string, songId: string): Promise<AddToPlaylistResult> {
     const api = getApi();
     if (!api) return { ok: false, error: "PyWebView no disponible" };
     try {
@@ -288,6 +294,16 @@ export const bridge = {
       return await api.remove_song_from_playlist(playlistId, songId);
     } catch (e: any) {
       return { ok: false, error: e?.message ?? "Error" };
+    }
+  },
+
+  async deleteSong(songId: string): Promise<ActionResult> {
+    const api = getApi();
+    if (!api) return { ok: false, error: "PyWebView no disponible" };
+    try {
+      return await api.delete_song(songId);
+    } catch (e: any) {
+      return { ok: false, error: e?.message ?? "Error al eliminar canción" };
     }
   },
 
@@ -397,9 +413,21 @@ export const bridge = {
     const api = getApi();
     if (!api) return { ok: false, error: "PyWebView no disponible", favorite: false };
     try {
-      return await api.toggle_favorite(songId);
+      const result = await api.toggle_favorite(songId);
+      return { ok: result.ok, favorite: result.data?.favorite ?? false, error: result.error };
     } catch (e: any) {
       return { ok: false, error: e?.message ?? "Error", favorite: false };
+    }
+  },
+
+  async isFavorite(songId: string): Promise<{ ok: boolean; favorite: boolean }> {
+    const api = getApi();
+    if (!api) return { ok: false, favorite: false };
+    try {
+      const res = await api.is_favorite(songId);
+      return { ok: true, favorite: res.data?.favorite ?? false };
+    } catch {
+      return { ok: false, favorite: false };
     }
   },
 

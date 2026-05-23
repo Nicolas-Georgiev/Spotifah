@@ -841,16 +841,35 @@ class Api:
             try:
                 cur = conn.cursor()
                 cur.execute(
+                    "SELECT 1 FROM playlist_canciones WHERE id_playlist = ? AND id_cancion = ?",
+                    (int(playlist_id), int(song_id)),
+                )
+                already = cur.fetchone() is not None
+                if already:
+                    return {
+                        "ok": True,
+                        "data": {
+                            "message": "La cancion ya esta en la playlist",
+                            "already_exists": True,
+                        },
+                    }
+                cur.execute(
                     "SELECT COALESCE(MAX(orden), 0) + 1 FROM playlist_canciones WHERE id_playlist = ?",
                     (int(playlist_id),),
                 )
                 next_order = cur.fetchone()[0]
                 cur.execute(
-                    "INSERT OR IGNORE INTO playlist_canciones (id_playlist, id_cancion, orden) VALUES (?, ?, ?)",
+                    "INSERT INTO playlist_canciones (id_playlist, id_cancion, orden) VALUES (?, ?, ?)",
                     (int(playlist_id), int(song_id), next_order),
                 )
                 conn.commit()
-                return {"ok": True, "data": {"message": "Cancion anadida a la playlist"}}
+                return {
+                    "ok": True,
+                    "data": {
+                        "message": "Cancion anadida a la playlist",
+                        "already_exists": False,
+                    },
+                }
             finally:
                 conn.close()
         except Exception as e:
@@ -870,6 +889,32 @@ class Api:
                     "ok": True,
                     "data": {"message": "Cancion eliminada de la playlist"},
                 }
+            finally:
+                conn.close()
+        except Exception as e:
+            return {"ok": False, "error": str(e)}
+
+    def delete_song(self, song_id: str) -> dict:
+        try:
+            conn = self.db.get_connection()
+            try:
+                cur = conn.cursor()
+                cur.execute("SELECT ruta_local FROM canciones WHERE id_cancion = ?", (int(song_id),))
+                row = cur.fetchone()
+                file_path = row["ruta_local"] if row else None
+
+                cur.execute("DELETE FROM playlist_canciones WHERE id_cancion = ?", (int(song_id),))
+                cur.execute("DELETE FROM historial_reproduccion WHERE id_cancion = ?", (int(song_id),))
+                cur.execute("DELETE FROM canciones WHERE id_cancion = ?", (int(song_id),))
+                conn.commit()
+
+                if file_path and os.path.exists(file_path):
+                    try:
+                        os.remove(file_path)
+                    except Exception:
+                        pass
+
+                return {"ok": True, "data": {"message": "Cancion eliminada"}}
             finally:
                 conn.close()
         except Exception as e:
@@ -903,40 +948,45 @@ class Api:
             return {"ok": False, "error": str(e)}
 
     def delete_playlist(self, playlist_id: str) -> dict:
-        if playlist_id in ("all", "favorites"):
+        if playlist_id == "all":
             return {"ok": False, "error": "No se puede eliminar esta playlist"}
         try:
             conn = self.db.get_connection()
             try:
                 cur = conn.cursor()
-                cur.execute(
-                    "DELETE FROM playlists WHERE id_playlist = ?",
-                    (int(playlist_id),),
-                )
+                cur.execute("SELECT nombre FROM playlists WHERE id_playlist = ?", (int(playlist_id),))
+                row = cur.fetchone()
+                if not row:
+                    return {"ok": False, "error": "Playlist no encontrada"}
+                if row["nombre"] == "Favoritos":
+                    return {"ok": False, "error": "No se puede eliminar la playlist de favoritos"}
+                cur.execute("DELETE FROM playlists WHERE id_playlist = ?", (int(playlist_id),))
                 conn.commit()
-                if cur.rowcount:
-                    return {"ok": True, "data": {"message": "Playlist eliminada"}}
-                return {"ok": False, "error": "Playlist no encontrada"}
+                return {"ok": True, "data": {"message": "Playlist eliminada"}}
             finally:
                 conn.close()
         except Exception as e:
             return {"ok": False, "error": str(e)}
 
     def rename_playlist(self, playlist_id: str, name: str) -> dict:
-        if playlist_id in ("all",):
+        if playlist_id == "all":
             return {"ok": False, "error": "No se puede renombrar esta playlist"}
         try:
             conn = self.db.get_connection()
             try:
                 cur = conn.cursor()
+                cur.execute("SELECT nombre FROM playlists WHERE id_playlist = ?", (int(playlist_id),))
+                row = cur.fetchone()
+                if not row:
+                    return {"ok": False, "error": "Playlist no encontrada"}
+                if row["nombre"] == "Favoritos":
+                    return {"ok": False, "error": "No se puede renombrar la playlist de favoritos"}
                 cur.execute(
                     "UPDATE playlists SET nombre = ? WHERE id_playlist = ?",
                     (name.strip(), int(playlist_id)),
                 )
                 conn.commit()
-                if cur.rowcount:
-                    return {"ok": True, "data": {"message": "Playlist renombrada"}}
-                return {"ok": False, "error": "Playlist no encontrada"}
+                return {"ok": True, "data": {"message": "Playlist renombrada"}}
             finally:
                 conn.close()
         except Exception as e:
@@ -1015,6 +1065,25 @@ class Api:
                 conn.close()
         except Exception as e:
             return {"ok": False, "error": str(e)}
+
+    def is_favorite(self, song_id: str) -> dict:
+        try:
+            fav_id = self._ensure_favorites_playlist()
+            if not fav_id:
+                return {"ok": True, "data": {"favorite": False}}
+            conn = self.db.get_connection()
+            try:
+                cur = conn.cursor()
+                cur.execute(
+                    "SELECT 1 FROM playlist_canciones WHERE id_playlist = ? AND id_cancion = ?",
+                    (fav_id, int(song_id)),
+                )
+                is_fav = cur.fetchone() is not None
+                return {"ok": True, "data": {"favorite": is_fav}}
+            finally:
+                conn.close()
+        except Exception:
+            return {"ok": True, "data": {"favorite": False}}
 
     # ── Playback ───────────────────────────────────────────────
 

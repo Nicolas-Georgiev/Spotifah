@@ -10,12 +10,13 @@ interface Props {
   fmtDuration: (seconds: number) => string;
   playlistId?: string;
   onRemoveFromPlaylist?: (songId: string) => void;
+  onSongDeleted?: (songId: string) => void;
 }
 
-export function SongTable({ songs, playingId, onPlay, fmtDuration, playlistId, onRemoveFromPlaylist }: Props) {
+export function SongTable({ songs, playingId, onPlay, fmtDuration, playlistId, onRemoveFromPlaylist, onSongDeleted }: Props) {
   return (
     <GlassCard className="overflow-hidden p-0">
-      <div className="hidden md:grid grid-cols-[40px_3fr_2fr_2fr_120px_80px_40px] gap-4 px-5 py-3 text-xs font-mono text-muted-foreground border-b border-border uppercase tracking-wider">
+      <div className="hidden md:grid grid-cols-[40px_3fr_2fr_2fr_120px_80px_80px] gap-4 px-5 py-3 text-xs font-mono text-muted-foreground border-b border-border uppercase tracking-wider">
         <span>#</span>
         <span>Titulo</span>
         <span>Artista</span>
@@ -35,6 +36,7 @@ export function SongTable({ songs, playingId, onPlay, fmtDuration, playlistId, o
             fmtDuration={fmtDuration}
             playlistId={playlistId}
             onRemoveFromPlaylist={onRemoveFromPlaylist}
+            onSongDeleted={onSongDeleted}
           />
         ))}
       </ul>
