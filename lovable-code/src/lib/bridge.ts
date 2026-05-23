@@ -35,6 +35,41 @@ interface SystemStatus {
   music_count: number;
 }
 
+interface NowPlayingData {
+  id: string;
+  title: string;
+  artist: string;
+  album: string;
+  duration: number;
+  cover_url: string;
+  is_playing: boolean;
+  position: number;
+}
+
+interface NowPlayingResult {
+  ok: boolean;
+  data?: NowPlayingData | null;
+}
+
+interface PlaybackPosition {
+  position: number;
+  is_playing: boolean;
+}
+
+interface VolumeData {
+  volume: number;
+}
+
+interface FavoriteData {
+  favorite: boolean;
+}
+
+interface CreatePlaylistResult {
+  ok: boolean;
+  data?: { id: string; name: string; description: string; is_public: boolean };
+  error?: string;
+}
+
 const isBrowser = typeof window !== "undefined";
 const api = isBrowser ? (window as any).pywebview?.api : null;
 
@@ -177,6 +212,109 @@ export const bridge = {
       return { ok: false, error: "PyWebView no disponible" };
     } catch (e: any) {
       return { ok: false, error: e?.message ?? "Error" };
+    }
+  },
+
+  async convertSoundcloud(url: string): Promise<ConvertResult> {
+    try {
+      if (api) return await api.convert_soundcloud(url);
+      return { ok: false, error: "PyWebView no disponible" };
+    } catch (e: any) {
+      return { ok: false, error: e?.message ?? "Error en conversión" };
+    }
+  },
+
+  async createPlaylist(name: string, description: string = ""): Promise<CreatePlaylistResult> {
+    try {
+      if (api) return await api.create_playlist(name, description);
+      return { ok: false, error: "PyWebView no disponible" };
+    } catch (e: any) {
+      return { ok: false, error: e?.message ?? "Error al crear playlist" };
+    }
+  },
+
+  async deletePlaylist(playlistId: string): Promise<ActionResult> {
+    try {
+      if (api) return await api.delete_playlist(playlistId);
+      return { ok: false, error: "PyWebView no disponible" };
+    } catch (e: any) {
+      return { ok: false, error: e?.message ?? "Error al eliminar" };
+    }
+  },
+
+  async renamePlaylist(playlistId: string, name: string): Promise<ActionResult> {
+    try {
+      if (api) return await api.rename_playlist(playlistId, name);
+      return { ok: false, error: "PyWebView no disponible" };
+    } catch (e: any) {
+      return { ok: false, error: e?.message ?? "Error al renombrar" };
+    }
+  },
+
+  async searchSongs(query: string): Promise<Song[]> {
+    if (!api) return [];
+    try {
+      const result = await api.search_songs(query);
+      if (Array.isArray(result)) return result;
+      return [];
+    } catch {
+      return [];
+    }
+  },
+
+  async toggleFavorite(songId: string): Promise<FavoriteData & { ok: boolean; error?: string }> {
+    try {
+      if (api) return await api.toggle_favorite(songId);
+      return { ok: false, error: "PyWebView no disponible", favorite: false };
+    } catch (e: any) {
+      return { ok: false, error: e?.message ?? "Error", favorite: false };
+    }
+  },
+
+  async getNowPlaying(): Promise<NowPlayingResult> {
+    try {
+      if (api) return await api.get_now_playing();
+      return { ok: true, data: null };
+    } catch {
+      return { ok: true, data: null };
+    }
+  },
+
+  async getPlaybackPosition(): Promise<PlaybackPosition> {
+    try {
+      if (api) return await api.get_playback_position();
+      return { position: 0, is_playing: false };
+    } catch {
+      return { position: 0, is_playing: false };
+    }
+  },
+
+  async setVolume(volume: number): Promise<{ ok: boolean; data?: VolumeData; error?: string }> {
+    try {
+      if (api) return await api.set_volume(volume);
+      return { ok: true, data: { volume } };
+    } catch (e: any) {
+      return { ok: false, error: e?.message ?? "Error al ajustar volumen" };
+    }
+  },
+
+  async getVolume(): Promise<{ ok: boolean; data?: VolumeData; error?: string }> {
+    try {
+      if (api) return await api.get_volume();
+      return { ok: true, data: { volume: 80 } };
+    } catch {
+      return { ok: true, data: { volume: 80 } };
+    }
+  },
+
+  async getRecentlyPlayed(limit: number = 10): Promise<Song[]> {
+    if (!api) return [];
+    try {
+      const result = await api.get_recently_played(limit);
+      if (Array.isArray(result)) return result;
+      return [];
+    } catch {
+      return [];
     }
   },
 };
