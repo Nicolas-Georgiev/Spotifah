@@ -5,6 +5,7 @@ import { SettingCard } from "../components/settings/SettingCard";
 import { Toggle } from "../components/settings/Toggle";
 import { BitrateSelect } from "../components/settings/BitrateSelect";
 import { ThemeSelect } from "../components/settings/ThemeSelect";
+import { DownloadPathSelect } from "../components/settings/DownloadPathSelect";
 
 export const Route = createFileRoute("/settings")({
   component: SettingsPage,
@@ -33,6 +34,10 @@ function SettingsPage() {
 
       <SettingCard title="Calidad de Descarga" subtitle="Bitrate predeterminado para conversiones a MP3">
         <BitrateSelect value={settings.download_quality ?? "192"} onChange={(v) => update("download_quality", v)} />
+      </SettingCard>
+
+      <SettingCard title="Carpeta de Descarga" subtitle="Donde se guardaran las canciones convertidas">
+        <DownloadPathSelect value={settings.download_path ?? ""} onChange={(v) => update("download_path", v)} />
       </SettingCard>
 
       <SettingCard title="Notificaciones" subtitle="Recibe avisos cuando se completen las conversiones">
