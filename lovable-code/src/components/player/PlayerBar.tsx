@@ -17,7 +17,7 @@ interface NowPlayingInfo {
 }
 
 export function PlayerBar() {
-  const { setCurrentPlayingId } = useAppData();
+  const { setCurrentPlayingId, currentPlayingId } = useAppData();
   const [np, setNp] = useState<NowPlayingInfo | null>(null);
   const [position, setPosition] = useState(0);
   const [volume, setVolume] = useState(100);
@@ -141,6 +141,12 @@ export function PlayerBar() {
     }
   }, [setCurrentPlayingId]);
 
+  useEffect(() => {
+    if (currentPlayingId) {
+      refreshNowPlaying();
+    }
+  }, [currentPlayingId, refreshNowPlaying]);
+
   const handlePlayPause = async () => {
     if (np?.is_playing) {
       await bridge.pauseSong();
@@ -209,7 +215,7 @@ export function PlayerBar() {
 
   const hasSong = !!np;
   const displayPosition = Math.min(position, dur);
-  const progress = Math.min(displayPosition / dur, 1);
+  const progress = np ? Math.min(displayPosition / dur, 1) : 0;
   const showTransition = !isDragging;
 
   return (

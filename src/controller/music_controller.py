@@ -259,12 +259,19 @@ class MusicController:
             track = self.library.get_track(self.current_index)
         if track and os.path.exists(track):
             try:
+                was_paused = self._is_paused
                 pygame.mixer.music.load(track)
                 pygame.mixer.music.play(start=position_seconds)
                 self._start_time = time.time()
                 self._start_pos = position_seconds
                 self._paused_pos = 0.0
                 self._is_paused = False
+
+                if was_paused:
+                    pygame.mixer.music.pause()
+                    self._paused_pos = position_seconds
+                    self._is_paused = True
+
                 return True
             except Exception as e:
                 print(f"❌ Error al hacer seek: {e}")

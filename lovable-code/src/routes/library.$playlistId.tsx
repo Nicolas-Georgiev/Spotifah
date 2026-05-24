@@ -50,9 +50,9 @@ function PlaylistDetail() {
   const totalSecs = sortedSongs.reduce((acc, s) => acc + s.duration, 0);
   const totalMin = Math.round(totalSecs / 60);
 
-  const handlePlay = (songId: string) => {
+  const handlePlay = async (songId: string) => {
     setCurrentPlayingId(songId);
-    bridge.playSong(songId, sortedSongs.map((s) => s.id));
+    await bridge.playSong(songId, sortedSongs.map((s) => s.id));
   };
 
   const handleRemove = async (songId: string) => {
