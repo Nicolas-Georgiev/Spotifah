@@ -39,9 +39,8 @@ function PlaylistDetail() {
 
   useEffect(() => {
     bridge.getPlaylistSongs(playlist.id).then(setSongs);
-    const defaultSort: SortConfig | null = playlist.id === "all"
-      ? { key: "download_date", dir: "desc" }
-      : null;
+    const defaultSort: SortConfig | null =
+      playlist.id === "all" ? { key: "download_date", dir: "desc" } : null;
     setSort(defaultSort);
   }, [playlist.id]);
 
@@ -50,9 +49,12 @@ function PlaylistDetail() {
   const totalSecs = sortedSongs.reduce((acc, s) => acc + s.duration, 0);
   const totalMin = Math.round(totalSecs / 60);
 
-  const handlePlay = (songId: string) => {
+  const handlePlay = async (songId: string) => {
     setCurrentPlayingId(songId);
-    bridge.playSong(songId, sortedSongs.map((s) => s.id));
+    await bridge.playSong(
+      songId,
+      sortedSongs.map((s) => s.id),
+    );
   };
 
   const handleRemove = async (songId: string) => {
@@ -71,7 +73,10 @@ function PlaylistDetail() {
 
   return (
     <div className="space-y-8">
-      <Link to="/library" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+      <Link
+        to="/library"
+        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+      >
         <ChevronLeft className="w-4 h-4" /> Volver a Biblioteca
       </Link>
 

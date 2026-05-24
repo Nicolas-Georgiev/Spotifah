@@ -1,24 +1,23 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-EKHO - Plataforma Musical 
+EKHO - Plataforma Musical
 
-Punto de entrada principal que utiliza el patrón MVC mejorado con:
-- Controladores como comunicadores entre Model y View
-- Separación clara de responsabilidades
-- Bibliotecas esenciales sin redundancias
+Entry point using the improved MVC pattern with:
+- Controllers as communicators between Model and View
+- Clear separation of responsibilities
+- Essential libraries without redundancies
 """
 
 import os
 import sys
 
-# Obtener el directorio actual (src) y añadirlo al path
 current_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, current_dir)
 
 
-def mostrar_canciones():
-    """Muestra todas las canciones guardadas actualmente en la base de datos."""
+def show_songs():
+    """Show all songs currently stored in the database."""
     try:
         from model.db_adapter import _get_db
         db = _get_db()
@@ -38,11 +37,11 @@ def mostrar_canciones():
             print(f"\n🎵 Canciones en la base de datos ({len(rows)} total):")
             print("-" * 70)
             for r in rows:
-                duracion = f"{r['duracion_seg']}s" if r['duracion_seg'] else "-"
-                ruta = r['ruta_local'] if r['ruta_local'] else "-"
+                duration = f"{r['duracion_seg']}s" if r['duracion_seg'] else "-"
+                path = r['ruta_local'] if r['ruta_local'] else "-"
                 print(f"[{r['id_cancion']:>3}] {r['titulo']} — {r['artista']}")
-                print(f"       Album: {r['album'] or '-'}  |  Duración: {duracion}  |  Origen: {r['plataforma_origen'] or '-'}")
-                print(f"       Ruta: {ruta}")
+                print(f"       Album: {r['album'] or '-'}  |  Duración: {duration}  |  Origen: {r['plataforma_origen'] or '-'}")
+                print(f"       Ruta: {path}")
                 print()
         finally:
             conn.close()
@@ -51,15 +50,13 @@ def mostrar_canciones():
 
 
 def main():
-    """Función principal que ejecuta la aplicación"""
+    """Main function that runs the application"""
     print(f"\n🎵 Iniciando Ekho Music Converter...")
     print(f"\n⚙️  Configurando terminal...")
 
     try:
-        # Importar el controlador principal consolidado
         from controller.conversor_controller import ConversorController
         
-        # Crear y ejecutar controlador principal consolidado
         conversor_controller = ConversorController()
         conversor_controller.run()
         
@@ -67,7 +64,7 @@ def main():
         print(f"\n❌ Error de importación: {e}")
         print("\n🔧 SOLUCIONES POSIBLES:")
         print("1. Verificar que todas las dependencias estén instaladas:")
-        print("   python install_dependencies.py")
+        print("   python scripts\install_dependencies.py")
         print("\n2. Verificar que FFmpeg esté instalado:")
         print("   Windows: winget install Gyan.FFmpeg")
         print("   Linux: sudo apt install ffmpeg")
@@ -84,7 +81,7 @@ def main():
         
         print("\n💡 CONSEJOS PARA SOLUCIONAR:")
         print("1. Verificar que todas las dependencias estén correctamente instaladas")
-        print("2. Ejecutar el instalador de dependencias: python install_dependencies.py")
+        print("2. Ejecutar el instalador de dependencias: python scripts\install_dependencies.py")
         print("3. Verificar que FFmpeg esté disponible en el PATH del sistema")
 
 

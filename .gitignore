@@ -3,6 +3,7 @@ __pycache__/
 
 BDD/
 data/
+.env
 # Logs
 logs
 *.log

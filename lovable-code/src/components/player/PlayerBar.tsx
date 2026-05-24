@@ -1,5 +1,15 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Play, Pause, SkipBack, SkipForward, Shuffle, Repeat, Repeat1, Volume2, VolumeX } from "lucide-react";
+import {
+  Play,
+  Pause,
+  SkipBack,
+  SkipForward,
+  Shuffle,
+  Repeat,
+  Repeat1,
+  Volume2,
+  VolumeX,
+} from "lucide-react";
 import { bridge } from "../../lib/bridge";
 import { useAppData } from "../../lib/app-data";
 import { Slider } from "../ui/slider";
@@ -17,7 +27,7 @@ interface NowPlayingInfo {
 }
 
 export function PlayerBar() {
-  const { setCurrentPlayingId } = useAppData();
+  const { setCurrentPlayingId, currentPlayingId } = useAppData();
   const [np, setNp] = useState<NowPlayingInfo | null>(null);
   const [position, setPosition] = useState(0);
   const [volume, setVolume] = useState(100);
@@ -34,19 +44,22 @@ export function PlayerBar() {
 
   const dur = np?.duration || 1;
 
-  const getPosFromClientX = useCallback((clientX: number) => {
-    const rect = barRef.current?.getBoundingClientRect();
-    if (!rect) return -1;
-    const frac = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-    return frac * dur;
-  }, [dur]);
+  const getPosFromClientX = useCallback(
+    (clientX: number) => {
+      const rect = barRef.current?.getBoundingClientRect();
+      if (!rect) return -1;
+      const frac = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+      return frac * dur;
+    },
+    [dur],
+  );
 
   const startPolling = useCallback(() => {
     const poll = async () => {
       const res = await bridge.getNowPlaying();
       if (res.ok && res.data) {
         const data = res.data as NowPlayingInfo;
-        setNp(prev => {
+        setNp((prev) => {
           if (prev?.id !== data.id) {
             setPosition(data.position);
           }
@@ -57,7 +70,6 @@ export function PlayerBar() {
         setCurrentPlayingId(data.id);
       } else {
         setNp(null);
-        setCurrentPlayingId(null);
       }
       const volRes = await bridge.getVolume();
       if (volRes.ok && volRes.data !== undefined) {
@@ -128,7 +140,7 @@ export function PlayerBar() {
     const res = await bridge.getNowPlaying();
     if (res.ok && res.data) {
       const data = res.data as NowPlayingInfo;
-      setNp(prev => {
+      setNp((prev) => {
         if (prev?.id !== data.id) {
           setPosition(data.position);
         }
@@ -137,9 +149,14 @@ export function PlayerBar() {
       setCurrentPlayingId(data.id);
     } else {
       setNp(null);
-      setCurrentPlayingId(null);
     }
   }, [setCurrentPlayingId]);
+
+  useEffect(() => {
+    if (currentPlayingId) {
+      refreshNowPlaying();
+    }
+  }, [currentPlayingId, refreshNowPlaying]);
 
   const handlePlayPause = async () => {
     if (np?.is_playing) {
@@ -148,20 +165,30 @@ export function PlayerBar() {
       await bridge.resumeSong();
     } else {
       const songs = await bridge.getSongs();
-      if (songs.length) await bridge.playSong(songs[0].id, songs.map((s) => s.id));
+      if (songs.length)
+        await bridge.playSong(
+          songs[0].id,
+          songs.map((s) => s.id),
+        );
     }
     await refreshNowPlaying();
   };
 
   const handlePrev = async () => {
     justSkippedRef.current = true;
-    setTimeout(() => { justSkippedRef.current = false; }, 500);
-    await bridge.prevSong(); await refreshNowPlaying();
+    setTimeout(() => {
+      justSkippedRef.current = false;
+    }, 500);
+    await bridge.prevSong();
+    await refreshNowPlaying();
   };
   const handleNext = async () => {
     justSkippedRef.current = true;
-    setTimeout(() => { justSkippedRef.current = false; }, 500);
-    await bridge.nextSong(); await refreshNowPlaying();
+    setTimeout(() => {
+      justSkippedRef.current = false;
+    }, 500);
+    await bridge.nextSong();
+    await refreshNowPlaying();
   };
 
   const handleShuffle = async () => {
@@ -209,11 +236,13 @@ export function PlayerBar() {
 
   const hasSong = !!np;
   const displayPosition = Math.min(position, dur);
-  const progress = Math.min(displayPosition / dur, 1);
+  const progress = np ? Math.min(displayPosition / dur, 1) : 0;
   const showTransition = !isDragging;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 glass border-t border-border/40 px-4 py-2 flex items-center gap-4">
+    <div
+      className={`fixed bottom-0 left-0 right-0 z-50 glass border-t border-border/40 px-4 py-2 flex items-center gap-4 transition-transform duration-500 ease-out ${currentPlayingId ? "translate-y-0" : "translate-y-full"}`}
+    >
       {/* Left: cover + info */}
       <div className="flex items-center gap-3 w-64 shrink-0">
         <div className="w-12 h-12 rounded-lg bg-muted/40 flex items-center justify-center text-lg shrink-0 overflow-hidden">
@@ -232,7 +261,11 @@ export function PlayerBar() {
       {/* Center: controls + progress */}
       <div className="flex-1 flex flex-col items-center gap-1 max-w-2xl mx-auto">
         <div className="flex items-center gap-3">
-          <button onClick={handlePrev} className="text-muted-foreground hover:text-foreground transition p-1" aria-label="Anterior">
+          <button
+            onClick={handlePrev}
+            className="text-muted-foreground hover:text-foreground transition p-1"
+            aria-label="Anterior"
+          >
             <SkipBack className="w-4 h-4" />
           </button>
           <button
@@ -247,7 +280,11 @@ export function PlayerBar() {
             className="w-9 h-9 rounded-full bg-primary text-primary-foreground grid place-items-center hover:scale-105 transition"
             aria-label={np?.is_playing ? "Pausar" : "Reproducir"}
           >
-            {np?.is_playing ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current ml-0.5" />}
+            {np?.is_playing ? (
+              <Pause className="w-4 h-4 fill-current" />
+            ) : (
+              <Play className="w-4 h-4 fill-current ml-0.5" />
+            )}
           </button>
           <button
             onClick={handleRepeat}
@@ -256,18 +293,26 @@ export function PlayerBar() {
           >
             {repeat === "one" ? <Repeat1 className="w-4 h-4" /> : <Repeat className="w-4 h-4" />}
           </button>
-          <button onClick={handleNext} className="text-muted-foreground hover:text-foreground transition p-1" aria-label="Siguiente">
+          <button
+            onClick={handleNext}
+            className="text-muted-foreground hover:text-foreground transition p-1"
+            aria-label="Siguiente"
+          >
             <SkipForward className="w-4 h-4" />
           </button>
         </div>
         <div className="flex items-center gap-2 w-full">
-          <span className="text-xs font-mono text-muted-foreground w-8 text-right tabular-nums">{fmt(displayPosition)}</span>
+          <span className="text-xs font-mono text-muted-foreground w-8 text-right tabular-nums">
+            {fmt(displayPosition)}
+          </span>
           <div
             ref={barRef}
             className="flex-1 relative group cursor-pointer"
             onMouseDown={handleBarMouseDown}
           >
-            <div className={`h-1.5 rounded-full bg-muted/40 overflow-hidden ${showTransition ? "transition-all duration-75" : ""}`}>
+            <div
+              className={`h-1.5 rounded-full bg-muted/40 overflow-hidden ${showTransition ? "transition-all duration-75" : ""}`}
+            >
               <div
                 className={`h-full bg-primary rounded-full ${showTransition ? "transition-all duration-75" : ""}`}
                 style={{ width: `${progress * 100}%` }}
@@ -278,14 +323,24 @@ export function PlayerBar() {
               style={{ left: `calc(${progress * 100}% - 6px)` }}
             />
           </div>
-          <span className="text-xs font-mono text-muted-foreground w-8 tabular-nums">{fmt(dur)}</span>
+          <span className="text-xs font-mono text-muted-foreground w-8 tabular-nums">
+            {fmt(dur)}
+          </span>
         </div>
       </div>
 
       {/* Right: volume */}
       <div className="flex items-center gap-2 w-40 shrink-0 justify-end">
-        <button onClick={toggleMute} className="text-muted-foreground hover:text-foreground transition p-1" aria-label="Silenciar">
-          {muted || volume === 0 ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+        <button
+          onClick={toggleMute}
+          className="text-muted-foreground hover:text-foreground transition p-1"
+          aria-label="Silenciar"
+        >
+          {muted || volume === 0 ? (
+            <VolumeX className="w-4 h-4" />
+          ) : (
+            <Volume2 className="w-4 h-4" />
+          )}
         </button>
         <Slider
           value={[muted ? 0 : volume]}

@@ -46,6 +46,54 @@ class SPAHandler(SimpleHTTPRequestHandler):
             return super().do_GET()
         return self._serve_index_html()
 
+    def _serve_blob_from_db(self, table: str, id_column: str, id_value, ctype: str):
+        db_path = os.path.join(self.data_dir, "BDD", "ekho.db") if self.data_dir else None
+        if not db_path or not os.path.isfile(db_path):
+            self.send_response(404)
+            self.end_headers()
+            return False
+        try:
+            import sqlite3
+            conn = sqlite3.connect(db_path)
+            conn.row_factory = sqlite3.Row
+            try:
+                cur = conn.cursor()
+                cur.execute(
+                    f"SELECT caratula_blob FROM {table} WHERE {id_column} = ?",
+                    (int(id_value),),
+                )
+                row = cur.fetchone()
+                if row and row["caratula_blob"]:
+                    blob = row["caratula_blob"]
+                    self.send_response(200)
+                    self.send_header("Content-Type", ctype)
+                    self.send_header("Content-Length", str(len(blob)))
+                    self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
+                    self.end_headers()
+                    self.wfile.write(blob)
+                    return True
+            finally:
+                conn.close()
+        except Exception:
+            pass
+        return False
+
+    def _serve_image_from_disk(self, path: str, ctype: str) -> bool:
+        if os.path.isfile(path):
+            try:
+                with open(path, "rb") as f:
+                    data = f.read()
+                self.send_response(200)
+                self.send_header("Content-Type", ctype)
+                self.send_header("Content-Length", str(len(data)))
+                self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
+                self.end_headers()
+                self.wfile.write(data)
+                return True
+            except Exception:
+                pass
+        return False
+
     def _serve_cover(self, path):
         filename = path.split("/api/covers/")[-1]
         if not filename or ".." in filename or "/" in filename:
@@ -64,53 +112,15 @@ class SPAHandler(SimpleHTTPRequestHandler):
             covers_dir = os.path.join(self.data_dir, "covers") if self.data_dir else None
             if covers_dir:
                 filepath = os.path.join(covers_dir, filename)
-                if os.path.isfile(filepath):
-                    try:
-                        with open(filepath, "rb") as f:
-                            data = f.read()
-                        self.send_response(200)
-                        self.send_header("Content-Type", ctype)
-                        self.send_header("Content-Length", str(len(data)))
-                        self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
-                        self.end_headers()
-                        self.wfile.write(data)
-                        return
-                    except Exception:
-                        pass
-            self.send_response(404)
-            self.end_headers()
-            return
-
-        db_path = os.path.join(self.data_dir, "BDD", "ekho.db") if self.data_dir else None
-        if not db_path or not os.path.isfile(db_path):
-            self.send_response(404)
-            self.end_headers()
-            return
-
-        try:
-            import sqlite3
-            conn = sqlite3.connect(db_path)
-            conn.row_factory = sqlite3.Row
-            try:
-                cur = conn.cursor()
-                cur.execute("SELECT caratula_blob FROM canciones WHERE id_cancion = ?", (int(song_id_str),))
-                row = cur.fetchone()
-                if row and row["caratula_blob"]:
-                    blob = row["caratula_blob"]
-                    self.send_response(200)
-                    self.send_header("Content-Type", ctype)
-                    self.send_header("Content-Length", str(len(blob)))
-                    self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
-                    self.end_headers()
-                    self.wfile.write(blob)
+                if self._serve_image_from_disk(filepath, ctype):
                     return
-            finally:
-                conn.close()
-        except Exception:
-            pass
+            self.send_response(404)
+            self.end_headers()
+            return
 
-        self.send_response(404)
-        self.end_headers()
+        if not self._serve_blob_from_db("canciones", "id_cancion", song_id_str, ctype):
+            self.send_response(404)
+            self.end_headers()
 
     def _serve_playlist_cover(self, path):
         filename = path.split("/api/playlist-covers/")[-1]
@@ -126,36 +136,9 @@ class SPAHandler(SimpleHTTPRequestHandler):
         playlist_id_str, ext = parts
         ctype = mimetypes.guess_type(f"x.{ext}")[0] or "image/jpeg"
 
-        db_path = os.path.join(self.data_dir, "BDD", "ekho.db") if self.data_dir else None
-        if not db_path or not os.path.isfile(db_path):
+        if not self._serve_blob_from_db("playlists", "id_playlist", playlist_id_str, ctype):
             self.send_response(404)
             self.end_headers()
-            return
-
-        try:
-            import sqlite3
-            conn = sqlite3.connect(db_path)
-            conn.row_factory = sqlite3.Row
-            try:
-                cur = conn.cursor()
-                cur.execute("SELECT caratula_blob FROM playlists WHERE id_playlist = ?", (int(playlist_id_str),))
-                row = cur.fetchone()
-                if row and row["caratula_blob"]:
-                    blob = row["caratula_blob"]
-                    self.send_response(200)
-                    self.send_header("Content-Type", ctype)
-                    self.send_header("Content-Length", str(len(blob)))
-                    self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
-                    self.end_headers()
-                    self.wfile.write(blob)
-                    return
-            finally:
-                conn.close()
-        except Exception:
-            pass
-
-        self.send_response(404)
-        self.end_headers()
 
     def _serve_portada(self, path):
         filename = path.split("/portadas/")[-1]

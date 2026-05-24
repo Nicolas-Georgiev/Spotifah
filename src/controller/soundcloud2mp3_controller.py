@@ -1,10 +1,9 @@
 # soundcloud2mp3_controller.py
-"""Controlador para conversión de SoundCloud a MP3 siguiendo patrón MVC robusto"""
+"""Controller for SoundCloud to MP3 conversion following a robust MVC pattern"""
 
 import os
 import sys
 
-# Añadir la carpeta src al path para importaciones absolutas
 src_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if src_dir not in sys.path:
     sys.path.insert(0, src_dir)
@@ -14,7 +13,7 @@ from model.soundcloud2mp3 import SoundCloudConverter
 
 
 class SoundCloudView:
-    """Vista mínima para SoundCloud (misma interfaz que las otras vistas)"""
+    """Minimal view for SoundCloud (same interface as other views)"""
 
     def get_user_input(self) -> str:
         print("\n🎵 Ingresa la URL de SoundCloud (pista o set/playlist):")
@@ -64,7 +63,7 @@ class SoundCloudView:
 
 
 class SoundCloud2MP3Controller(BaseController):
-    """Controlador para conversión de SoundCloud a MP3"""
+    """Controller for SoundCloud to MP3 conversion"""
 
     def __init__(self):
         super().__init__()
@@ -82,7 +81,7 @@ class SoundCloud2MP3Controller(BaseController):
         return self.model.convert(url)
 
     def convert_single_track(self) -> bool:
-        """Convierte una pista o un set/playlist — retorna True si fue exitoso"""
+        """Convert a single track or set/playlist - returns True on success"""
         try:
             url = self.view.get_user_input()
 
@@ -93,7 +92,6 @@ class SoundCloud2MP3Controller(BaseController):
                 ))
                 return False
 
-            # — Detectar si es set/playlist —
             if self.model.is_playlist_url(url):
                 print("\n📋 Set/playlist de SoundCloud detectado.")
                 print("Obteniendo lista de pistas... (puede tardar unos segundos)")
@@ -114,7 +112,6 @@ class SoundCloud2MP3Controller(BaseController):
                 print(f"\n✅ Descargadas {len(results)}/{total} pistas")
                 return len(results) > 0
 
-            # — Pista individual —
             result_path = self.process_conversion(url)
             self.handle_success(result_path)
             return True
@@ -127,7 +124,7 @@ class SoundCloud2MP3Controller(BaseController):
             return False
 
     def run(self) -> None:
-        """Ejecutar el flujo principal del controlador"""
+        """Run the main controller flow"""
         try:
             self.view.show_welcome()
             self.view.show_system_info()
