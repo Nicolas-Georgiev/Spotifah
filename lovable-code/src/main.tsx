@@ -5,13 +5,16 @@ import { RouterProvider } from "@tanstack/react-router";
 import { router } from "./router";
 import { AppDataProvider } from "./lib/app-data";
 import { ConvertDataProvider } from "./lib/convert-data";
+import { ThemeProvider } from "./lib/theme-provider";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <AppDataProvider>
-      <ConvertDataProvider>
-        <RouterProvider router={router} />
-      </ConvertDataProvider>
-    </AppDataProvider>
+    <ThemeProvider>
+      <AppDataProvider>
+        <ConvertDataProvider>
+          <RouterProvider router={router} />
+        </ConvertDataProvider>
+      </AppDataProvider>
+    </ThemeProvider>
   </StrictMode>,
 );

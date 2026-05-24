@@ -134,6 +134,26 @@ function getApi() {
   }
 }
 
+const SETTINGS_KEY = "ekho_settings";
+
+function saveToLocal(key: string, value: any) {
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    const data = raw ? JSON.parse(raw) : {};
+    data[key] = value;
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(data));
+  } catch {}
+}
+
+function loadFromLocal(): Record<string, any> {
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
 function fmtDuration(seconds: number): string {
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
@@ -283,14 +303,27 @@ export const bridge = {
   },
 
   async getSettings(): Promise<Record<string, any>> {
+    const local = loadFromLocal();
+
     const api = getApi();
-    if (!api) return { volume: 80, theme: "dark", download_quality: "192" };
-    return await api.get_settings();
+    if (!api) return local;
+
+    try {
+      const backend = await api.get_settings();
+      const merged = { ...backend, ...local };
+      return merged;
+    } catch {
+      return local;
+    }
   },
 
   async updateSettings(data: Record<string, any>): Promise<ActionResult> {
+    for (const [key, value] of Object.entries(data)) {
+      saveToLocal(key, value);
+    }
+
     const api = getApi();
-    if (!api) return { ok: true, data: { message: "Simulado" } };
+    if (!api) return { ok: true, data: { message: "Guardado localmente" } };
     try {
       return await api.update_settings(data);
     } catch (e: any) {

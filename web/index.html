@@ -1,9 +1,31 @@
 <!DOCTYPE html>
-<html lang="es" class="dark">
+<html lang="es">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>EKHO</title>
+  <script>
+    (function() {
+      try {
+        var raw = localStorage.getItem('ekho_settings');
+        if (raw) {
+          var data = JSON.parse(raw);
+          var t = data.theme;
+          if (t === 'light' || t === 'dark' || t === 'default') {
+            document.documentElement.setAttribute('data-theme', t);
+            if (t === 'dark' || t === 'default') {
+              document.documentElement.classList.add('dark');
+            } else {
+              document.documentElement.classList.remove('dark');
+            }
+            return;
+          }
+        }
+      } catch(e) {}
+      document.documentElement.setAttribute('data-theme', 'default');
+      document.documentElement.classList.add('dark');
+    })();
+  </script>
   <style>
     .splash-init {
       position: fixed;
@@ -27,8 +49,8 @@
       user-select: none;
     }
   </style>
-  <script type="module" crossorigin src="/assets/index-CS6ws_Le.js"></script>
-  <link rel="stylesheet" crossorigin href="/assets/index-4ujgQPIa.css">
+  <script type="module" crossorigin src="/assets/index-Bg7ZrBwH.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-f_29HJki.css">
 </head>
 <body>
   <div id="root">
