@@ -30,7 +30,7 @@ export function PlayerBar() {
   const { setCurrentPlayingId, currentPlayingId } = useAppData();
   const [np, setNp] = useState<NowPlayingInfo | null>(null);
   const [position, setPosition] = useState(0);
-  const [volume, setVolume] = useState(100);
+  const [volume, setVolume] = useState(0);
   const [muted, setMuted] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [shuffle, setShuffle] = useState(false);
@@ -71,14 +71,18 @@ export function PlayerBar() {
       } else {
         setNp(null);
       }
-      const volRes = await bridge.getVolume();
-      if (volRes.ok && volRes.data !== undefined) {
-        setVolume(volRes.data.volume);
-      }
     };
     poll();
     if (pollingRef.current) clearInterval(pollingRef.current);
     pollingRef.current = setInterval(poll, 2000);
+  }, []);
+
+  useEffect(() => {
+    bridge.getVolume().then((res) => {
+      if (res.ok && res.data !== undefined) {
+        setVolume(res.data.volume);
+      }
+    });
   }, []);
 
   useEffect(() => {

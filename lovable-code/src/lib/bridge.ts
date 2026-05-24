@@ -420,7 +420,7 @@ export const bridge = {
 
   async getVolume(): Promise<{ ok: boolean; data?: VolumeData; error?: string }> {
     const result = await apiCall<{ ok: boolean; data?: VolumeData }>("get_volume");
-    return result ?? { ok: true, data: { volume: 100 } };
+    return result ?? { ok: false, error: "No se pudo obtener el volumen" };
   },
 
   getRecentlyPlayed(limit: number = 10): Promise<Song[]> {

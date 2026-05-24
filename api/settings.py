@@ -23,8 +23,11 @@ class SettingsMixin:
 
     def _load_settings(self) -> dict:
         if os.path.exists(self._settings_file):
-            with open(self._settings_file, "r", encoding="utf-8") as f:
-                return json.load(f)
+            try:
+                with open(self._settings_file, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            except (json.JSONDecodeError, Exception):
+                pass
         return {"volume": 100, "theme": "dark", "download_quality": "192"}
 
     def get_settings(self) -> dict:

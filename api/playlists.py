@@ -1,4 +1,5 @@
 import os
+import stat
 
 from api.covers import CoversMixin
 
@@ -173,16 +174,31 @@ class PlaylistsMixin(CoversMixin):
                 row = cur.fetchone()
                 file_path = row["ruta_local"] if row else None
 
+                deleted = False
+                if file_path:
+                    if os.path.exists(file_path):
+                        try:
+                            os.chmod(file_path, stat.S_IWRITE)
+                            os.remove(file_path)
+                            deleted = True
+                        except Exception as e:
+                            print(f"delete_song: no se pudo eliminar {file_path}: {e}")
+
+                    if not deleted:
+                        filename = os.path.basename(file_path)
+                        alt_path = os.path.join(self._music_dir, filename)
+                        if alt_path != file_path and os.path.exists(alt_path):
+                            try:
+                                os.chmod(alt_path, stat.S_IWRITE)
+                                os.remove(alt_path)
+                                deleted = True
+                            except Exception as e:
+                                print(f"delete_song: fallback tampoco funciono para {alt_path}: {e}")
+
                 cur.execute("DELETE FROM playlist_canciones WHERE id_cancion = ?", (int(song_id),))
                 cur.execute("DELETE FROM historial_reproduccion WHERE id_cancion = ?", (int(song_id),))
                 cur.execute("DELETE FROM canciones WHERE id_cancion = ?", (int(song_id),))
                 conn.commit()
-
-                if file_path and os.path.exists(file_path):
-                    try:
-                        os.remove(file_path)
-                    except Exception:
-                        pass
 
                 if self._music_controller:
                     self._music_controller.remove_from_queue(int(song_id))

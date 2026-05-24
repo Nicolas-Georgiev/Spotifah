@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as StatusRouteImport } from './routes/status'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as RecommendationsRouteImport } from './routes/recommendations'
 import { Route as LibraryRouteImport } from './routes/library'
 import { Route as ConvertRouteImport } from './routes/convert'
 import { Route as IndexRouteImport } from './routes/index'
@@ -25,6 +26,11 @@ const StatusRoute = StatusRouteImport.update({
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RecommendationsRoute = RecommendationsRouteImport.update({
+  id: '/recommendations',
+  path: '/recommendations',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LibraryRoute = LibraryRouteImport.update({
@@ -57,6 +63,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/convert': typeof ConvertRoute
   '/library': typeof LibraryRouteWithChildren
+  '/recommendations': typeof RecommendationsRoute
   '/settings': typeof SettingsRoute
   '/status': typeof StatusRoute
   '/library/$playlistId': typeof LibraryPlaylistIdRoute
@@ -65,6 +72,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/convert': typeof ConvertRoute
+  '/recommendations': typeof RecommendationsRoute
   '/settings': typeof SettingsRoute
   '/status': typeof StatusRoute
   '/library/$playlistId': typeof LibraryPlaylistIdRoute
@@ -75,6 +83,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/convert': typeof ConvertRoute
   '/library': typeof LibraryRouteWithChildren
+  '/recommendations': typeof RecommendationsRoute
   '/settings': typeof SettingsRoute
   '/status': typeof StatusRoute
   '/library/$playlistId': typeof LibraryPlaylistIdRoute
@@ -86,6 +95,7 @@ export interface FileRouteTypes {
     | '/'
     | '/convert'
     | '/library'
+    | '/recommendations'
     | '/settings'
     | '/status'
     | '/library/$playlistId'
@@ -94,6 +104,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/convert'
+    | '/recommendations'
     | '/settings'
     | '/status'
     | '/library/$playlistId'
@@ -103,6 +114,7 @@ export interface FileRouteTypes {
     | '/'
     | '/convert'
     | '/library'
+    | '/recommendations'
     | '/settings'
     | '/status'
     | '/library/$playlistId'
@@ -113,6 +125,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ConvertRoute: typeof ConvertRoute
   LibraryRoute: typeof LibraryRouteWithChildren
+  RecommendationsRoute: typeof RecommendationsRoute
   SettingsRoute: typeof SettingsRoute
   StatusRoute: typeof StatusRoute
 }
@@ -131,6 +144,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/recommendations': {
+      id: '/recommendations'
+      path: '/recommendations'
+      fullPath: '/recommendations'
+      preLoaderRoute: typeof RecommendationsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/library': {
@@ -188,6 +208,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ConvertRoute: ConvertRoute,
   LibraryRoute: LibraryRouteWithChildren,
+  RecommendationsRoute: RecommendationsRoute,
   SettingsRoute: SettingsRoute,
   StatusRoute: StatusRoute,
 }

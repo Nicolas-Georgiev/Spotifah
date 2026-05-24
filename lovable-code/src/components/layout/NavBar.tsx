@@ -1,5 +1,5 @@
 import { Link, useLocation } from "@tanstack/react-router";
-import { Home, Library, Download } from "lucide-react";
+import { Home, Library, Download, Sparkles } from "lucide-react";
 
 function iconBtn(active: boolean) {
   return `w-10 h-10 rounded-lg grid place-items-center transition ${
@@ -23,6 +23,9 @@ export function NavBar() {
       </Link>
       <Link to="/convert" className={iconBtn(isActive("/convert"))} aria-label="Conversor">
         <Download className="w-5 h-5" />
+      </Link>
+      <Link to="/recommendations" className={iconBtn(isActive("/recommendations"))} aria-label="Recomendaciones">
+        <Sparkles className="w-5 h-5" />
       </Link>
     </nav>
   );
