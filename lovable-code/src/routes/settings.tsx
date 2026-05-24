@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Bell, Download, Music2, Info } from "lucide-react";
+import { Bell, Download, Music2, Info, FolderOpen } from "lucide-react";
 import { bridge } from "../lib/bridge";
 import { LoadingMessage } from "../components/shared/LoadingMessage";
 import { SettingCard } from "../components/settings/SettingCard";
@@ -41,6 +41,25 @@ function SettingsPage() {
 
       <SettingCard icon={<Download className="w-5 h-5" />} iconBg="bg-secondary/25 text-secondary" title="Calidad de Descarga" subtitle="Bitrate predeterminado para conversiones a MP3">
         <BitrateSelect value={settings.download_quality ?? "192"} onChange={(v) => update("download_quality", v)} />
+      </SettingCard>
+
+      <SettingCard icon={<FolderOpen className="w-5 h-5" />} iconBg="bg-blue-500/25 text-blue-400" title="Ubicación de Descarga" subtitle="Carpeta donde se guardarán las canciones descargadas">
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-mono text-muted-foreground truncate flex-1">
+            {settings.download_path || "Cargando..."}
+          </span>
+          <button
+            onClick={async () => {
+              const res = await bridge.selectFolderDialog();
+              if (res.ok && res.data) {
+                update("download_path", res.data.path);
+              }
+            }}
+            className="px-3 py-1.5 text-xs font-medium bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition whitespace-nowrap"
+          >
+            Cambiar
+          </button>
+        </div>
       </SettingCard>
 
       <SettingCard icon={<Bell className="w-5 h-5" />} iconBg="bg-yellow-500/25 text-yellow-400" title="Notificaciones" subtitle="Recibe avisos cuando se completen las conversiones">
