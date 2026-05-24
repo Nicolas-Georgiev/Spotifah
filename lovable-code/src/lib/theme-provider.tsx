@@ -34,11 +34,25 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(getDOMTheme);
 
   useEffect(() => {
-    bridge.getSettings().then((s) => {
-      const t = isValidTheme(s.theme) ? s.theme : "default";
-      applyTheme(t);
-      setThemeState(t);
-    });
+    const loadTheme = () => {
+      bridge.getSettings().then((s) => {
+        // Only apply if we got a valid theme from the API.
+        // If the API wasn't ready yet, s.theme will be undefined (no theme in
+        // localStorage) and we must NOT fall back to "default" — that would
+        // override the correct theme already injected by the server into the DOM.
+        if (isValidTheme(s.theme)) {
+          applyTheme(s.theme);
+          setThemeState(s.theme);
+        }
+      });
+    };
+
+    loadTheme(); // Attempt immediately (works when pywebview API is already ready)
+
+    // Also listen for pywebviewready in case the JS bridge isn't injected yet
+    // when React first mounts (common timing issue with pywebview).
+    window.addEventListener("pywebviewready", loadTheme);
+    return () => window.removeEventListener("pywebviewready", loadTheme);
   }, []);
 
   const setTheme = (t: Theme) => {

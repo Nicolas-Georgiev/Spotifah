@@ -6,24 +6,18 @@
   <title>EKHO</title>
   <script>
     (function() {
-      try {
-        var raw = localStorage.getItem('ekho_settings');
-        if (raw) {
-          var data = JSON.parse(raw);
-          var t = data.theme;
-          if (t === 'light' || t === 'dark' || t === 'default') {
-            document.documentElement.setAttribute('data-theme', t);
-            if (t === 'dark' || t === 'default') {
-              document.documentElement.classList.add('dark');
-            } else {
-              document.documentElement.classList.remove('dark');
-            }
-            return;
-          }
+      var t = "__INITIAL_THEME__";
+      if (t === 'light' || t === 'dark' || t === 'default') {
+        document.documentElement.setAttribute('data-theme', t);
+        if (t === 'dark' || t === 'default') {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
         }
-      } catch(e) {}
-      document.documentElement.setAttribute('data-theme', 'default');
-      document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.setAttribute('data-theme', 'default');
+        document.documentElement.classList.add('dark');
+      }
     })();
   </script>
   <style>

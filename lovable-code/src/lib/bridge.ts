@@ -310,7 +310,7 @@ export const bridge = {
 
     try {
       const backend = await api.get_settings();
-      const merged = { ...backend, ...local };
+      const merged = { ...backend, ...local, theme: backend.theme ?? "default" };
       return merged;
     } catch {
       return local;
@@ -319,7 +319,9 @@ export const bridge = {
 
   async updateSettings(data: Record<string, any>): Promise<ActionResult> {
     for (const [key, value] of Object.entries(data)) {
-      saveToLocal(key, value);
+      if (key !== "theme") {
+        saveToLocal(key, value);
+      }
     }
 
     const api = getApi();

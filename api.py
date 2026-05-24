@@ -1583,7 +1583,7 @@ class Api:
         if os.path.exists(self._settings_file):
             with open(self._settings_file, "r", encoding="utf-8") as f:
                 return json.load(f)
-        return {"volume": 100, "theme": "dark", "download_quality": "192"}
+        return {"volume": 100, "download_quality": "192"}
 
     def get_settings(self) -> dict:
         try:
@@ -1591,7 +1591,7 @@ class Api:
             settings["download_path"] = self._music_dir
             return settings
         except Exception:
-            return {"volume": 100, "theme": "dark", "download_quality": "192", "download_path": self._music_dir}
+            return {"volume": 100, "download_quality": "192", "download_path": self._music_dir}
 
     def update_settings(self, data: dict) -> dict:
         try:

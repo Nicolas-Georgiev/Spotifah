@@ -1,3 +1,4 @@
+import json
 import os
 import sys
 import threading
@@ -36,13 +37,14 @@ class SPAHandler(SimpleHTTPRequestHandler):
             return self._serve_portada(path)
         if path.startswith("/assets/") or path == "/favicon.ico":
             return super().do_GET()
+        if path == "/index.html":
+            return self._serve_index_html()
         web_dir = self._get_web_dir()
         file_path = path.lstrip("/")
         full_path = os.path.join(web_dir, file_path)
         if os.path.isfile(full_path):
             return super().do_GET()
-        self.path = "/index.html"
-        return super().do_GET()
+        return self._serve_index_html()
 
     def _serve_cover(self, path):
         filename = path.split("/api/covers/")[-1]
@@ -179,6 +181,42 @@ class SPAHandler(SimpleHTTPRequestHandler):
             self.wfile.write(data)
         except Exception:
             self.send_response(404)
+            self.end_headers()
+
+    def _serve_index_html(self):
+        web_dir = self._get_web_dir()
+        index_path = os.path.join(web_dir, "index.html")
+        if not os.path.isfile(index_path):
+            self.send_response(404)
+            self.end_headers()
+            return
+
+        theme = "default"
+        if self.data_dir:
+            settings_path = os.path.join(self.data_dir, "settings.json")
+            if os.path.isfile(settings_path):
+                try:
+                    with open(settings_path, "r", encoding="utf-8") as f:
+                        settings = json.load(f)
+                    t = settings.get("theme")
+                    if t in ("default", "dark", "light"):
+                        theme = t
+                except Exception:
+                    pass
+
+        try:
+            with open(index_path, "r", encoding="utf-8") as f:
+                content = f.read()
+            content = content.replace("__INITIAL_THEME__", theme)
+
+            body = content.encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+        except Exception:
+            self.send_response(500)
             self.end_headers()
 
     def log_message(self, format, *args):
