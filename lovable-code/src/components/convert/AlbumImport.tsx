@@ -139,14 +139,18 @@ export function AlbumImport({ onNavigateToPlaylist }: Props) {
         <h2 className="text-xl font-semibold">Importar álbum o playlist</h2>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-3">
-        <input
-          value={url}
-          onChange={(e) => { setUrl(e.target.value); setPreview(null); setError(null); setCoverError(false); setImportTaskId(null); setCompletedPlaylistId(null); if (coverRef.current) { cleanupCover(coverRef.current); coverRef.current = null; } }}
-          onKeyDown={(e) => { if (e.key === "Enter") analyze(); }}
-          placeholder="https://open.spotify.com/album/..."
-          className="flex-1 bg-input/60 border border-border rounded-lg px-4 py-3 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-        />
+      <div className="glass rounded-2xl p-5">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Link2 className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <input
+              value={url}
+              onChange={(e) => { setUrl(e.target.value); setPreview(null); setError(null); setCoverError(false); setImportTaskId(null); setCompletedPlaylistId(null); if (coverRef.current) { cleanupCover(coverRef.current); coverRef.current = null; } }}
+              onKeyDown={(e) => { if (e.key === "Enter") analyze(); }}
+              placeholder="https://open.spotify.com/album/..."
+              className="w-full bg-input/60 border border-border rounded-lg pl-11 pr-4 py-3 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
         <button
           onClick={analyze}
           disabled={loading || !url.trim()}
@@ -159,6 +163,7 @@ export function AlbumImport({ onNavigateToPlaylist }: Props) {
           )}
           {loading ? "Analizando..." : "Analizar"}
         </button>
+        </div>
       </div>
 
       {error && (
