@@ -6,6 +6,7 @@ import { useConvertData } from "../lib/convert-data";
 import { ConversionInput } from "../components/convert/ConversionInput";
 import { ConversionList } from "../components/convert/ConversionList";
 import { AlbumImport } from "../components/convert/AlbumImport";
+import { LocalFileImport } from "../components/convert/LocalFileImport";
 
 export const Route = createFileRoute("/convert")({
   component: ConvertPage,
@@ -143,6 +144,10 @@ function ConvertPage() {
           <ConversionList items={items} />
         </div>
       </section>
+
+      <hr className="border-border/50" />
+
+      <LocalFileImport />
     </div>
   );
 }

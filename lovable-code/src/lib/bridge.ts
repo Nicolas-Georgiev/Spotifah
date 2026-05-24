@@ -285,6 +285,18 @@ export const bridge = {
     return apiCallOk("select_folder_dialog");
   },
 
+  selectFilesDialog(): Promise<{ ok: boolean; data?: { files: string[] }; error?: string }> {
+    return apiCallOk<{ files: string[] }>("select_files_dialog");
+  },
+
+  importLocalFiles(filePaths: string[]): Promise<{
+    ok: boolean;
+    data?: { imported: Song[]; errors: { file: string; error: string }[]; total: number };
+    error?: string;
+  }> {
+    return apiCallOk("import_local_files", filePaths);
+  },
+
   async getSystemStatus(): Promise<SystemStatus> {
     const result = await apiCall<SystemStatus>("get_system_status");
     return result ?? { dependencies: {}, ffmpeg: false, music_count: 0 };

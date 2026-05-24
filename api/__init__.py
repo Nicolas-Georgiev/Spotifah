@@ -24,9 +24,10 @@ from api.player import PlayerMixin
 from api.covers import CoversMixin
 from api.settings import SettingsMixin
 from api.system import SystemMixin
+from api.local_import import LocalImportMixin
 
 
-class Api(ConvertersMixin, PlaylistsMixin, PlayerMixin, CoversMixin, SettingsMixin, SystemMixin):
+class Api(ConvertersMixin, PlaylistsMixin, PlayerMixin, CoversMixin, SettingsMixin, SystemMixin, LocalImportMixin):
     def __init__(self):
         self._project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         self._is_frozen = getattr(sys, "frozen", False)
