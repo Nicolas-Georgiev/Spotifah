@@ -2,10 +2,10 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useCallback } from "react";
 import { Music, ListMusic, ArrowRight } from "lucide-react";
 import { bridge } from "../lib/bridge";
+import { useConvertData } from "../lib/convert-data";
 import { ConversionInput } from "../components/convert/ConversionInput";
 import { ConversionList } from "../components/convert/ConversionList";
 import { AlbumImport } from "../components/convert/AlbumImport";
-import type { ConvItem } from "../components/convert/ConversionItem";
 
 export const Route = createFileRoute("/convert")({
   component: ConvertPage,
@@ -24,7 +24,7 @@ function detectPlatform(url: string): Platform {
 function ConvertPage() {
   const navigate = useNavigate();
   const [url, setUrl] = useState("");
-  const [items, setItems] = useState<ConvItem[]>([]);
+  const { items, setItems } = useConvertData();
   const [busy, setBusy] = useState(false);
   const [isPlaylistUrl, setIsPlaylistUrl] = useState(false);
   const [checkingType, setCheckingType] = useState(false);

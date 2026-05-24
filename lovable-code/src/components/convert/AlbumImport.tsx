@@ -1,9 +1,10 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import {
   Music, ListMusic, ExternalLink, Clock, Album, Link2,
   ChevronDown, ChevronUp, Search,
 } from "lucide-react";
 import { bridge, type AlbumPreviewData, type TrackPreview } from "../../lib/bridge";
+import { useConvertData } from "../../lib/convert-data";
 import { PlaylistImport } from "./PlaylistImport";
 import { PlatformBadges } from "./PlatformBadges";
 
@@ -52,21 +53,49 @@ export function AlbumImport({ onNavigateToPlaylist }: Props) {
   const [preview, setPreview] = useState<AlbumPreviewData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showAllTracks, setShowAllTracks] = useState(false);
-  const [importTaskId, setImportTaskId] = useState<string | null>(null);
-  const [completedPlaylistId, setCompletedPlaylistId] = useState<number | null>(null);
+  const {
+    activeImportTaskId: importTaskId,
+    completedPlaylistId,
+    setActiveImportTaskId: setImportTaskId,
+    setCompletedPlaylistId,
+  } = useConvertData();
+  const coverRef = useRef<string | null>(null);
+  const [coverError, setCoverError] = useState(false);
+
+  const cleanupCover = useCallback((coverUrl: string | null | undefined) => {
+    if (coverUrl && coverUrl.startsWith("/api/covers/")) {
+      bridge.deletePreviewCover(coverUrl);
+    }
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (coverRef.current) {
+        cleanupCover(coverRef.current);
+      }
+    };
+  }, [cleanupCover]);
 
   const analyze = useCallback(async () => {
     const trimmed = url.trim();
     if (!trimmed) return;
+    if (coverRef.current) {
+      cleanupCover(coverRef.current);
+      coverRef.current = null;
+    }
     setLoading(true);
     setError(null);
     setPreview(null);
+    setCoverError(false);
     setImportTaskId(null);
     setCompletedPlaylistId(null);
     try {
       const res = await bridge.getAlbumPreview(trimmed);
       if (res.ok && res.data) {
         setPreview(res.data);
+        if (res.data.cover_url && res.data.cover_url.startsWith("/api/covers/")) {
+          coverRef.current = res.data.cover_url;
+        }
       } else {
         setError(res.error || "No se pudo obtener la vista previa");
       }
@@ -75,10 +104,14 @@ export function AlbumImport({ onNavigateToPlaylist }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [url]);
+  }, [url, cleanupCover]);
 
   const handleImport = useCallback(async () => {
     if (!preview) return;
+    if (coverRef.current) {
+      cleanupCover(coverRef.current);
+      coverRef.current = null;
+    }
     setImportTaskId(null);
     setCompletedPlaylistId(null);
     const res = await bridge.importAlbum(url.trim());
@@ -106,6 +139,7 @@ export function AlbumImport({ onNavigateToPlaylist }: Props) {
         <h2 className="text-xl font-semibold">Importar álbum o playlist</h2>
       </div>
 
+<<<<<<< HEAD
       <div className="glass rounded-2xl p-5">
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
@@ -131,6 +165,28 @@ export function AlbumImport({ onNavigateToPlaylist }: Props) {
             {loading ? "Analizando..." : "Analizar"}
           </button>
         </div>
+=======
+      <div className="flex flex-col sm:flex-row gap-3">
+        <input
+          value={url}
+          onChange={(e) => { setUrl(e.target.value); setPreview(null); setError(null); setCoverError(false); setImportTaskId(null); setCompletedPlaylistId(null); if (coverRef.current) { cleanupCover(coverRef.current); coverRef.current = null; } }}
+          onKeyDown={(e) => { if (e.key === "Enter") analyze(); }}
+          placeholder="https://open.spotify.com/album/..."
+          className="flex-1 bg-input/60 border border-border rounded-lg px-4 py-3 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+        />
+        <button
+          onClick={analyze}
+          disabled={loading || !url.trim()}
+          className="px-5 py-3 rounded-lg font-medium bg-primary text-primary-foreground hover:opacity-90 glow-violet flex items-center gap-2 justify-center disabled:opacity-50"
+        >
+          {loading ? (
+            <span className="w-4 h-4 border-2 border-background border-t-transparent rounded-full animate-spin" />
+          ) : (
+            <Search className="w-4 h-4" />
+          )}
+          {loading ? "Analizando..." : "Analizar"}
+        </button>
+>>>>>>> e3624042cf0c93c4c4d6911294adee46c25f269e
       </div>
 
       {error && (
@@ -144,12 +200,12 @@ export function AlbumImport({ onNavigateToPlaylist }: Props) {
           <div className="flex flex-col md:flex-row">
             <div className="md:w-64 shrink-0">
               <div className="aspect-square bg-muted/40 relative">
-                {preview.cover_url ? (
+                {preview.cover_url && !coverError ? (
                   <img
                     src={preview.cover_url}
                     alt={preview.name}
                     className="w-full h-full object-cover"
-                    onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                    onError={() => setCoverError(true)}
                   />
                 ) : (
                   <div className="w-full h-full grid place-items-center">

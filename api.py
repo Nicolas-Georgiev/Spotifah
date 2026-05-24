@@ -358,9 +358,18 @@ class Api:
 
     # ── Album Preview ────────────────────────────────────────────
 
+    def _cleanup_preview_covers(self):
+        import glob
+        for f in glob.glob(os.path.join(self._covers_dir, "preview_*.jpg")):
+            try:
+                os.remove(f)
+            except Exception:
+                pass
+
     def _localize_preview_cover(self, cover_url: str) -> str:
         if not cover_url or cover_url.startswith("/api/"):
             return cover_url
+        self._cleanup_preview_covers()
         import hashlib, urllib.request
         h = hashlib.md5(cover_url.encode()).hexdigest()[:16]
         ext = "jpg"
@@ -375,7 +384,19 @@ class Api:
                 f.write(data)
             return local
         except Exception:
-            return cover_url
+            return ''
+
+    def delete_preview_cover(self, cover_url: str):
+        if not cover_url:
+            return
+        import hashlib
+        h = hashlib.md5(cover_url.encode()).hexdigest()[:16]
+        local_path = os.path.join(self._covers_dir, f"preview_{h}.jpg")
+        try:
+            if os.path.exists(local_path):
+                os.remove(local_path)
+        except Exception:
+            pass
 
     def _get_spotify_album_preview(self, url: str) -> dict:
         from model.spotify2mp3_model import Spotify2MP3Converter
@@ -419,6 +440,8 @@ class Api:
 
         converter = YouTube2MP3Converter()
         info = converter.get_playlist_info(url)
+        cover_url = info['cover_url']
+
         playlist_url = YouTube2MP3Converter._normalize_playlist_url(url)
         ydl_opts = {
             'quiet': True, 'extract_flat': True,
@@ -438,12 +461,17 @@ class Api:
                 "duration": e.get('duration', 0) or 0,
             })
 
+        if not cover_url and entries:
+            first_id = entries[0].get('id') if entries[0] else None
+            if first_id:
+                cover_url = f'https://i.ytimg.com/vi/{first_id}/hqdefault.jpg'
+
         return {
             "platform": "youtube",
             "name": info['nombre'],
             "artist": '',
             "year": None,
-            "cover_url": self._localize_preview_cover(info['cover_url']),
+            "cover_url": self._localize_preview_cover(cover_url),
             "is_album": False,
             "total_tracks": len(tracks),
             "tracks": tracks,
@@ -455,11 +483,16 @@ class Api:
         converter = SoundCloudConverter(self._music_dir)
         info = converter.get_playlist_info(url)
         ydl_opts = {
-            'quiet': True, 'extract_flat': True,
+            'quiet': True, 'extract_flat': False,
             'skip_download': True, 'no_warnings': True,
         }
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             playlist_data = ydl.extract_info(url, download=False)
+
+        cover_url = (playlist_data.get('thumbnail') or
+                     playlist_data.get('artwork_url') or
+                     playlist_data.get('artwork') or
+                     info.get('cover_url') or '')
 
         tracks = []
         entries = playlist_data.get('entries', []) if playlist_data else []
@@ -467,17 +500,24 @@ class Api:
             if not e:
                 continue
             tracks.append({
-                "title": e.get('title', '?'),
+                "title": e.get('title') or e.get('track') or '?',
                 "artist": e.get('uploader', '') or '',
                 "duration": e.get('duration', 0) or 0,
             })
+
+        if not cover_url and entries:
+            first = entries[0]
+            if first:
+                cover_url = (first.get('artwork_url') or
+                             first.get('artwork') or
+                             first.get('thumbnail') or '')
 
         return {
             "platform": "soundcloud",
             "name": info['nombre'],
             "artist": '',
             "year": None,
-            "cover_url": self._localize_preview_cover(info['cover_url']),
+            "cover_url": self._localize_preview_cover(cover_url),
             "is_album": False,
             "total_tracks": len(tracks),
             "tracks": tracks,
@@ -650,6 +690,13 @@ class Api:
                 print(f"  Error: {e}")
             task["current"] = i
 
+        if not cover_url and song_ids:
+            from model.db_adapter import get_cancion_json
+            primera = get_cancion_json(id_cancion=song_ids[0])
+            if primera and primera.get("caratula_url"):
+                cover_url = primera["caratula_url"]
+                print(f"🖼️ Usando portada de la primera canci\u00f3n: {cover_url}")
+
         self._finalize_import(task, song_ids, cover_url, url, "YouTube")
 
     def _import_soundcloud_playlist(self, task: dict, converter, url: str):
@@ -676,6 +723,13 @@ class Api:
             except Exception as e:
                 print(f"  Error: {e}")
             task["current"] = i
+
+        if not cover_url and song_ids:
+            from model.db_adapter import get_cancion_json
+            primera = get_cancion_json(id_cancion=song_ids[0])
+            if primera and primera.get("caratula_url"):
+                cover_url = primera["caratula_url"]
+                print(f"🖼️ Usando portada de la primera canci\u00f3n: {cover_url}")
 
         self._finalize_import(task, song_ids, cover_url, url, "SoundCloud")
 
