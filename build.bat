@@ -46,14 +46,24 @@ pyinstaller ^
     --icon "assets\icons\logo-ekho.ico" ^
     --add-data "assets\icons\logo-ekho.ico;assets\icons" ^
     --add-data "web;web" ^
+    --add-data "src;src" ^
     --hidden-import "pywebview" ^
     --hidden-import "pygame" ^
     --hidden-import "mutagen" ^
     --hidden-import "moviepy" ^
+    --hidden-import "moviepy.editor" ^
+    --copy-metadata "imageio" ^
     --hidden-import "requests" ^
     --hidden-import "yt_dlp" ^
-    --hidden-import "spotdl" ^
+    --collect-all "spotdl" ^
+    --collect-data "pykakasi" ^
     --hidden-import "pytubefix" ^
+    --hidden-import "model.spotify2mp3_model" ^
+    --hidden-import "model.youtube2mp3_model" ^
+    --hidden-import "model.soundcloud2mp3" ^
+    --hidden-import "controller.music_controller" ^
+    --hidden-import "model.music_library" ^
+    --hidden-import "databaseManager.db" ^
     "app.py"
 
 if %errorlevel% equ 0 (
