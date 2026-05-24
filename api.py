@@ -938,6 +938,55 @@ class Api:
         except Exception as e:
             return {"ok": False, "error": str(e)}
 
+    def update_song(self, song_id: str, data: dict) -> dict:
+        try:
+            conn = self.db.get_connection()
+            try:
+                cur = conn.cursor()
+                updates = []
+                params = []
+
+                field_mapping = {
+                    "title": "titulo",
+                    "artist": "artista",
+                    "album": "album",
+                    "genre": "genero",
+                }
+
+                for frontend_field, db_column in field_mapping.items():
+                    if frontend_field in data:
+                        updates.append(f"{db_column} = ?")
+                        params.append(data[frontend_field].strip())
+
+                if "cover_base64" in data and data["cover_base64"]:
+                    try:
+                        import base64
+                        cover_data = data["cover_base64"]
+                        if "," in cover_data:
+                            cover_data = cover_data.split(",")[1]
+                        cover_blob = base64.b64decode(cover_data)
+                        updates.append("caratula_blob = ?")
+                        params.append(cover_blob)
+                        local_url = f"/api/covers/{int(song_id)}.jpg"
+                        updates.append("caratula_url = ?")
+                        params.append(local_url)
+                    except Exception as e:
+                        return {"ok": False, "error": f"Error al procesar imagen: {str(e)}"}
+
+                if not updates:
+                    return {"ok": False, "error": "No hay campos para actualizar"}
+
+                params.append(int(song_id))
+                query = f"UPDATE canciones SET {', '.join(updates)} WHERE id_cancion = ?"
+                cur.execute(query, params)
+                conn.commit()
+
+                return {"ok": True, "data": {"message": "Canción actualizada"}}
+            finally:
+                conn.close()
+        except Exception as e:
+            return {"ok": False, "error": str(e)}
+
     # ── Playlist CRUD ─────────────────────────────────────────
 
     def create_playlist(self, name: str, description: str = "") -> dict:

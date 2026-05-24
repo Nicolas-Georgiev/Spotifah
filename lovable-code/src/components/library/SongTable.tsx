@@ -19,6 +19,7 @@ interface Props {
   playlistId?: string;
   onRemoveFromPlaylist?: (songId: string) => void;
   onSongDeleted?: (songId: string) => void;
+  onSongUpdated?: (song: Song) => void;
   sort?: SortConfig | null;
   onSortChange?: (config: SortConfig | null) => void;
 }
@@ -54,7 +55,7 @@ const HEADERS: { key: SortKey | null; label: string; className?: string }[] = [
   { key: null, label: "" },
 ];
 
-export function SongTable({ songs, playingId, onPlay, fmtDuration, playlistId, onRemoveFromPlaylist, onSongDeleted, sort, onSortChange }: Props) {
+export function SongTable({ songs, playingId, onPlay, fmtDuration, playlistId, onRemoveFromPlaylist, onSongDeleted, onSongUpdated, sort, onSortChange }: Props) {
   const toggleSort = (key: SortKey) => {
     if (!onSortChange) return;
     const next = !sort || sort.key !== key
@@ -106,6 +107,7 @@ export function SongTable({ songs, playingId, onPlay, fmtDuration, playlistId, o
             playlistId={playlistId}
             onRemoveFromPlaylist={onRemoveFromPlaylist}
             onSongDeleted={onSongDeleted}
+            onSongUpdated={onSongUpdated}
           />
         ))}
       </ul>

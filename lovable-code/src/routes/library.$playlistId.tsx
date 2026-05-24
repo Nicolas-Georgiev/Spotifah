@@ -63,6 +63,11 @@ function PlaylistDetail() {
     setSongs((prev) => prev.filter((s) => s.id !== songId));
   };
 
+  const handleSongUpdated = async () => {
+    const freshSongs = await bridge.getPlaylistSongs(playlist.id);
+    setSongs(freshSongs);
+  };
+
   return (
     <div className="space-y-8">
       <Link to="/library" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
@@ -84,6 +89,7 @@ function PlaylistDetail() {
         playlistId={playlist.id}
         onRemoveFromPlaylist={handleRemove}
         onSongDeleted={handleSongDeleted}
+        onSongUpdated={handleSongUpdated}
         sort={sort}
         onSortChange={setSort}
       />
