@@ -1,3 +1,5 @@
+import { EkhoLogo } from "./EkhoLogo";
+
 interface Props {
   message?: string;
   error?: string | null;
@@ -8,10 +10,8 @@ export function SplashScreen({ message = "Cargando tu biblioteca...", error, onR
   return (
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center" style={{ background: "var(--gradient-bg)" }}>
       <div className="flex flex-col items-center gap-6">
-        <div className="relative">
-          <h1 className="text-6xl sm:text-7xl font-bold text-primary text-glow-violet select-none">
-            EKHO
-          </h1>
+        <div className="relative flex flex-col items-center">
+          <EkhoLogo size={140} className="text-primary" />
           <div className="absolute -inset-6 rounded-full bg-primary/5 blur-3xl animate-pulse-glow" />
         </div>
 
