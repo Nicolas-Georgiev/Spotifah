@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
-import { Play, Heart, MoreVertical, ListMusic, Trash2, ListMinus, Plus } from "lucide-react";
+import { Play, Heart, MoreVertical, ListMusic, Trash2, ListMinus, Plus, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { CoverArt } from "../shared/CoverArt";
 import { SourceBadge } from "./SourceBadge";
+import { SongEditDialog } from "./SongEditDialog";
 import { bridge, type Song, type Playlist } from "../../lib/bridge";
 import {
   ContextMenu,
@@ -46,6 +47,7 @@ interface Props {
   playlistId?: string;
   onRemoveFromPlaylist?: (songId: string) => void;
   onSongDeleted?: (songId: string) => void;
+  onSongUpdated?: (song: Song) => void;
 }
 
 function formatDownloadDate(date: string): string {
@@ -63,19 +65,30 @@ function formatDownloadDate(date: string): string {
   }
 }
 
-export function SongRow({ song, index, isActive, onPlay, fmtDuration, playlistId, onRemoveFromPlaylist, onSongDeleted }: Props) {
+export function SongRow({ song, index, isActive, onPlay, fmtDuration, playlistId, onRemoveFromPlaylist, onSongDeleted, onSongUpdated }: Props) {
   const [favorite, setFavorite] = useState(false);
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [localSong, setLocalSong] = useState(song);
+
+  useEffect(() => {
+    setLocalSong(song);
+  }, [song]);
 
   useEffect(() => {
     bridge.getPlaylists().then(setPlaylists);
   }, []);
 
   useEffect(() => {
-    bridge.isFavorite(song.id).then((res) => {
+    bridge.isFavorite(localSong.id).then((res) => {
       if (res.ok) setFavorite(res.favorite);
     });
-  }, [song.id]);
+  }, [localSong.id]);
+
+  const handleSongUpdated = (updatedSong: Song) => {
+    setLocalSong(updatedSong);
+    onSongUpdated?.(updatedSong);
+  };
 
   const toggleFav = async (e?: React.MouseEvent) => {
     e?.stopPropagation();
@@ -93,11 +106,11 @@ export function SongRow({ song, index, isActive, onPlay, fmtDuration, playlistId
 
   const handleAddToPlaylist = async (e: React.MouseEvent, targetPlaylistId: string, playlistName: string) => {
     e.stopPropagation();
-    const res = await bridge.addSongToPlaylist(targetPlaylistId, song.id);
+    const res = await bridge.addSongToPlaylist(targetPlaylistId, localSong.id);
     if (res.ok && res.data?.already_exists) {
-      toast.info(`"${song.title}" ya está en "${playlistName}"`);
+      toast.info(`"${localSong.title}" ya está en "${playlistName}"`);
     } else if (res.ok) {
-      toast.success(`"${song.title}" añadida a "${playlistName}"`);
+      toast.success(`"${localSong.title}" añadida a "${playlistName}"`);
       if (playlistName === "Favoritos") setFavorite(true);
     } else {
       toast.error("Error al añadir a playlist", { description: res.error });
@@ -112,7 +125,7 @@ export function SongRow({ song, index, isActive, onPlay, fmtDuration, playlistId
   const filteredPlaylists = playlists.filter((p) => p.id !== "all");
 
   return (
-    <ContextMenu>
+    <><ContextMenu>
       <ContextMenuTrigger>
         <li
           onClick={() => onPlay(song.id)}
@@ -125,24 +138,24 @@ export function SongRow({ song, index, isActive, onPlay, fmtDuration, playlistId
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-10 h-10 rounded bg-muted/40 flex items-center justify-center shrink-0">
               <CoverArt
-                src={song.cover_url}
+                src={localSong.cover_url}
                 alt=""
                 className="w-full h-full rounded object-cover"
                 icon="♪"
               />
             </div>
             <div className="min-w-0">
-              <p className="text-sm font-medium truncate">{song.title}</p>
+              <p className="text-sm font-medium truncate">{localSong.title}</p>
             </div>
           </div>
-          <span className="text-sm text-muted-foreground truncate">{song.artist}</span>
-          <span className="text-sm text-muted-foreground truncate">{song.album}</span>
+          <span className="text-sm text-muted-foreground truncate">{localSong.artist}</span>
+          <span className="text-sm text-muted-foreground truncate">{localSong.album}</span>
           <span>
-            <SourceBadge source={song.source} />
+            <SourceBadge source={localSong.source} />
           </span>
-          <span className="text-sm text-muted-foreground font-mono text-right">{fmtDuration(song.duration)}</span>
+          <span className="text-sm text-muted-foreground font-mono text-right">{fmtDuration(localSong.duration)}</span>
           <span className="text-xs text-muted-foreground">
-            {song.download_date ? formatDownloadDate(song.download_date) : "-"}
+            {localSong.download_date ? formatDownloadDate(localSong.download_date) : "-"}
           </span>
           <div className="flex items-center gap-0 justify-end">
             <button
@@ -171,6 +184,10 @@ export function SongRow({ song, index, isActive, onPlay, fmtDuration, playlistId
                         Añadir a playlist
                       </DropdownMenuItem>
                     </DialogTrigger>
+                    <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setEditDialogOpen(true); }} className="focus:bg-muted focus:text-foreground">
+                      <Pencil className="w-4 h-4 mr-2" />
+                      Editar información
+                    </DropdownMenuItem>
                     {playlistId && playlistId !== "all" && onRemoveFromPlaylist && (
                       <DropdownMenuItem
                         onSelect={(e) => {
@@ -201,7 +218,7 @@ export function SongRow({ song, index, isActive, onPlay, fmtDuration, playlistId
                   <AlertDialogHeader>
                     <AlertDialogTitle>¿Borrar canción?</AlertDialogTitle>
                     <AlertDialogDescription>
-                      Se eliminará "{song.title}" de tu biblioteca y del disco.
+                      Se eliminará "{localSong.title}" de tu biblioteca y del disco.
                       Esta acción no se puede deshacer.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
@@ -249,6 +266,10 @@ export function SongRow({ song, index, isActive, onPlay, fmtDuration, playlistId
           <Heart className={`w-4 h-4 mr-2 ${favorite ? "fill-primary text-primary" : ""}`} />
           {favorite ? "Quitar de favoritos" : "Añadir a favoritos"}
         </ContextMenuItem>
+        <ContextMenuSeparator />
+        <ContextMenuItem onClick={() => setEditDialogOpen(true)} className="focus:bg-accent focus:text-accent-foreground">
+          <Pencil className="w-4 h-4 mr-2" /> Editar información
+        </ContextMenuItem>
         {playlistId && playlistId !== "all" && onRemoveFromPlaylist && (
           <>
             <ContextMenuSeparator />
@@ -262,5 +283,12 @@ export function SongRow({ song, index, isActive, onPlay, fmtDuration, playlistId
         )}
       </ContextMenuContent>
     </ContextMenu>
+      <SongEditDialog
+        song={localSong}
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        onSongUpdated={handleSongUpdated}
+      />
+    </>
   );
 }

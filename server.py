@@ -69,7 +69,7 @@ class SPAHandler(SimpleHTTPRequestHandler):
                         self.send_response(200)
                         self.send_header("Content-Type", ctype)
                         self.send_header("Content-Length", str(len(data)))
-                        self.send_header("Cache-Control", "max-age=86400")
+                        self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
                         self.end_headers()
                         self.wfile.write(data)
                         return
@@ -98,7 +98,7 @@ class SPAHandler(SimpleHTTPRequestHandler):
                     self.send_response(200)
                     self.send_header("Content-Type", ctype)
                     self.send_header("Content-Length", str(len(blob)))
-                    self.send_header("Cache-Control", "max-age=86400")
+                    self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
                     self.end_headers()
                     self.wfile.write(blob)
                     return
@@ -143,7 +143,7 @@ class SPAHandler(SimpleHTTPRequestHandler):
                     self.send_response(200)
                     self.send_header("Content-Type", ctype)
                     self.send_header("Content-Length", str(len(blob)))
-                    self.send_header("Cache-Control", "max-age=86400")
+                    self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
                     self.end_headers()
                     self.wfile.write(blob)
                     return

@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Link } from "@tanstack/react-router";
-import { MoreHorizontal, Pencil, Trash2, Music } from "lucide-react";
+import { MoreHorizontal, Pencil, Trash2, Music, Upload } from "lucide-react";
 import type { Playlist } from "../../lib/bridge";
 import { bridge } from "../../lib/bridge";
+import { CoverArt } from "../shared/CoverArt";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -32,11 +33,30 @@ export function PlaylistCard({ playlist, onRename, onDelete }: Props) {
   const [renameOpen, setRenameOpen] = useState(false);
   const [newName, setNewName] = useState(playlist.name);
   const [newDescription, setNewDescription] = useState(playlist.description);
+  const [coverBase64, setCoverBase64] = useState<string | null>(null);
+  const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [coverVersion, setCoverVersion] = useState(() => Date.now());
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const result = event.target?.result as string;
+      setCoverBase64(result);
+      setCoverPreview(result);
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleRename = async () => {
     if (!newName.trim()) return;
-    await bridge.renamePlaylist(playlist.id, newName.trim(), newDescription.trim());
+    await bridge.renamePlaylist(playlist.id, newName.trim(), newDescription.trim(), coverBase64 || undefined);
+    if (coverBase64) setCoverVersion(Date.now());
     setRenameOpen(false);
+    setCoverBase64(null);
+    setCoverPreview(null);
     onRename?.();
   };
 
@@ -54,9 +74,9 @@ export function PlaylistCard({ playlist, onRename, onDelete }: Props) {
           className="glass rounded-2xl overflow-hidden hover:-translate-y-1 transition block"
         >
           <div className="relative aspect-square overflow-hidden bg-muted/40 flex items-center justify-center">
-            {playlist.cover_url ? (
+            {coverPreview || playlist.cover_url ? (
               <img
-                src={playlist.cover_url}
+                src={coverPreview || `${playlist.cover_url}?v=${coverVersion}`}
                 alt={playlist.name}
                 className="w-full h-full object-cover"
                 onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
@@ -87,7 +107,7 @@ export function PlaylistCard({ playlist, onRename, onDelete }: Props) {
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start">
-                <DropdownMenuItem onClick={() => { setNewName(playlist.name); setNewDescription(playlist.description); setRenameOpen(true); }} className="focus:bg-muted focus:text-foreground">
+                <DropdownMenuItem onClick={() => { setNewName(playlist.name); setNewDescription(playlist.description); setCoverBase64(null); setCoverPreview(null); setRenameOpen(true); }} className="focus:bg-muted focus:text-foreground">
                   <Pencil className="w-4 h-4 mr-2" /> Renombrar
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleDelete} className="text-destructive focus:bg-muted focus:text-destructive">
@@ -99,13 +119,40 @@ export function PlaylistCard({ playlist, onRename, onDelete }: Props) {
         )}
       </div>
 
-      <Dialog open={renameOpen} onOpenChange={setRenameOpen}>
+      <Dialog open={renameOpen} onOpenChange={(open) => { setRenameOpen(open); if (!open) { setCoverBase64(null); setCoverPreview(null); } }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Renombrar Playlist</DialogTitle>
-            <DialogDescription>Ingresa el nuevo nombre para la playlist</DialogDescription>
+            <DialogTitle>Editar playlist</DialogTitle>
+            <DialogDescription>Cambia el nombre, descripción o portada de la playlist</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 pt-2">
+            <div className="flex flex-col items-center gap-2">
+              <div className="w-28 h-28 rounded-lg overflow-hidden bg-muted/40">
+                <CoverArt
+                  src={coverPreview || playlist.cover_url}
+                  alt={playlist.name}
+                  className="w-full h-full object-cover"
+                  icon="♪"
+                />
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleFileChange}
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                type="button"
+                className="hover:bg-muted hover:text-foreground"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Upload className="w-4 h-4 mr-2" />
+                Cambiar portada
+              </Button>
+            </div>
             <Input
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
@@ -121,9 +168,9 @@ export function PlaylistCard({ playlist, onRename, onDelete }: Props) {
             />
             <div className="flex justify-end gap-2">
               <DialogClose asChild>
-                <Button variant="outline">Cancelar</Button>
+                <Button variant="outline" className="hover:bg-muted hover:text-foreground">Cancelar</Button>
               </DialogClose>
-              <Button onClick={handleRename} disabled={!newName.trim()}>Renombrar</Button>
+              <Button onClick={handleRename} disabled={!newName.trim()}>Guardar</Button>
             </div>
           </div>
         </DialogContent>
