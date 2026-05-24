@@ -15,7 +15,7 @@ if %errorlevel% neq 0 (
 )
 
 :: Reconstruir frontend
-echo [1/4] Reconstruyendo frontend...
+echo [1/3] Reconstruyendo frontend...
 if exist "lovable-code\node_modules\.bin\vite.cmd" (
     pushd lovable-code
     call npx vite build
@@ -30,15 +30,6 @@ if exist "lovable-code\node_modules\.bin\vite.cmd" (
     echo WARNING: node_modules no encontrado, saltando build del frontend...
 )
 
-:: Copiar assets a web/
-echo [2/4] Copiando assets...
-if exist "lovable-code\dist\client\assets" (
-    xcopy /E /I /Y "lovable-code\dist\client\assets\*" "web\assets\" >nul
-    echo OK - Assets copiados
-) else (
-    echo WARNING: No se encontraron assets compilados, usando existentes...
-)
-
 :: Verificar que web/index.html existe
 if not exist "web\index.html" (
     echo ERROR: No se encuentra web/index.html
@@ -46,7 +37,7 @@ if not exist "web\index.html" (
     exit /b 1
 )
 
-echo [3/4] Construyendo ejecutable...
+echo [2/3] Construyendo ejecutable...
 
 pyinstaller ^
     --onefile ^
@@ -60,6 +51,9 @@ pyinstaller ^
     --hidden-import "mutagen" ^
     --hidden-import "moviepy" ^
     --hidden-import "requests" ^
+    --hidden-import "yt_dlp" ^
+    --hidden-import "spotdl" ^
+    --hidden-import "pytubefix" ^
     "app.py"
 
 if %errorlevel% equ 0 (
