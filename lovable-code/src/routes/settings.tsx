@@ -35,49 +35,26 @@ function SettingsPage() {
         <BitrateSelect value={settings.download_quality ?? "192"} onChange={(v) => update("download_quality", v)} />
       </SettingCard>
 
-<<<<<<< HEAD
-  <SettingCard title="Notificaciones" subtitle="Recibe avisos cuando se completen las conversiones">
-=======
-      <SettingCard icon={<FolderOpen className="w-5 h-5" />} iconBg="bg-blue-500/25 text-blue-400" title="Ubicación de Descarga" subtitle="Carpeta donde se guardarán las canciones descargadas">
-      <div className="flex items-center gap-3">
-        <span className="text-sm font-mono text-muted-foreground truncate flex-1">
-          {settings.download_path || "Cargando..."}
-        </span>
-        <button
-          onClick={async () => {
-            const res = await bridge.selectFolderDialog();
-            if (res.ok && res.data) {
-              update("download_path", res.data.path);
-            }
-          }}
-          className="px-3 py-1.5 text-xs font-medium bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition whitespace-nowrap"
-        >
-          Cambiar
-        </button>
-      </div>
-    </SettingCard>
+      <SettingCard title="Notificaciones" subtitle="Recibe avisos cuando se completen las conversiones">
+        <Toggle label="Notificaciones del sistema" value={settings.notifications ?? true} onChange={(v) => update("notifications", v)} />
+      </SettingCard>
 
-    <SettingCard icon={<Bell className="w-5 h-5" />} iconBg="bg-yellow-500/25 text-yellow-400" title="Notificaciones" subtitle="Recibe avisos cuando se completen las conversiones">
->>>>>>> 5f59112ead02969212328988bd2cf3a818ea83fd
-      <Toggle label="Notificaciones del sistema" value={settings.notifications ?? true} onChange={(v) => update("notifications", v)} />
-    </SettingCard>
+      <SettingCard title="Reproduccion" subtitle="Comportamiento del reproductor de musica">
+        <Toggle label="Reproduccion automatica al abrir playlist" value={settings.autoplay ?? false} onChange={(v) => update("autoplay", v)} />
+      </SettingCard>
 
-    <SettingCard title="Reproduccion" subtitle="Comportamiento del reproductor de musica">
-      <Toggle label="Reproduccion automatica al abrir playlist" value={settings.autoplay ?? false} onChange={(v) => update("autoplay", v)} />
-    </SettingCard>
+      <SettingCard title="Tema" subtitle="Personaliza la apariencia de EKHO">
+        <ThemeSelect />
+      </SettingCard>
 
-    <SettingCard title="Tema" subtitle="Personaliza la apariencia de EKHO">
-      <ThemeSelect />
-    </SettingCard>
-
-    <SettingCard title="Acerca de" subtitle="Informacion sobre EKHO">
-      <div className="grid grid-cols-2 gap-3 text-sm font-mono">
-        <span className="text-muted-foreground">Version</span>
-        <span>v0.1.0</span>
-        <span className="text-muted-foreground">Build</span>
-        <span>2026.05.11</span>
-      </div>
-    </SettingCard>
-  </div>
+      <SettingCard title="Acerca de" subtitle="Informacion sobre EKHO">
+        <div className="grid grid-cols-2 gap-3 text-sm font-mono">
+          <span className="text-muted-foreground">Version</span>
+          <span>v0.1.0</span>
+          <span className="text-muted-foreground">Build</span>
+          <span>2026.05.11</span>
+        </div>
+      </SettingCard>
+    </div>
   );
 }
