@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, no-empty */
+
 export interface Song {
   id: string;
   title: string;
@@ -160,53 +162,57 @@ function fmtDuration(seconds: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
+async function apiCall<T>(method: string, ...args: any[]): Promise<T | null> {
+  const api = getApi();
+  if (!api) return null;
+  try {
+    const fn = api[method];
+    if (typeof fn !== "function") return null;
+    return (await fn(...args)) as T;
+  } catch {
+    return null;
+  }
+}
+
+async function apiCallOk<T = ActionResult>(
+  method: string,
+  ...args: any[]
+): Promise<{ ok: boolean; data?: T; error?: string }> {
+  const api = getApi();
+  if (!api) return { ok: false, error: "PyWebView no disponible" };
+  try {
+    const fn = api[method];
+    if (typeof fn !== "function") return { ok: false, error: `Metodo ${method} no encontrado` };
+    return await fn(...args);
+  } catch (e: any) {
+    return { ok: false, error: e?.message ?? "Error" };
+  }
+}
+
+async function apiArray<T>(method: string, ...args: any[]): Promise<T[]> {
+  const result = await apiCall<any>(method, ...args);
+  return Array.isArray(result) ? result : [];
+}
+
 export const bridge = {
-  async getPlaylists(): Promise<Playlist[]> {
-    const api = getApi();
-    if (!api) return [];
-    try {
-      const result = await api.get_playlists();
-      if (Array.isArray(result)) return result;
-      return [];
-    } catch {
-      return [];
-    }
+  getPlaylists(): Promise<Playlist[]> {
+    return apiArray<Playlist>("get_playlists");
   },
 
-  async getPlaylistSongs(playlistId: string): Promise<Song[]> {
-    const api = getApi();
-    if (!api) return [];
-    try {
-      const result = await api.get_playlist_songs(playlistId);
-      if (Array.isArray(result)) return result;
-      return [];
-    } catch {
-      return [];
-    }
+  getPlaylistSongs(playlistId: string): Promise<Song[]> {
+    return apiArray<Song>("get_playlist_songs", playlistId);
   },
 
-  async getSongs(): Promise<Song[]> {
+  getSongs(): Promise<Song[]> {
     return bridge.getPlaylistSongs("all");
   },
 
-  async convertYoutube(url: string): Promise<ConvertResult> {
-    const api = getApi();
-    if (!api) return { ok: false, error: "PyWebView no disponible" };
-    try {
-      return await api.convert_youtube(url);
-    } catch (e: any) {
-      return { ok: false, error: e?.message ?? "Error en conversión" };
-    }
+  convertYoutube(url: string): Promise<ConvertResult> {
+    return apiCallOk<ConvertResult["data"]>("convert_youtube", url) as Promise<ConvertResult>;
   },
 
-  async convertSpotify(url: string): Promise<ConvertResult> {
-    const api = getApi();
-    if (!api) return { ok: false, error: "PyWebView no disponible" };
-    try {
-      return await api.convert_spotify(url);
-    } catch (e: any) {
-      return { ok: false, error: e?.message ?? "Error en conversión" };
-    }
+  convertSpotify(url: string): Promise<ConvertResult> {
+    return apiCallOk<ConvertResult["data"]>("convert_spotify", url) as Promise<ConvertResult>;
   },
 
   async playSong(songId: string, songIds?: string[]): Promise<ActionResult> {
@@ -222,96 +228,45 @@ export const bridge = {
     }
   },
 
-  async pauseSong(): Promise<ActionResult> {
-    const api = getApi();
-    if (!api) return { ok: true, data: { message: "Simulado" } };
-    try {
-      return await api.pause_song();
-    } catch (e: any) {
-      return { ok: false, error: e?.message ?? "Error" };
-    }
+  pauseSong(): Promise<ActionResult> {
+    return apiCallOk("pause_song");
   },
 
-  async resumeSong(): Promise<ActionResult> {
-    const api = getApi();
-    if (!api) return { ok: true, data: { message: "Simulado" } };
-    try {
-      return await api.resume_song();
-    } catch (e: any) {
-      return { ok: false, error: e?.message ?? "Error" };
-    }
+  resumeSong(): Promise<ActionResult> {
+    return apiCallOk("resume_song");
   },
 
-  async stopSong(): Promise<ActionResult> {
-    const api = getApi();
-    if (!api) return { ok: true, data: { message: "Simulado" } };
-    try {
-      return await api.stop_song();
-    } catch (e: any) {
-      return { ok: false, error: e?.message ?? "Error" };
-    }
+  stopSong(): Promise<ActionResult> {
+    return apiCallOk("stop_song");
   },
 
-  async seekSong(position: number): Promise<ActionResult> {
-    const api = getApi();
-    if (!api) return { ok: false, error: "PyWebView no disponible" };
-    try {
-      return await api.seek_song(position);
-    } catch (e: any) {
-      return { ok: false, error: e?.message ?? "Error al buscar" };
-    }
+  seekSong(position: number): Promise<ActionResult> {
+    return apiCallOk("seek_song", position);
   },
 
-  async nextSong(): Promise<ActionResult> {
-    const api = getApi();
-    if (!api) return { ok: true, data: { message: "Simulado" } };
-    try {
-      return await api.next_song();
-    } catch (e: any) {
-      return { ok: false, error: e?.message ?? "Error" };
-    }
+  nextSong(): Promise<ActionResult> {
+    return apiCallOk("next_song");
   },
 
-  async prevSong(): Promise<ActionResult> {
-    const api = getApi();
-    if (!api) return { ok: true, data: { message: "Simulado" } };
-    try {
-      return await api.prev_song();
-    } catch (e: any) {
-      return { ok: false, error: e?.message ?? "Error" };
-    }
+  prevSong(): Promise<ActionResult> {
+    return apiCallOk("prev_song");
   },
 
-  async toggleShuffle(): Promise<{ ok: boolean; data?: { shuffle: boolean }; error?: string }> {
-    const api = getApi();
-    if (!api) return { ok: true, data: { shuffle: false } };
-    try {
-      return await api.toggle_shuffle();
-    } catch (e: any) {
-      return { ok: false, error: e?.message ?? "Error" };
-    }
+  toggleShuffle(): Promise<{ ok: boolean; data?: { shuffle: boolean }; error?: string }> {
+    return apiCallOk("toggle_shuffle");
   },
 
-  async cycleRepeat(): Promise<{ ok: boolean; data?: { repeat: string }; error?: string }> {
-    const api = getApi();
-    if (!api) return { ok: true, data: { repeat: "none" } };
-    try {
-      return await api.cycle_repeat();
-    } catch (e: any) {
-      return { ok: false, error: e?.message ?? "Error" };
-    }
+  cycleRepeat(): Promise<{ ok: boolean; data?: { repeat: string }; error?: string }> {
+    return apiCallOk("cycle_repeat");
   },
 
   async getSettings(): Promise<Record<string, any>> {
     const local = loadFromLocal();
-
     const api = getApi();
     if (!api) return local;
-
     try {
       const backend = await api.get_settings();
-      const merged = { ...backend, ...local };
-      return merged;
+      return { ...backend, ...local };
     } catch {
       return local;
     }
@@ -321,172 +276,89 @@ export const bridge = {
     for (const [key, value] of Object.entries(data)) {
       saveToLocal(key, value);
     }
-
-    const api = getApi();
-    if (!api) return { ok: true, data: { message: "Guardado localmente" } };
-    try {
-      return await api.update_settings(data);
-    } catch (e: any) {
-      return { ok: false, error: e?.message ?? "Error" };
-    }
+    return apiCallOk("update_settings", data);
   },
 
-  async selectFolderDialog(): Promise<{ ok: boolean; data?: { path: string }; error?: string }> {
-    const api = getApi();
-    if (!api) return { ok: false, error: "PyWebView no disponible" };
-    try {
-      return await api.select_folder_dialog();
-    } catch (e: any) {
-      return { ok: false, error: e?.message ?? "Error" };
-    }
+  selectFolderDialog(): Promise<{ ok: boolean; data?: { path: string }; error?: string }> {
+    return apiCallOk("select_folder_dialog");
   },
 
   async getSystemStatus(): Promise<SystemStatus> {
-    const api = getApi();
-    if (!api) return { dependencies: {}, ffmpeg: false, music_count: 0 };
-    return await api.get_system_status();
+    const result = await apiCall<SystemStatus>("get_system_status");
+    return result ?? { dependencies: {}, ffmpeg: false, music_count: 0 };
   },
 
-  async addSongToPlaylist(playlistId: string, songId: string): Promise<AddToPlaylistResult> {
-    const api = getApi();
-    if (!api) return { ok: false, error: "PyWebView no disponible" };
-    try {
-      return await api.add_song_to_playlist(playlistId, songId);
-    } catch (e: any) {
-      return { ok: false, error: e?.message ?? "Error" };
-    }
+  addSongToPlaylist(playlistId: string, songId: string): Promise<AddToPlaylistResult> {
+    return apiCallOk("add_song_to_playlist", playlistId, songId);
   },
 
-  async removeSongFromPlaylist(playlistId: string, songId: string): Promise<ActionResult> {
-    const api = getApi();
-    if (!api) return { ok: false, error: "PyWebView no disponible" };
-    try {
-      return await api.remove_song_from_playlist(playlistId, songId);
-    } catch (e: any) {
-      return { ok: false, error: e?.message ?? "Error" };
-    }
+  removeSongFromPlaylist(playlistId: string, songId: string): Promise<ActionResult> {
+    return apiCallOk("remove_song_from_playlist", playlistId, songId);
   },
 
-  async deleteSong(songId: string): Promise<ActionResult> {
-    const api = getApi();
-    if (!api) return { ok: false, error: "PyWebView no disponible" };
-    try {
-      return await api.delete_song(songId);
-    } catch (e: any) {
-      return { ok: false, error: e?.message ?? "Error al eliminar canción" };
-    }
+  deleteSong(songId: string): Promise<ActionResult> {
+    return apiCallOk("delete_song", songId);
   },
 
-  async updateSong(songId: string, data: { title?: string; artist?: string; album?: string; genre?: string; cover_base64?: string }): Promise<ActionResult> {
-    const api = getApi();
-    if (!api) return { ok: false, error: "PyWebView no disponible" };
-    try {
-      return await api.update_song(songId, data);
-    } catch (e: any) {
-      return { ok: false, error: e?.message ?? "Error al actualizar canción" };
-    }
+  updateSong(
+    songId: string,
+    data: {
+      title?: string;
+      artist?: string;
+      album?: string;
+      genre?: string;
+      cover_base64?: string;
+    },
+  ): Promise<ActionResult> {
+    return apiCallOk("update_song", songId, data);
   },
 
-  async convertSoundcloud(url: string): Promise<ConvertResult> {
-    const api = getApi();
-    if (!api) return { ok: false, error: "PyWebView no disponible" };
-    try {
-      return await api.convert_soundcloud(url);
-    } catch (e: any) {
-      return { ok: false, error: e?.message ?? "Error en conversión" };
-    }
+  convertSoundcloud(url: string): Promise<ConvertResult> {
+    return apiCallOk("convert_soundcloud", url) as Promise<ConvertResult>;
   },
 
   async detectUrlType(url: string): Promise<UrlTypeResult> {
-    const api = getApi();
-    if (!api) return { platform: null, is_playlist: false };
-    try {
-      return await api.detect_url_type(url);
-    } catch {
-      return { platform: null, is_playlist: false };
-    }
+    const result = await apiCall<UrlTypeResult>("detect_url_type", url);
+    return result ?? { platform: null, is_playlist: false };
   },
 
-  async importPlaylist(url: string): Promise<ImportPlaylistResult> {
-    const api = getApi();
-    if (!api) return { ok: false, error: "PyWebView no disponible" };
-    try {
-      return await api.import_playlist(url);
-    } catch (e: any) {
-      return { ok: false, error: e?.message ?? "Error al importar playlist" };
-    }
+  importPlaylist(url: string): Promise<ImportPlaylistResult> {
+    return apiCallOk("import_playlist", url);
   },
 
-  async getAlbumPreview(url: string): Promise<AlbumPreviewResult> {
-    const api = getApi();
-    if (!api) return { ok: false, error: "PyWebView no disponible" };
-    try {
-      return await api.get_album_preview(url);
-    } catch (e: any) {
-      return { ok: false, error: e?.message ?? "Error al obtener vista previa" };
-    }
+  getAlbumPreview(url: string): Promise<AlbumPreviewResult> {
+    return apiCallOk("get_album_preview", url);
   },
 
-  async importAlbum(url: string): Promise<ImportPlaylistResult> {
-    const api = getApi();
-    if (!api) return { ok: false, error: "PyWebView no disponible" };
-    try {
-      return await api.import_album(url);
-    } catch (e: any) {
-      return { ok: false, error: e?.message ?? "Error al importar álbum" };
-    }
+  importAlbum(url: string): Promise<ImportPlaylistResult> {
+    return apiCallOk("import_album", url);
   },
 
-  async getImportProgress(taskId: string): Promise<{ ok: boolean; data?: ImportProgress; error?: string }> {
-    const api = getApi();
-    if (!api) return { ok: false, error: "PyWebView no disponible" };
-    try {
-      return await api.get_import_progress(taskId);
-    } catch (e: any) {
-      return { ok: false, error: e?.message ?? "Error al obtener progreso" };
-    }
+  getImportProgress(
+    taskId: string,
+  ): Promise<{ ok: boolean; data?: ImportProgress; error?: string }> {
+    return apiCallOk("get_import_progress", taskId);
   },
 
-  async createPlaylist(name: string, description: string = ""): Promise<CreatePlaylistResult> {
-    const api = getApi();
-    if (!api) return { ok: false, error: "PyWebView no disponible" };
-    try {
-      return await api.create_playlist(name, description);
-    } catch (e: any) {
-      return { ok: false, error: e?.message ?? "Error al crear playlist" };
-    }
+  createPlaylist(name: string, description: string = ""): Promise<CreatePlaylistResult> {
+    return apiCallOk("create_playlist", name, description);
   },
 
-  async deletePlaylist(playlistId: string): Promise<ActionResult> {
-    const api = getApi();
-    if (!api) return { ok: false, error: "PyWebView no disponible" };
-    try {
-      return await api.delete_playlist(playlistId);
-    } catch (e: any) {
-      return { ok: false, error: e?.message ?? "Error al eliminar" };
-    }
+  deletePlaylist(playlistId: string): Promise<ActionResult> {
+    return apiCallOk("delete_playlist", playlistId);
   },
 
-  async renamePlaylist(playlistId: string, name: string, description: string = "", cover_base64?: string): Promise<ActionResult> {
-    const api = getApi();
-    if (!api) return { ok: false, error: "PyWebView no disponible" };
-    try {
-      return await api.rename_playlist(playlistId, name, description, cover_base64 || "");
-    } catch (e: any) {
-      return { ok: false, error: e?.message ?? "Error al renombrar" };
-    }
+  renamePlaylist(
+    playlistId: string,
+    name: string,
+    description: string = "",
+    cover_base64?: string,
+  ): Promise<ActionResult> {
+    return apiCallOk("rename_playlist", playlistId, name, description, cover_base64 || "");
   },
 
-  async searchSongs(query: string): Promise<Song[]> {
-    const api = getApi();
-    if (!api) return [];
-    try {
-      const result = await api.search_songs(query);
-      if (Array.isArray(result)) return result;
-      return [];
-    } catch {
-      return [];
-    }
+  searchSongs(query: string): Promise<Song[]> {
+    return apiArray<Song>("search_songs", query);
   },
 
   async toggleFavorite(songId: string): Promise<FavoriteData & { ok: boolean; error?: string }> {
@@ -515,53 +387,30 @@ export const bridge = {
     const api = getApi();
     if (!api) return { ok: true, data: null };
     try {
-      return await api.get_now_playing();
+      const fn = api.get_now_playing;
+      if (typeof fn !== "function") return { ok: true, data: null };
+      return await fn() as NowPlayingResult;
     } catch {
       return { ok: true, data: null };
     }
   },
 
   async getPlaybackPosition(): Promise<PlaybackPosition> {
-    const api = getApi();
-    if (!api) return { position: 0, is_playing: false };
-    try {
-      const result = await api.get_playback_position();
-      return result.data || { position: 0, is_playing: false };
-    } catch {
-      return { position: 0, is_playing: false };
-    }
+    const result = await apiCall<{ data: PlaybackPosition }>("get_playback_position");
+    return result?.data ?? { position: 0, is_playing: false };
   },
 
-  async setVolume(volume: number): Promise<{ ok: boolean; data?: VolumeData; error?: string }> {
-    const api = getApi();
-    if (!api) return { ok: true, data: { volume } };
-    try {
-      return await api.set_volume(volume);
-    } catch (e: any) {
-      return { ok: false, error: e?.message ?? "Error al ajustar volumen" };
-    }
+  setVolume(volume: number): Promise<{ ok: boolean; data?: VolumeData; error?: string }> {
+    return apiCallOk("set_volume", volume);
   },
 
   async getVolume(): Promise<{ ok: boolean; data?: VolumeData; error?: string }> {
-    const api = getApi();
-        if (!api) return { ok: true, data: { volume: 100 } };
-    try {
-      return await api.get_volume();
-    } catch {
-      return { ok: true, data: { volume: 100 } };
-    }
+    const result = await apiCall<{ ok: boolean; data?: VolumeData }>("get_volume");
+    return result ?? { ok: true, data: { volume: 100 } };
   },
 
-  async getRecentlyPlayed(limit: number = 10): Promise<Song[]> {
-    const api = getApi();
-    if (!api) return [];
-    try {
-      const result = await api.get_recently_played(limit);
-      if (Array.isArray(result)) return result;
-      return [];
-    } catch {
-      return [];
-    }
+  getRecentlyPlayed(limit: number = 10): Promise<Song[]> {
+    return apiArray<Song>("get_recently_played", limit);
   },
 
   async deletePreviewCover(coverUrl: string): Promise<void> {
@@ -569,9 +418,7 @@ export const bridge = {
     if (!api) return;
     try {
       await api.delete_preview_cover(coverUrl);
-    } catch {
-      // ignore
-    }
+    } catch {}
   },
 };
 

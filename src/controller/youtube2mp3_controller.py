@@ -1,32 +1,30 @@
 # youtube2mp3_controller.py
-"""Controlador para conversión de YouTube a MP3 siguiendo patrón MVC robusto"""
+"""Controller for YouTube to MP3 conversion following a robust MVC pattern"""
 
 import os
 import sys
 from typing import Optional
 
-# Añadir la carpeta src al path para importaciones absolutas
 src_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if src_dir not in sys.path:
     sys.path.insert(0, src_dir)
 
-# Importar usando rutas absolutas desde src
 from controller.conversor_controller import BaseController
 from model.youtube2mp3_model import YouTube2MP3Converter
 from view.youtube2mp3_view import YouTubeView
 
 
 class YouTube2MP3Controller(BaseController):
-    """Controlador para conversión de YouTube a MP3"""
+    """Controller for YouTube to MP3 conversion"""
     
     def __init__(self):
-        """Inicializar controlador de YouTube"""
+        """Initialize YouTube controller"""
         super().__init__()
         self.model = YouTube2MP3Converter()
         self.view = YouTubeView()
     
     def validate_input(self, url: str) -> bool: # type: ignore
-        """Validar que la URL sea de YouTube"""
+        """Validate that the URL is from YouTube"""
         if not url or not url.strip():
             return False
         
@@ -41,27 +39,21 @@ class YouTube2MP3Controller(BaseController):
         return any(indicator in url for indicator in youtube_indicators)
     
     def process_conversion(self, youtube_url: str) -> str:  # type: ignore
-        """Procesar conversión de YouTube a MP3"""
+        """Process YouTube to MP3 conversion"""
         try:
-            # Mostrar pasos del proceso
             self.view.show_conversion_steps()
-            
-            # Procesar conversión
             self.show_progress("⬇️ Descargando desde YouTube...")
             result_path = self.model.convert(youtube_url)
-            
             return result_path
             
         except Exception as e:
             raise e
     
     def convert_single_video(self) -> bool:
-        """Convierte un vídeo o playlist de YouTube - retorna True si fue exitoso"""
+        """Convert a YouTube video or playlist - returns True on success"""
         try:
-            # Obtener URL del usuario
             url = self.view.get_user_input()
 
-            # Validar entrada
             if not self.validate_input(url):
                 self.handle_error(ValueError(
                     "URL no válida. Debe ser un enlace de YouTube válido "
@@ -69,7 +61,6 @@ class YouTube2MP3Controller(BaseController):
                 ))
                 return False
 
-            # — Detectar si es playlist —
             if self.model.is_playlist_url(url):
                 print("\n📋 Playlist de YouTube detectada.")
                 print("Obteniendo lista de vídeos... (puede tardar unos segundos)")
@@ -90,12 +81,12 @@ class YouTube2MP3Controller(BaseController):
                 print(f"\n✅ Descargados {len(results)}/{total} vídeos")
                 return len(results) > 0
 
-            # — Vídeo individual —
             result_path = self.process_conversion(url)
             self.handle_success(result_path)
             self.view.show_output_info()
             return True
 
+        except KeyboardInterrupt:
             self.show_progress("⏹️  Operación cancelada por el usuario")
             return False
         except Exception as e:
@@ -103,20 +94,15 @@ class YouTube2MP3Controller(BaseController):
             return False
     
     def run(self) -> None:
-        """Ejecutar el flujo principal del controlador"""
+        """Run the main controller flow"""
         try:
-            # Mostrar bienvenida
             self.view.show_welcome()
-            
-            # Mostrar información del sistema
             self.view.show_system_info()
             
-            # Bucle principal de conversión
             while True:
                 try:
                     success = self.convert_single_video()
                     
-                    # Si hubo éxito o error manejado, preguntar si continuar
                     if not self.view.ask_continue():
                         break
                         
@@ -128,7 +114,6 @@ class YouTube2MP3Controller(BaseController):
                     if not self.view.ask_continue():
                         break
             
-            # Mostrar despedida
             self.view.show_goodbye()
             
         except KeyboardInterrupt:

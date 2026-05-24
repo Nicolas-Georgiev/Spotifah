@@ -1,33 +1,31 @@
 # spotify2mp3_controller.py
-"""Controlador para conversión de Spotify a MP3 siguiendo patrón MVC robusto"""
+"""Controller for Spotify to MP3 conversion following a robust MVC pattern"""
 
 import os
 import sys
 from typing import Optional
 
-# Añadir la carpeta src al path para importaciones absolutas
 src_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if src_dir not in sys.path:
     sys.path.insert(0, src_dir)
 
-# Importar usando rutas absolutas desde src
 from controller.conversor_controller import BaseController
 from model.spotify2mp3_model import Spotify2MP3Converter
 from view.spotify2mp3_view import SpotifyView
 
 
 class Spotify2MP3Controller(BaseController):
-    """Controlador para conversión de Spotify a MP3"""
+    """Controller for Spotify to MP3 conversion"""
     
     def __init__(self):
-        """Inicializar controlador de Spotify"""
+        """Initialize Spotify controller"""
         super().__init__()
         self.model = Spotify2MP3Converter()
         self.view = SpotifyView()
         self.current_session = None
     
     def validate_input(self, url: str) -> bool: # type: ignore
-        """Validar que la URL sea de Spotify"""
+        """Validate that the URL is from Spotify"""
         if not url or not url.strip():
             return False
         
@@ -41,18 +39,16 @@ class Spotify2MP3Controller(BaseController):
         return any(indicator in url for indicator in spotify_indicators)
     
     def process_conversion(self, spotify_url: str) -> str: # type: ignore
-        """Procesar conversión de Spotify a MP3"""
+        """Process Spotify to MP3 conversion"""
         self.view.show_conversion_steps()
         self.show_progress("🔍 Extrayendo metadatos de Spotify...")
         return self.model.convert(spotify_url)
     
     def convert_single_track(self) -> bool:
-        """Convierte una pista o una playlist completa - retorna True si fue exitoso"""
+        """Convert a single track or full playlist - returns True on success"""
         try:
-            # Obtener URL del usuario
             url = self.view.get_user_input()
 
-            # Validar entrada
             if not self.validate_input(url):
                 self.handle_error(ValueError(
                     "URL no válida. Debe ser un enlace de Spotify válido "
@@ -60,7 +56,6 @@ class Spotify2MP3Controller(BaseController):
                 ))
                 return False
 
-            # — Detectar si es playlist/álbum —
             if self.model.is_playlist_url(url):
                 print("\n📋 Playlist/álbum de Spotify detectado.")
                 print("Obteniendo lista de canciones... (puede tardar unos segundos)")
@@ -81,7 +76,6 @@ class Spotify2MP3Controller(BaseController):
                 print(f"\n✅ Descargadas {len(results)}/{total} canciones")
                 return len(results) > 0
 
-            # — Canción individual —
             result_path = self.process_conversion(url)
             self.handle_success(result_path)
             self.view.show_metadata_info()
@@ -95,24 +89,19 @@ class Spotify2MP3Controller(BaseController):
             return False
     
     def show_setup_info(self) -> None:
-        """Mostrar información de configuración"""
+        """Show setup information"""
         self.view.show_setup_info()
     
     def run(self) -> None:
-        """Ejecutar el flujo principal del controlador"""
+        """Run the main controller flow"""
         try:
-            # Mostrar bienvenida
             self.view.show_welcome()
-            
-            # Mostrar información del sistema simplificado
             self.view.show_system_info()
             
-            # Bucle principal de conversión
             while True:
                 try:
                     success = self.convert_single_track()
                     
-                    # Si hubo éxito o error manejado, preguntar si continuar
                     if not self.view.ask_continue():
                         break
                         
@@ -124,12 +113,9 @@ class Spotify2MP3Controller(BaseController):
                     if not self.view.ask_continue():
                         break
             
-            # Mostrar despedida
             self.view.show_goodbye()
             
         except KeyboardInterrupt:
             print("\n⏹️  Programa terminado")
         except Exception as e:
             self.handle_error(e)
-
-

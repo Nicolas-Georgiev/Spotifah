@@ -272,37 +272,7 @@ class SpotifyInfoExtractor:
             print(f"⚠️ Error en SpotDL: {e}")
             return None
             
-    # ========================================================================
-    # MÉTODOS OBSOLETOS - Ya no se usan, toda la información se guarda 
-    # directamente en la base de datos como JSON
-    # ========================================================================
-    
-    # def _save_metadata_to_temp_file(self, metadata, clear_previous=False, is_batch=False):
-    #     """
-    #     [OBSOLETO] Guardaba metadatos en data/metadata/spotify_metadata.json
-    #     Ahora todo se guarda directo en BD con upsert_cancion_json()
-    #     """
-    #     pass
-    
-    # def get_metadata_file_path(self):
-    #     """[OBSOLETO] Retornaba ruta de archivo metadata JSON"""
-    #     pass
-    
-    # def get_current_metadata(self):
-    #     """[OBSOLETO] Obtenía metadatos del archivo JSON"""
-    #     pass
-    
-    # def get_all_tracks_metadata(self):
-    #     """[OBSOLETO] Obtenía todos los tracks del archivo JSON"""
-    #     pass
-    
-    # def get_download_session_info(self):
-    #     """[OBSOLETO] Obtenía info de sesión del archivo JSON"""
-    #     pass
-    
-    # ========================================================================
-    # FIN MÉTODOS OBSOLETOS
-    # ========================================================================
+
 
     @staticmethod
     def _extract_spotify_id(url: str):

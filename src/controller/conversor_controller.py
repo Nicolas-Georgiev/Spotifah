@@ -1,5 +1,5 @@
 # conversor_controller.py
-"""Controlador consolidado para manejo de conversores con patrón MVC robusto"""
+"""Consolidated controller for managing converters with a robust MVC pattern"""
 
 import os
 import sys
@@ -7,27 +7,26 @@ import subprocess
 from abc import ABC, abstractmethod
 from typing import Any, Optional, Dict
 
-# Configurar rutas de importación
 src_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if src_dir not in sys.path:
     sys.path.insert(0, src_dir)
 
 
 class BaseController(ABC):
-    """Controlador base que define la interfaz común para todos los convertidores"""
+    """Base controller defining the common interface for all converters"""
     
     def __init__(self):
-        """Inicializar controlador"""
+        """Initialize controller"""
         self.model = None
         self.view = None
         self._setup_environment()
     
     def _setup_environment(self):
-        """Configurar el entorno necesario (carpetas, etc.)"""
+        """Set up the necessary environment (directories, etc.)"""
         self._ensure_data_directories()
     
     def _ensure_data_directories(self):
-        """Crear directorios necesarios si no existen"""
+        """Create required directories if they don't exist"""
         base_dir = os.path.join(os.path.dirname(__file__), "..", "..")
         directories = [
             os.path.join(base_dir, "data", "music"),
@@ -40,16 +39,16 @@ class BaseController(ABC):
     
     @abstractmethod
     def validate_input(self, input_data: str) -> bool:
-        """Validar entrada del usuario"""
+        """Validate user input"""
         pass
     
     @abstractmethod
     def process_conversion(self, input_data: str) -> str:
-        """Procesar conversión usando el modelo"""
+        """Process conversion using the model"""
         pass
     
     def handle_error(self, error: Exception) -> None:
-        """Manejar errores de manera consistente"""
+        """Handle errors consistently"""
         error_msg = f"Error en conversión: {str(error)}"
         if self.view:
             self.view.show_error(error_msg)
@@ -57,14 +56,14 @@ class BaseController(ABC):
             print(f"❌ {error_msg}")
     
     def handle_success(self, result: str) -> None:
-        """Manejar éxito de manera consistente"""
+        """Handle success consistently"""
         if self.view:
             self.view.show_result(result)
         else:
             print(f"✅ Conversión completada: {result}")
     
     def show_progress(self, message: str) -> None:
-        """Mostrar progreso al usuario"""
+        """Show progress to the user"""
         if self.view:
             self.view.show_message(message)
         else:
@@ -72,16 +71,15 @@ class BaseController(ABC):
     
     @abstractmethod
     def run(self) -> None:
-        """Ejecutar el flujo principal del controlador"""
+        """Run the main controller flow"""
         pass
 
 
 class ConversorController:
-    """Controlador principal que maneja múltiples convertidores"""
+    """Main controller that manages multiple converters"""
     
     def __init__(self):
-        """Inicializar controlador principal"""
-        # Importar controladores aquí para evitar importaciones circulares
+        """Initialize main controller"""
         from controller.spotify2mp3_controller import Spotify2MP3Controller
         from controller.youtube2mp3_controller import YouTube2MP3Controller
         from controller.soundcloud2mp3_controller import SoundCloud2MP3Controller
@@ -94,8 +92,7 @@ class ConversorController:
         self._setup_environment()
     
     def _setup_environment(self) -> None:
-        """Configurar entorno general"""
-        # Crear directorios base
+        """Set up general environment"""
         base_dir = os.path.join(os.path.dirname(__file__), "..", "..")
         directories = [
             os.path.join(base_dir, "data", "music"),
@@ -108,7 +105,7 @@ class ConversorController:
             os.makedirs(directory, exist_ok=True)
     
     def show_main_menu(self) -> None:
-        """Mostrar menú principal"""
+        """Show main menu"""
         print("\n" + "="*70)
         print("  🎵 EKHO - PLATAFORMA MUSICAL 🎵")
         print("="*70)
@@ -123,7 +120,7 @@ class ConversorController:
         print("="*70)
     
     def get_user_choice(self) -> str:
-        """Obtener elección del usuario"""
+        """Get user choice"""
         while True:
             try:
                 print("\nSelecciona una opción (1-3, 0 para salir): ", end='', flush=True)
@@ -145,10 +142,9 @@ class ConversorController:
                 return "0"
     
     def show_system_status(self) -> None:
-        """Mostrar estado del sistema"""
+        """Show system status"""
         print("\n🔧 ESTADO DEL SISTEMA:")
         
-        # Verificar dependencias
         dependencies = [
             ('spotdl', 'SpotDL para metadatos de Spotify'),
             ('yt_dlp', 'yt-dlp para descargas de YouTube'),
@@ -166,7 +162,6 @@ class ConversorController:
             except ImportError:
                 print(f"  ❌ {description} - NO INSTALADO")
         
-        # Verificar directorios
         base_dir = os.path.join(os.path.dirname(__file__), "..", "..")
         directories = [
             ("data/music", "Directorio de música"),
@@ -198,7 +193,7 @@ class ConversorController:
             return False
     
     def run(self) -> None:
-        """Ejecutar el flujo principal"""
+        """Run the main flow"""
         try:
             while True:
                 self.show_main_menu()
@@ -228,10 +223,9 @@ class ConversorController:
                 elif choice == '4':
                     self.show_system_status()
                 elif choice == '5':
-                    from run_conversores import mostrar_canciones
-                    mostrar_canciones()
+                    from run_conversores import show_songs
+                    show_songs()
                 
-                # Pausa antes de volver al menú
                 print("\n⏸️  Presiona Enter para continuar...", end='', flush=True)
                 try:
                     input()

@@ -3,142 +3,139 @@ import sqlite3
 import sys
 from pathlib import Path
 
-# Permitir ejecutar este archivo directamente (fallback) y mantener la import relativa cuando se ejecuta como paquete.
 if __package__ is None:
-    # añade 'src' al sys.path para que 'databaseManager' sea importable cuando ejecutas el archivo directamente
-    src_dir = Path(__file__).resolve().parents[1]  # ../.. -> .../src
+    src_dir = Path(__file__).resolve().parents[1]
     sys.path.insert(0, str(src_dir))
 
 try:
     from .db import Database
 except Exception:
-    # fallback para ejecución directa
     from databaseManager.db import Database
 
-def crear_cancion(conn: sqlite3.Connection):
+def create_song(conn: sqlite3.Connection):
     print("\nCrear nueva canción")
-    titulo = input("Título: ").strip()
-    if not titulo:
+    title = input("Título: ").strip()
+    if not title:
         print("Título obligatorio.")
         return
-    artista = input("Artista (opcional): ").strip() or None
+    artist = input("Artista (opcional): ").strip() or None
     album = input("Álbum (opcional): ").strip() or None
     try:
-        duracion = input("Duración en segundos (opcional): ").strip()
-        duracion_seg = int(duracion) if duracion else None
+        dur = input("Duración en segundos (opcional): ").strip()
+        duration_sec = int(dur) if dur else None
     except ValueError:
         print("Duración inválida.")
         return
-    genero = input("Género (opcional): ").strip() or None
-    plataforma = input("Plataforma origen (por defecto 'local'): ").strip() or "local"
-    url_origen = input("URL origen (opcional): ").strip() or None
-    ruta_local = input("Ruta local (opcional): ").strip() or None
-    caratula = input("URL carátula (opcional): ").strip() or None
-    letra = input("Letra (opcional): ").strip() or None
+    genre = input("Género (opcional): ").strip() or None
+    platform = input("Plataforma origen (por defecto 'local'): ").strip() or "local"
+    source_url = input("URL origen (opcional): ").strip() or None
+    local_path = input("Ruta local (opcional): ").strip() or None
+    cover = input("URL carátula (opcional): ").strip() or None
+    lyrics = input("Letra (opcional): ").strip() or None
 
     cur = conn.cursor()
     cur.execute("""
         INSERT INTO canciones
         (titulo, artista, album, duracion_seg, genero, plataforma_origen, url_origen, ruta_local, caratula_url, letra)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (titulo, artista, album, duracion_seg, genero, plataforma, url_origen, ruta_local, caratula, letra))
+    """, (title, artist, album, duration_sec, genre, platform, source_url, local_path, cover, lyrics))
     conn.commit()
     print(f"Canción creada con id {cur.lastrowid}.")
 
-def listar_canciones(conn: sqlite3.Connection):
+def list_songs(conn: sqlite3.Connection):
     cur = conn.execute("SELECT id_cancion, titulo, artista, genero, duracion_seg FROM canciones ORDER BY id_cancion")
-    filas = cur.fetchall()
-    if not filas:
+    rows = cur.fetchall()
+    if not rows:
         print("\nNo hay canciones.")
         return
     print("\nCanciones:")
-    for r in filas:
+    for r in rows:
         print(f"  {r['id_cancion']}: {r['titulo']} - {r['artista'] or '-'} ({r['genero'] or '-'}, {r['duracion_seg'] or '-'}s)")
 
-def listar_usuarios(conn: sqlite3.Connection):
+def list_users(conn: sqlite3.Connection):
     cur = conn.execute("SELECT id_usuario, nombre_usuario, correo FROM usuarios ORDER BY id_usuario")
-    filas = cur.fetchall()
-    if not filas:
+    rows = cur.fetchall()
+    if not rows:
         print("\nNo hay usuarios.")
         return []
     print("\nUsuarios:")
-    for r in filas:
+    for r in rows:
         print(f"  {r['id_usuario']}: {r['nombre_usuario']} <{r['correo']}>")
-    return filas
+    return rows
 
-def crear_usuario(conn: sqlite3.Connection):
+def create_user(conn: sqlite3.Connection):
     print("\nCrear nuevo usuario")
-    nombre_usuario = input("Nombre de usuario: ").strip()
-    if not nombre_usuario:
+    username = input("Nombre de usuario: ").strip()
+    if not username:
         print("Nombre de usuario obligatorio.")
         return
-    correo = input("Correo: ").strip()
-    if not correo:
+    email = input("Correo: ").strip()
+    if not email:
         print("Correo obligatorio.")
         return
-    contraseña = input("Contraseña (hash): ").strip()
-    if not contraseña:
+    password = input("Contraseña (hash): ").strip()
+    if not password:
         print("Contraseña obligatoria.")
         return
-    pais = input("País (opcional): ").strip() or None
-    preferencias_generos = input("Géneros preferidos JSON (opcional, ej: [\"Pop\",\"Rock\"]): ").strip() or None
-    preferencias_artistas = input("Artistas preferidos JSON (opcional, ej: [\"Artista A\"]): ").strip() or None
+    country = input("País (opcional): ").strip() or None
+    genre_preferences = input("Géneros preferidos JSON (opcional, ej: [\"Pop\",\"Rock\"]): ").strip() or None
+    artist_preferences = input("Artistas preferidos JSON (opcional, ej: [\"Artista A\"]): ").strip() or None
 
     try:
         cur = conn.cursor()
         cur.execute("""
             INSERT INTO usuarios (nombre_usuario, correo, contraseña_hash, pais, preferencias_generos, preferencias_artistas)
             VALUES (?, ?, ?, ?, ?, ?)
-        """, (nombre_usuario, correo, contraseña, pais, preferencias_generos, preferencias_artistas))
+        """, (username, email, password, country, genre_preferences, artist_preferences))
         conn.commit()
         print(f"Usuario creado con id {cur.lastrowid}.")
     except sqlite3.IntegrityError:
         print("Error: El correo ya existe.")
 
-def crear_playlist(conn: sqlite3.Connection):
+def create_playlist(conn: sqlite3.Connection):
     print("\nCrear nueva playlist")
-    usuarios = listar_usuarios(conn)
-    if not usuarios:
+    users = list_users(conn)
+    if not users:
         print("No hay usuarios para asignar la playlist.")
         return
     try:
-        id_usuario = int(input("ID de usuario propietario (elige de la lista): ").strip())
+        user_id = int(input("ID de usuario propietario (elige de la lista): ").strip())
     except ValueError:
         print("ID inválido.")
         return
-    nombre = input("Nombre playlist: ").strip()
-    if not nombre:
+    name = input("Nombre playlist: ").strip()
+    if not name:
         print("Nombre obligatorio.")
         return
-    descripcion = input("Descripción (opcional): ").strip() or None
-    publica_in = input("¿Pública? (s/N): ").strip().lower()
-    publica = 1 if publica_in == 's' else 0
+    description = input("Descripción (opcional): ").strip() or None
+    is_public_input = input("¿Pública? (s/N): ").strip().lower()
+    is_public = 1 if is_public_input == 's' else 0
 
     cur = conn.cursor()
     cur.execute("""
         INSERT INTO playlists (id_usuario, nombre, descripcion, publica)
         VALUES (?, ?, ?, ?)
-    """, (id_usuario, nombre, descripcion, publica))
+    """, (user_id, name, description, is_public))
     conn.commit()
     print(f"Playlist creada con id {cur.lastrowid}.")
 
-def listar_playlists(conn: sqlite3.Connection):
+def list_playlists(conn: sqlite3.Connection):
     cur = conn.execute("""
         SELECT p.id_playlist, p.nombre, p.descripcion, p.publica, u.nombre_usuario
         FROM playlists p
         LEFT JOIN usuarios u ON p.id_usuario = u.id_usuario
         ORDER BY p.id_playlist
     """)
-    filas = cur.fetchall()
-    if not filas:
+    rows = cur.fetchall()
+    if not rows:
         print("\nNo hay playlists.")
         return
     print("\nPlaylists:")
-    for r in filas:
+    for r in rows:
         pub = "Pública" if r["publica"] else "Privada"
         print(f"  {r['id_playlist']}: {r['nombre']} ({pub}) - creador: {r['nombre_usuario'] or '-'}")
 
-def ver_playlist_canciones(conn: sqlite3.Connection):
+def view_playlist_songs(conn: sqlite3.Connection):
     print("\nVer playlist con canciones")
     
     cur = conn.execute("""
@@ -159,7 +156,7 @@ def ver_playlist_canciones(conn: sqlite3.Connection):
         print(f"  {p['id_playlist']}: {p['nombre']} ({pub}) - creador: {p['nombre_usuario'] or '-'}")
     
     try:
-        id_playlist = int(input("\nIngresa el ID de la playlist que deseas ver: ").strip())
+        playlist_id = int(input("\nIngresa el ID de la playlist que deseas ver: ").strip())
     except ValueError:
         print("ID inválido.")
         return
@@ -169,7 +166,7 @@ def ver_playlist_canciones(conn: sqlite3.Connection):
         FROM playlists p
         LEFT JOIN usuarios u ON p.id_usuario = u.id_usuario
         WHERE p.id_playlist = ?
-    """, (id_playlist,))
+    """, (playlist_id,))
     playlist = cur.fetchone()
 
     if not playlist:
@@ -189,33 +186,33 @@ def ver_playlist_canciones(conn: sqlite3.Connection):
         JOIN canciones c ON pc.id_cancion = c.id_cancion
         WHERE pc.id_playlist = ?
         ORDER BY pc.orden
-    """, (id_playlist,))
-    canciones = cur.fetchall()
+    """, (playlist_id,))
+    songs = cur.fetchall()
 
-    if not canciones:
+    if not songs:
         print("\nEsta playlist no tiene canciones.")
     else:
-        print(f"\nCanciones ({len(canciones)}):")
-        for idx, c in enumerate(canciones, 1):
+        print(f"\nCanciones ({len(songs)}):")
+        for idx, c in enumerate(songs, 1):
             print(f"  {idx}. {c['titulo']} - {c['artista'] or '-'} ({c['genero'] or '-'}, {c['duracion_seg'] or '-'}s)")
 
-def anadir_cancion_a_playlist(conn: sqlite3.Connection):
+def add_song_to_playlist(conn: sqlite3.Connection):
     print("\nAñadir canción a playlist")
-    listar_playlists(conn)
+    list_playlists(conn)
     try:
-        id_playlist = int(input("ID playlist: ").strip())
+        playlist_id = int(input("ID playlist: ").strip())
     except ValueError:
         print("ID inválido.")
         return
-    listar_canciones(conn)
+    list_songs(conn)
     try:
-        id_cancion = int(input("ID canción: ").strip())
+        song_id = int(input("ID canción: ").strip())
     except ValueError:
         print("ID canción inválido.")
         return
-    orden_in = input("Orden en la playlist (opcional, por defecto 1): ").strip()
+    order_input = input("Orden en la playlist (opcional, por defecto 1): ").strip()
     try:
-        orden = int(orden_in) if orden_in else 1
+        order = int(order_input) if order_input else 1
     except ValueError:
         print("Orden inválido.")
         return
@@ -223,36 +220,36 @@ def anadir_cancion_a_playlist(conn: sqlite3.Connection):
         conn.execute("""
             INSERT INTO playlist_canciones (id_playlist, id_cancion, orden)
             VALUES (?, ?, ?)
-        """, (id_playlist, id_cancion, orden))
+        """, (playlist_id, song_id, order))
         conn.commit()
         print("Canción añadida a la playlist.")
     except sqlite3.IntegrityError as e:
         print(f"Error al añadir: {e}")
 
 def run_menu(conn: sqlite3.Connection):
-    acciones = {
-        "1": ("Listar canciones", lambda: listar_canciones(conn)),
-        "2": ("Crear canción", lambda: crear_cancion(conn)),
-        "3": ("Listar usuarios", lambda: listar_usuarios(conn)),
-        "4": ("Crear usuario", lambda: crear_usuario(conn)),
-        "5": ("Listar playlists", lambda: listar_playlists(conn)),
-        "6": ("Ver playlist con canciones", lambda: ver_playlist_canciones(conn)),
-        "7": ("Crear playlist", lambda: crear_playlist(conn)),
-        "8": ("Añadir canción a playlist", lambda: anadir_cancion_a_playlist(conn)),
+    actions = {
+        "1": ("Listar canciones", lambda: list_songs(conn)),
+        "2": ("Crear canción", lambda: create_song(conn)),
+        "3": ("Listar usuarios", lambda: list_users(conn)),
+        "4": ("Crear usuario", lambda: create_user(conn)),
+        "5": ("Listar playlists", lambda: list_playlists(conn)),
+        "6": ("Ver playlist con canciones", lambda: view_playlist_songs(conn)),
+        "7": ("Crear playlist", lambda: create_playlist(conn)),
+        "8": ("Añadir canción a playlist", lambda: add_song_to_playlist(conn)),
         "0": ("Salir", None)
     }
 
     while True:
         print("\n=== Menú Spotifah (CLI) ===")
-        for k, v in acciones.items():
+        for k, v in actions.items():
             print(f"  {k}. {v[0]}")
         choice = input("Elige una opción: ").strip()
         if choice == "0":
             print("Saliendo...")
             break
-        accion = acciones.get(choice)
-        if accion and accion[1]:
-            accion[1]()
+        action = actions.get(choice)
+        if action and action[1]:
+            action[1]()
         else:
             print("Opción no válida.")
 

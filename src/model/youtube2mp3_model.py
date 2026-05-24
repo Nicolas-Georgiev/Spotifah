@@ -414,21 +414,7 @@ class YouTube2MP3Converter:
             traceback.print_exc()
             return file_path
 
-    # ========================================================================
-    # MÉTODO OBSOLETO - Ya no se usa, toda la información se guarda 
-    # directamente en la base de datos como JSON
-    # ========================================================================
-    
-    # def _save_metadata_to_json(self, video_info: dict, mp3_path: str) -> None:
-    #     """
-    #     [OBSOLETO] Guardaba metadatos en data/metadata/youtube_metadata.json
-    #     Ahora todo se guarda directo en BD con upsert_cancion_json()
-    #     """
-    #     pass
-    
-    # ========================================================================
-    # FIN MÉTODO OBSOLETO
-    # ========================================================================
+
 
     def convert(self, url):
         """Descarga y convierte el video de YouTube a MP3 con portada"""
