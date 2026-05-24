@@ -52,6 +52,8 @@ pyinstaller ^
     --onefile ^
     --noconsole ^
     --name "EKHO" ^
+    --icon "assets\icons\logo-ekho.ico" ^
+    --add-data "assets\icons\logo-ekho.ico;assets\icons" ^
     --add-data "web;web" ^
     --hidden-import "pywebview" ^
     --hidden-import "pygame" ^
