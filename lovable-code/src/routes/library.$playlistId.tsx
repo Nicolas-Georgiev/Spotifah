@@ -2,6 +2,7 @@ import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useEffect, useState, useMemo } from "react";
 import { ChevronLeft } from "lucide-react";
 import { bridge, type Song } from "../lib/bridge";
+import { useAppData } from "../lib/app-data";
 import { PlaylistHeader } from "../components/library/PlaylistHeader";
 import { SongTable, sortSongs, type SortConfig } from "../components/library/SongTable";
 
@@ -32,8 +33,8 @@ function fmtDuration(seconds: number): string {
 
 function PlaylistDetail() {
   const { playlist } = Route.useLoaderData();
+  const { currentPlayingId, setCurrentPlayingId } = useAppData();
   const [songs, setSongs] = useState<Song[]>([]);
-  const [playingId, setPlayingId] = useState<string | null>(null);
   const [sort, setSort] = useState<SortConfig | null>(null);
 
   useEffect(() => {
@@ -50,7 +51,7 @@ function PlaylistDetail() {
   const totalMin = Math.round(totalSecs / 60);
 
   const handlePlay = (songId: string) => {
-    setPlayingId(songId);
+    setCurrentPlayingId(songId);
     bridge.playSong(songId, sortedSongs.map((s) => s.id));
   };
 
@@ -83,7 +84,7 @@ function PlaylistDetail() {
 
       <SongTable
         songs={sortedSongs}
-        playingId={playingId}
+        playingId={currentPlayingId}
         onPlay={handlePlay}
         fmtDuration={fmtDuration}
         playlistId={playlist.id}

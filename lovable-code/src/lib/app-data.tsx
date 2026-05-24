@@ -8,6 +8,8 @@ interface AppData {
   recentSongs: Song[];
   loading: boolean;
   error: string | null;
+  currentPlayingId: string | null;
+  setCurrentPlayingId: (id: string | null) => void;
   refreshPlaylists: () => Promise<void>;
   refreshSongs: () => Promise<void>;
   refreshRecentSongs: () => Promise<void>;
@@ -32,6 +34,7 @@ export function AppDataProvider({ children }: Props) {
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [songs, setSongs] = useState<Song[]>([]);
   const [recentSongs, setRecentSongs] = useState<Song[]>([]);
+  const [currentPlayingId, setCurrentPlayingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [loadKey, setLoadKey] = useState(0);
@@ -125,18 +128,20 @@ export function AppDataProvider({ children }: Props) {
   }
 
   return (
-    <AppDataContext.Provider
-      value={{
-        playlists,
-        songs,
-        recentSongs,
-        loading,
-        error,
-        refreshPlaylists,
-        refreshSongs,
-        refreshRecentSongs,
-      }}
-    >
+      <AppDataContext.Provider
+        value={{
+          playlists,
+          songs,
+          recentSongs,
+          currentPlayingId,
+          setCurrentPlayingId,
+          loading,
+          error,
+          refreshPlaylists,
+          refreshSongs,
+          refreshRecentSongs,
+        }}
+      >
       {children}
     </AppDataContext.Provider>
   );

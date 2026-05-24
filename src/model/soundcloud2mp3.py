@@ -187,10 +187,16 @@ class SoundCloudConverter:
         if _DB_ADAPTER_OK:
             try:
                 mp3_abs = os.path.normpath(os.path.abspath(mp3_path))
+                # Leer duración real del archivo MP3 (fallback: duración de SoundCloud)
+                try:
+                    duracion_real = int(MP3(mp3_abs).info.length)
+                except Exception:
+                    duracion_real = int(duration) if duration else None
+
                 metadata_bd = {
                     'titulo':            raw_title,
                     'artista':           raw_artist,
-                    'duracion_seg':      int(duration) if duration else None,
+                    'duracion_seg':      duracion_real,
                     'genero':            genre or None,
                     'plataforma_origen': 'SoundCloud',
                     'url_origen':        url,

@@ -524,10 +524,16 @@ class YouTube2MP3Converter:
             # ── Guardar en BD ──────────────────────────────────────────────
             if _DB_ADAPTER_OK:
                 try:
+                    # Leer duración real del archivo MP3 (fallback: duración de YouTube)
+                    try:
+                        duracion_real = int(MP3(mp3_abs).info.length)
+                    except Exception:
+                        duracion_real = video_info.get('length') or None
+
                     metadata_bd = {
                         'titulo':           video_info.get('title', ''),
                         'artista':          video_info.get('author', ''),
-                        'duracion_seg':     video_info.get('length') or None,
+                        'duracion_seg':     duracion_real,
                         'genero':           genre_str or None,
                         'plataforma_origen': 'YouTube',
                         'url_origen':       url,

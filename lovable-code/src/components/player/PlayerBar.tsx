@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Play, Pause, SkipBack, SkipForward, Shuffle, Repeat, Repeat1, Volume2, VolumeX } from "lucide-react";
 import { bridge } from "../../lib/bridge";
+import { useAppData } from "../../lib/app-data";
 import { Slider } from "../ui/slider";
 
 interface NowPlayingInfo {
@@ -16,6 +17,7 @@ interface NowPlayingInfo {
 }
 
 export function PlayerBar() {
+  const { setCurrentPlayingId } = useAppData();
   const [np, setNp] = useState<NowPlayingInfo | null>(null);
   const [position, setPosition] = useState(0);
   const [volume, setVolume] = useState(100);
@@ -52,8 +54,10 @@ export function PlayerBar() {
         });
         setShuffle(data.shuffle);
         setRepeat(data.repeat);
+        setCurrentPlayingId(data.id);
       } else {
         setNp(null);
+        setCurrentPlayingId(null);
       }
       const volRes = await bridge.getVolume();
       if (volRes.ok && volRes.data !== undefined) {
@@ -130,10 +134,12 @@ export function PlayerBar() {
         }
         return data;
       });
+      setCurrentPlayingId(data.id);
     } else {
       setNp(null);
+      setCurrentPlayingId(null);
     }
-  }, []);
+  }, [setCurrentPlayingId]);
 
   const handlePlayPause = async () => {
     if (np?.is_playing) {

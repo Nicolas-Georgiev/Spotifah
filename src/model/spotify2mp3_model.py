@@ -1055,11 +1055,17 @@ class Spotify2MP3Converter(BaseModel):
                 _album = track_info.get('album', '')
                 if isinstance(_album, dict):
                     _album = _album.get('name', '')
+                # Leer duración real del archivo MP3 (fallback: duración de Spotify)
+                try:
+                    duracion_real = int(MP3(mp3_path).info.length)
+                except Exception:
+                    duracion_real = track_info.get('duracion_seg') or (track_info.get('duration_ms') or 0) // 1000
+
                 metadata_bd = {
                     'titulo':            titulo_final,
                     'artista':           artista_final,
                     'album':             _album,
-                    'duracion_seg':      track_info.get('duracion_seg') or (track_info.get('duration_ms') or 0) // 1000,
+                    'duracion_seg':      duracion_real,
                     'plataforma_origen': 'Spotify',
                     'url_origen':        spotify_url,
                     'ruta_local':        os.path.abspath(mp3_path),
