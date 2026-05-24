@@ -331,6 +331,16 @@ export const bridge = {
     }
   },
 
+  async selectFolderDialog(): Promise<{ ok: boolean; data?: { path: string }; error?: string }> {
+    const api = getApi();
+    if (!api) return { ok: false, error: "PyWebView no disponible" };
+    try {
+      return await api.select_folder_dialog();
+    } catch (e: any) {
+      return { ok: false, error: e?.message ?? "Error" };
+    }
+  },
+
   async getSystemStatus(): Promise<SystemStatus> {
     const api = getApi();
     if (!api) return { dependencies: {}, ffmpeg: false, music_count: 0 };
