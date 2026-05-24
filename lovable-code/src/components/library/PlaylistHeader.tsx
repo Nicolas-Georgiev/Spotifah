@@ -54,7 +54,7 @@ export function PlaylistHeader({ playlist, songs, totalMin, onPlayAll }: Props) 
           </div>
           <h1 className="text-4xl sm:text-6xl font-bold mt-3">{playlist.name}</h1>
           <p className="text-muted-foreground mt-2">{playlist.description}</p>
-          <p className="text-xs text-muted-foreground font-mono mt-3">
+          <p className="text-sm text-muted-foreground font-mono mt-3">
             {songs.length} canciones · {totalMin} min
           </p>
         </div>

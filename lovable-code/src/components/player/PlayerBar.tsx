@@ -263,7 +263,7 @@ export function PlayerBar() {
           >
             <div className={`h-1.5 rounded-full bg-muted/40 overflow-hidden ${showTransition ? "transition-all duration-75" : ""}`}>
               <div
-                className={`h-full bg-primary ${showTransition ? "transition-all duration-75" : ""}`}
+                className={`h-full bg-primary rounded-full ${showTransition ? "transition-all duration-75" : ""}`}
                 style={{ width: `${progress * 100}%` }}
               />
             </div>

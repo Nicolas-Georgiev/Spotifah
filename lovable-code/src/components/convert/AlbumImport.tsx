@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import {
-  Music, ListMusic, ExternalLink, Clock, Album,
+  Music, ListMusic, ExternalLink, Clock, Album, Link2,
   ChevronDown, ChevronUp, Search,
 } from "lucide-react";
 import { bridge, type AlbumPreviewData, type TrackPreview } from "../../lib/bridge";
@@ -28,14 +28,14 @@ function formatDuration(seconds: number): string {
 function TrackRow({ track, index }: { track: TrackPreview; index: number }) {
   return (
     <div className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-muted/30 transition text-sm">
-      <span className="w-6 text-right text-muted-foreground font-mono text-xs">
+      <span className="w-6 text-right text-muted-foreground text-sm font-mono">
         {index}
       </span>
       <div className="flex-1 min-w-0">
         <p className="font-medium truncate">{track.title}</p>
         <p className="text-xs text-muted-foreground truncate">{track.artist}</p>
       </div>
-      <span className="text-xs text-muted-foreground font-mono shrink-0">
+      <span className="text-sm text-muted-foreground font-mono shrink-0">
         {formatDuration(track.duration)}
       </span>
     </div>
@@ -101,36 +101,36 @@ export function AlbumImport({ onNavigateToPlaylist }: Props) {
 
   return (
     <div className="space-y-6">
-      <header>
-        <h2 className="text-2xl font-bold flex items-center gap-2">
-          <Album className="w-6 h-6" />
-          Importar Álbum
-        </h2>
-        <p className="text-sm text-muted-foreground mt-1">
-          Pega un enlace de álbum o playlist desde Spotify, YouTube o SoundCloud
-        </p>
-      </header>
+      <div className="flex items-center gap-3 mb-6">
+        <ListMusic className="w-5 h-5 text-muted-foreground" />
+        <h2 className="text-xl font-semibold">Importar álbum o playlist</h2>
+      </div>
 
-      <div className="flex flex-col sm:flex-row gap-3">
-        <input
-          value={url}
-          onChange={(e) => { setUrl(e.target.value); setPreview(null); setError(null); setImportTaskId(null); setCompletedPlaylistId(null); }}
-          onKeyDown={(e) => { if (e.key === "Enter") analyze(); }}
-          placeholder="https://open.spotify.com/album/..."
-          className="flex-1 bg-input/60 border border-border rounded-lg px-4 py-3 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-        />
-        <button
-          onClick={analyze}
-          disabled={loading || !url.trim()}
-          className="px-5 py-3 rounded-lg font-medium bg-primary text-primary-foreground hover:opacity-90 glow-violet flex items-center gap-2 justify-center disabled:opacity-50"
-        >
-          {loading ? (
-            <span className="w-4 h-4 border-2 border-background border-t-transparent rounded-full animate-spin" />
-          ) : (
-            <Search className="w-4 h-4" />
-          )}
-          {loading ? "Analizando..." : "Analizar"}
-        </button>
+      <div className="glass rounded-2xl p-5">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Link2 className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <input
+              value={url}
+              onChange={(e) => { setUrl(e.target.value); setPreview(null); setError(null); setImportTaskId(null); setCompletedPlaylistId(null); }}
+              onKeyDown={(e) => { if (e.key === "Enter") analyze(); }}
+              placeholder="https://open.spotify.com/album/..."
+              className="w-full bg-input/60 border border-border rounded-lg pl-11 pr-4 py-3 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+          <button
+            onClick={analyze}
+            disabled={loading || !url.trim()}
+            className="px-5 py-3 rounded-lg font-medium bg-primary text-primary-foreground hover:opacity-90 glow-violet flex items-center gap-2 justify-center disabled:opacity-50"
+          >
+            {loading ? (
+              <span className="w-4 h-4 border-2 border-background border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Search className="w-4 h-4" />
+            )}
+            {loading ? "Analizando..." : "Analizar"}
+          </button>
+        </div>
       </div>
 
       {error && (

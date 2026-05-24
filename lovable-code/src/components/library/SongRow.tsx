@@ -153,8 +153,8 @@ export function SongRow({ song, index, isActive, onPlay, fmtDuration, playlistId
           <span>
             <SourceBadge source={localSong.source} />
           </span>
-          <span className="text-sm text-muted-foreground font-mono text-right">{fmtDuration(localSong.duration)}</span>
-          <span className="text-xs text-muted-foreground">
+          <span className="text-sm text-muted-foreground font-mono text-right tabular-nums">{fmtDuration(localSong.duration)}</span>
+          <span className="text-xs text-muted-foreground font-mono">
             {localSong.download_date ? formatDownloadDate(localSong.download_date) : "-"}
           </span>
           <div className="flex items-center gap-0 justify-end">
