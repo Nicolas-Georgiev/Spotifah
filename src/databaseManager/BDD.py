@@ -254,7 +254,11 @@ def run_menu(conn: sqlite3.Connection):
             print("Opción no válida.")
 
 def main():
-    db_file = os.path.join(os.path.dirname(__file__), "..", "..", "data", "BDD", "ekho.db")
+    try:
+        from frozen_utils import get_db_path
+        db_file = get_db_path()
+    except ImportError:
+        db_file = os.path.join(os.path.dirname(__file__), "..", "..", "data", "BDD", "ekho.db")
     db = Database(db_file)
     conn = db.get_connection()
     try:

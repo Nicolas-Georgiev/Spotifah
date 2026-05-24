@@ -90,8 +90,12 @@ class SpotifyInfoExtractor:
                 # Intentar cargar desde .env en la raíz del proyecto si no están en el entorno
                 if not client_id or not client_secret:
                     try:
-                        project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-                        dotenv_path = os.path.join(project_root, '.env')
+                        try:
+                            from frozen_utils import get_dotenv_path
+                            dotenv_path = get_dotenv_path()
+                        except ImportError:
+                            project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+                            dotenv_path = os.path.join(project_root, '.env')
                         if os.path.exists(dotenv_path):
                             with open(dotenv_path, 'r', encoding='utf-8') as f:
                                 for line in f:

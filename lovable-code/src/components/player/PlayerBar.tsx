@@ -10,24 +10,14 @@ import {
   Volume2,
   VolumeX,
 } from "lucide-react";
-import { bridge } from "../../lib/bridge";
+import { bridge, type NowPlayingData } from "../../lib/bridge";
 import { useAppData } from "../../lib/app-data";
 import { Slider } from "../ui/slider";
 
-interface NowPlayingInfo {
-  id: string;
-  title: string;
-  artist: string;
-  duration: number;
-  cover_url: string;
-  is_playing: boolean;
-  position: number;
-  shuffle: boolean;
-  repeat: string;
-}
+type NowPlayingInfo = NowPlayingData;
 
 export function PlayerBar() {
-  const { setCurrentPlayingId, currentPlayingId } = useAppData();
+  const { setCurrentPlayingId, currentPlayingId, playerRefreshTrigger } = useAppData();
   const [np, setNp] = useState<NowPlayingInfo | null>(null);
   const [position, setPosition] = useState(0);
   const [volume, setVolume] = useState(0);
@@ -57,6 +47,9 @@ export function PlayerBar() {
   const startPolling = useCallback(() => {
     const poll = async () => {
       const res = await bridge.getNowPlaying();
+      if (res.debug) {
+        console.log("[PlayerBar] POLL DEBUG:", JSON.stringify(res.debug));
+      }
       if (res.ok && res.data) {
         const data = res.data as NowPlayingInfo;
         setNp((prev) => {
@@ -68,13 +61,11 @@ export function PlayerBar() {
         setShuffle(data.shuffle);
         setRepeat(data.repeat);
         setCurrentPlayingId(data.id);
-      } else {
-        setNp(null);
       }
     };
     poll();
     if (pollingRef.current) clearInterval(pollingRef.current);
-    pollingRef.current = setInterval(poll, 2000);
+    pollingRef.current = setInterval(poll, 1500);
   }, []);
 
   useEffect(() => {
@@ -97,6 +88,7 @@ export function PlayerBar() {
         const dur = prevNp.duration;
         if (dur > 0 && res.position >= dur - 1) {
           await bridge.nextSong();
+          await new Promise(r => setTimeout(r, 100));
           refreshNowPlaying();
         }
       }
@@ -140,27 +132,46 @@ export function PlayerBar() {
     };
   }, [isDragging, getPosFromClientX]);
 
-  const refreshNowPlaying = useCallback(async () => {
-    const res = await bridge.getNowPlaying();
-    if (res.ok && res.data) {
-      const data = res.data as NowPlayingInfo;
-      setNp((prev) => {
-        if (prev?.id !== data.id) {
-          setPosition(data.position);
-        }
-        return data;
-      });
-      setCurrentPlayingId(data.id);
-    } else {
-      setNp(null);
-    }
+  const updateNowPlaying = useCallback((data: NowPlayingInfo) => {
+    setNp((prev) => {
+      if (prev?.id !== data.id) {
+        setPosition(data.position);
+      }
+      return data;
+    });
+    setShuffle(data.shuffle);
+    setRepeat(data.repeat);
+    setCurrentPlayingId(data.id);
   }, [setCurrentPlayingId]);
 
-  useEffect(() => {
-    if (currentPlayingId) {
-      refreshNowPlaying();
+  const refreshNowPlaying = useCallback(async (retries = 0): Promise<boolean> => {
+    const res = await bridge.getNowPlaying();
+    if (res.debug) {
+      console.log("[PlayerBar] DEBUG backend state:", JSON.stringify(res.debug));
     }
-  }, [currentPlayingId, refreshNowPlaying]);
+    console.log("[PlayerBar] getNowPlaying response:", JSON.stringify(res));
+    if (res.ok && res.data) {
+      const data = res.data as NowPlayingInfo;
+      if (npRef.current && data.id === npRef.current.id && retries < 3) {
+        console.log("[PlayerBar] same song id, retrying...");
+        await new Promise(r => setTimeout(r, 500));
+        return refreshNowPlaying(retries + 1);
+      }
+      updateNowPlaying(data);
+      return true;
+    }
+    if (retries < 3) {
+      const delays = [300, 800, 2000];
+      await new Promise(r => setTimeout(r, delays[retries]));
+      return refreshNowPlaying(retries + 1);
+    }
+    console.log("[PlayerBar] refreshNowPlaying failed after retries, keeping current np");
+    return false;
+  }, [updateNowPlaying]);
+
+  useEffect(() => {
+    refreshNowPlaying();
+  }, [currentPlayingId, playerRefreshTrigger, refreshNowPlaying]);
 
   const handlePlayPause = async () => {
     if (np?.is_playing) {
@@ -169,12 +180,14 @@ export function PlayerBar() {
       await bridge.resumeSong();
     } else {
       const songs = await bridge.getSongs();
-      if (songs.length)
+      if (songs.length) {
         await bridge.playSong(
           songs[0].id,
           songs.map((s) => s.id),
         );
+      }
     }
+    await new Promise(r => setTimeout(r, 100));
     await refreshNowPlaying();
   };
 
@@ -183,7 +196,9 @@ export function PlayerBar() {
     setTimeout(() => {
       justSkippedRef.current = false;
     }, 500);
-    await bridge.prevSong();
+    const res = await bridge.prevSong();
+    console.log("[PlayerBar] prevSong response:", JSON.stringify(res));
+    await new Promise(r => setTimeout(r, 100));
     await refreshNowPlaying();
   };
   const handleNext = async () => {
@@ -191,7 +206,9 @@ export function PlayerBar() {
     setTimeout(() => {
       justSkippedRef.current = false;
     }, 500);
-    await bridge.nextSong();
+    const res = await bridge.nextSong();
+    console.log("[PlayerBar] nextSong response:", JSON.stringify(res));
+    await new Promise(r => setTimeout(r, 100));
     await refreshNowPlaying();
   };
 

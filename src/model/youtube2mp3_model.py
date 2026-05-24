@@ -5,6 +5,14 @@ import datetime
 import requests
 from pytubefix import YouTube
 
+try:
+    from frozen_utils import get_music_dir as _get_music_dir
+except ImportError:
+    def _get_music_dir():
+        return os.path.normpath(
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "data", "music")
+        )
+
 # Adaptador de BD — importación segura
 try:
     import sys as _sys
@@ -66,9 +74,7 @@ class YouTube2MP3Converter:
     def __init__(self):
         self.origin = "YouTube"
         # Carpeta de destino configurable
-        self.download_folder = os.path.normpath(
-            os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "data", "music")
-        )
+        self.download_folder = os.path.normpath(_get_music_dir())
 
     def set_download_folder(self, path):
         """
@@ -84,7 +90,7 @@ class YouTube2MP3Converter:
     def download_video(url, output_path=None):
         # Crear carpeta de descargas si no existe
         if output_path is None:
-            downloads_dir = os.path.join(os.path.dirname(__file__), "..", "..", "data", "music")
+            downloads_dir = _get_music_dir()
         else:
             downloads_dir = str(output_path)
         os.makedirs(downloads_dir, exist_ok=True)

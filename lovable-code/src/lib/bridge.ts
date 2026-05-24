@@ -46,7 +46,7 @@ interface SystemStatus {
   music_count: number;
 }
 
-interface NowPlayingData {
+export interface NowPlayingData {
   id: string;
   title: string;
   artist: string;
@@ -62,6 +62,7 @@ interface NowPlayingData {
 interface NowPlayingResult {
   ok: boolean;
   data?: NowPlayingData | null;
+  debug?: Record<string, unknown>;
 }
 
 interface PlaybackPosition {

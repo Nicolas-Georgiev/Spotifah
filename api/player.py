@@ -11,7 +11,7 @@ import io
 with contextlib.redirect_stdout(io.StringIO()):
     import pygame
     from model.music_library import MusicLibrary
-    from controller.music_controller import MusicController
+    from controller.music_controller import MusicController, HAS_PYGAME
 
 from api.covers import CoversMixin
 
@@ -26,6 +26,53 @@ class PlayerMixin(CoversMixin):
             saved_volume = settings.get("volume", 100)
             pygame.mixer.music.set_volume(saved_volume / 100.0)
             self._pygame_inited = True
+
+    def _build_now_playing_dict(self):
+        try:
+            if not self._pygame_inited:
+                print("[build_now_playing] pygame no inicializado")
+                return None
+            if not self._music_controller:
+                print("[build_now_playing] music_controller es None")
+                return None
+            if self._current_song_id is None:
+                print("[build_now_playing] _current_song_id es None")
+                return None
+            is_playing = bool(pygame.mixer.music.get_busy())
+            conn = self.db.get_connection()
+            try:
+                cur = conn.cursor()
+                cur.execute("""
+                    SELECT id_cancion, titulo, artista, album, duracion_seg,
+                           genero, plataforma_origen, ruta_local, caratula_url
+                    FROM canciones WHERE id_cancion = ?
+                """, (int(self._current_song_id),))
+                row = cur.fetchone()
+                if not row:
+                    print(f"[build_now_playing] cancion {self._current_song_id} no encontrada en DB")
+                    return None
+                pos = self._music_controller.get_absolute_position()
+                cover = row["caratula_url"] or ""
+                if not cover:
+                    cover = self._ensure_cover(row["id_cancion"], row["titulo"], row["artista"] or "", row["album"] or "", row["ruta_local"] or "", row["plataforma_origen"] or "")
+                cover = self._localize_cover(row["id_cancion"], cover)
+                return {
+                    "id": str(row["id_cancion"]),
+                    "title": row["titulo"],
+                    "artist": row["artista"] or "",
+                    "album": row["album"] or "",
+                    "duration": row["duracion_seg"] or 0,
+                    "cover_url": cover,
+                    "is_playing": bool(is_playing),
+                    "position": pos,
+                    "shuffle": self._music_controller.get_shuffle_enabled(),
+                    "repeat": self._music_controller.get_repeat_mode(),
+                }
+            finally:
+                conn.close()
+        except Exception as e:
+            print(f"[build_now_playing] error: {e}")
+            return None
 
     def play_song(self, song_id: str, song_ids: list = None) -> dict:
         try:
@@ -51,6 +98,8 @@ class PlayerMixin(CoversMixin):
                             "UPDATE canciones SET ruta_local = ? WHERE id_cancion = ?",
                             (song_path, int(song_id)),
                         )
+
+                self._current_song_id = song_id
 
                 if song_ids and len(song_ids) > 0:
                     queue_paths = []
@@ -87,16 +136,18 @@ class PlayerMixin(CoversMixin):
                         ok = self._music_controller.play_file(song_path)
                     if not ok:
                         return {"ok": False, "error": f"No se pudo reproducir: {song_path}"}
-
-                self._current_song_id = song_id
                 cur.execute(
                     "INSERT INTO historial_reproduccion (id_usuario, id_cancion) VALUES (?, ?)",
                     (1, int(song_id)),
                 )
                 conn.commit()
+                np_data = self._build_now_playing_dict()
                 return {
                     "ok": True,
-                    "data": {"message": f"Reproduciendo: {os.path.basename(song_path)}"},
+                    "data": {
+                        "message": f"Reproduciendo: {os.path.basename(song_path)}",
+                        "now_playing": np_data,
+                    },
                 }
             finally:
                 conn.close()
@@ -193,7 +244,14 @@ class PlayerMixin(CoversMixin):
             with self._player_lock:
                 self._music_controller.next_track()
             self._sync_current_song_from_player()
-            return {"ok": True, "data": {"message": "Siguiente cancion"}}
+            np_data = self._build_now_playing_dict()
+            return {
+                "ok": True,
+                "data": {
+                    "message": "Siguiente cancion",
+                    "now_playing": np_data,
+                },
+            }
         except Exception as e:
             return {"ok": False, "error": str(e)}
 
@@ -203,7 +261,14 @@ class PlayerMixin(CoversMixin):
             with self._player_lock:
                 self._music_controller.previous_track()
             self._sync_current_song_from_player()
-            return {"ok": True, "data": {"message": "Cancion anterior"}}
+            np_data = self._build_now_playing_dict()
+            return {
+                "ok": True,
+                "data": {
+                    "message": "Cancion anterior",
+                    "now_playing": np_data,
+                },
+            }
         except Exception as e:
             return {"ok": False, "error": str(e)}
 
@@ -227,44 +292,22 @@ class PlayerMixin(CoversMixin):
 
     def get_now_playing(self) -> dict:
         try:
-            if not self._pygame_inited or not self._music_controller or self._current_song_id is None:
-                return {"ok": True, "data": None}
-            is_playing = pygame.mixer.music.get_busy()
-            conn = self.db.get_connection()
-            try:
-                cur = conn.cursor()
-                cur.execute("""
-                    SELECT id_cancion, titulo, artista, album, duracion_seg,
-                           genero, plataforma_origen, ruta_local, caratula_url
-                    FROM canciones WHERE id_cancion = ?
-                """, (int(self._current_song_id),))
-                row = cur.fetchone()
-                if not row:
-                    return {"ok": True, "data": None}
-                pos = self._music_controller.get_absolute_position()
-                cover = row["caratula_url"] or ""
-                if not cover:
-                    cover = self._ensure_cover(row["id_cancion"], row["titulo"], row["artista"] or "", row["album"] or "", row["ruta_local"] or "", row["plataforma_origen"] or "")
-                cover = self._localize_cover(row["id_cancion"], cover)
-                return {
-                    "ok": True,
-                    "data": {
-                        "id": str(row["id_cancion"]),
-                        "title": row["titulo"],
-                        "artist": row["artista"] or "",
-                        "album": row["album"] or "",
-                        "duration": row["duracion_seg"] or 0,
-                        "cover_url": cover,
-                        "is_playing": bool(is_playing),
-                        "position": pos,
-                        "shuffle": self._music_controller.get_shuffle_enabled(),
-                        "repeat": self._music_controller.get_repeat_mode(),
-                    },
+            np_data = self._build_now_playing_dict()
+            if np_data is None:
+                debug = {
+                    "pygame_inited": self._pygame_inited,
+                    "music_controller": self._music_controller is not None,
+                    "current_song_id": self._current_song_id,
+                    "has_queue": self._music_controller.has_queue() if self._music_controller else None,
+                    "queue_index": self._music_controller._queue_index if self._music_controller and self._music_controller.has_queue() else None,
+                    "queue_ids_len": len(self._music_controller._queue_ids) if self._music_controller else None,
+                    "mixer_ready": self._music_controller.mixer_ready if self._music_controller else None,
+                    "HAS_PYGAME": HAS_PYGAME,
                 }
-            finally:
-                conn.close()
-        except Exception:
-            return {"ok": True, "data": None}
+                return {"ok": True, "data": None, "debug": debug}
+            return {"ok": True, "data": np_data}
+        except Exception as e:
+            return {"ok": True, "data": None, "debug": {"error": str(e)}}
 
     def get_playback_position(self) -> dict:
         try:

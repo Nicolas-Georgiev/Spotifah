@@ -10,6 +10,8 @@ interface AppData {
   error: string | null;
   currentPlayingId: string | null;
   setCurrentPlayingId: (id: string | null) => void;
+  playerRefreshTrigger: number;
+  triggerPlayerRefresh: () => void;
   refreshPlaylists: () => Promise<void>;
   refreshSongs: () => Promise<void>;
   refreshRecentSongs: () => Promise<void>;
@@ -35,6 +37,7 @@ export function AppDataProvider({ children }: Props) {
   const [songs, setSongs] = useState<Song[]>([]);
   const [recentSongs, setRecentSongs] = useState<Song[]>([]);
   const [currentPlayingId, setCurrentPlayingId] = useState<string | null>(null);
+  const [playerRefreshTrigger, setPlayerRefreshTrigger] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [loadKey, setLoadKey] = useState(0);
@@ -52,6 +55,10 @@ export function AppDataProvider({ children }: Props) {
   const refreshRecentSongs = useCallback(async () => {
     const r = await bridge.getRecentlyPlayed(4);
     setRecentSongs(r);
+  }, []);
+
+  const triggerPlayerRefresh = useCallback(() => {
+    setPlayerRefreshTrigger((n) => n + 1);
   }, []);
 
   const handleRetry = useCallback(() => {
@@ -135,6 +142,8 @@ export function AppDataProvider({ children }: Props) {
           recentSongs,
           currentPlayingId,
           setCurrentPlayingId,
+          playerRefreshTrigger,
+          triggerPlayerRefresh,
           loading,
           error,
           refreshPlaylists,

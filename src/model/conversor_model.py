@@ -5,6 +5,14 @@ Facilita la expansión a otras plataformas manteniendo consistencia en metadatos
 """
 import os
 
+try:
+    from frozen_utils import get_music_dir as _get_music_dir
+except ImportError:
+    def _get_music_dir():
+        return os.path.normpath(
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "data", "music")
+        )
+
 class BaseModel:
     """Clase base para todos los convertidores de audio"""
     
@@ -14,10 +22,8 @@ class BaseModel:
     ORIGIN_SOUNDCLOUD = "SoundCloud"
     ORIGIN_UNKNOWN = "Unknown"
 
-    # Carpeta de descarga por defecto (data/music relativa a la raíz del proyecto)
-    DEFAULT_DOWNLOAD_FOLDER = os.path.normpath(
-        os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "data", "music")
-    )
+    # Carpeta de descarga por defecto — usa frozen_utils para ser compatible con el exe
+    DEFAULT_DOWNLOAD_FOLDER = _get_music_dir()
     
     def __init__(self, origin_name):
         self.origin = origin_name

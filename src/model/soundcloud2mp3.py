@@ -14,6 +14,12 @@ _src = os.path.dirname(os.path.abspath(__file__))
 if _src not in sys.path:
     sys.path.insert(0, _src)
 
+try:
+    from frozen_utils import get_music_dir as _get_music_dir
+except ImportError:
+    def _get_music_dir():
+        return str(Path(__file__).resolve().parent.parent.parent / "data" / "music")
+
 # ── Adaptador de BD — importación segura ───────────────────────────────────
 try:
     from model.db_adapter import upsert_cancion, registrar_descarga
@@ -61,9 +67,7 @@ class SoundCloudConverter:
         if download_folder:
             self.download_folder = str(Path(download_folder).resolve())
         else:
-            self.download_folder = str(
-                Path(__file__).resolve().parent.parent.parent / "data" / "music"
-            )
+            self.download_folder = str(Path(_get_music_dir()).resolve())
         Path(self.download_folder).mkdir(parents=True, exist_ok=True)
 
     def set_download_folder(self, path: str) -> None:

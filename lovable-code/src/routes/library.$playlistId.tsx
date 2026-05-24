@@ -33,7 +33,7 @@ function fmtDuration(seconds: number): string {
 
 function PlaylistDetail() {
   const { playlist } = Route.useLoaderData();
-  const { currentPlayingId, setCurrentPlayingId } = useAppData();
+  const { currentPlayingId, setCurrentPlayingId, triggerPlayerRefresh } = useAppData();
   const [songs, setSongs] = useState<Song[]>([]);
   const [sort, setSort] = useState<SortConfig | null>(null);
 
@@ -50,11 +50,12 @@ function PlaylistDetail() {
   const totalMin = Math.round(totalSecs / 60);
 
   const handlePlay = async (songId: string) => {
-    setCurrentPlayingId(songId);
     await bridge.playSong(
       songId,
       sortedSongs.map((s) => s.id),
     );
+    setCurrentPlayingId(songId);
+    triggerPlayerRefresh();
   };
 
   const handleRemove = async (songId: string) => {

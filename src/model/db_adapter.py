@@ -29,7 +29,18 @@ except Exception as _e:
 
 
 def _get_db(db_path=None):
-    """Devuelve una instancia de Database, creando la BD si no existe."""
+    """Devuelve una instancia de Database apuntando a la BD correcta según el entorno."""
+    if db_path is None:
+        if getattr(sys, 'frozen', False):
+            # Modo frozen (exe): usar AppData del usuario
+            if sys.platform == 'win32':
+                base = os.environ.get('APPDATA', os.path.expanduser('~'))
+            elif sys.platform == 'darwin':
+                base = os.path.join(os.path.expanduser('~'), 'Library', 'Application Support')
+            else:
+                base = os.path.join(os.path.expanduser('~'), '.local', 'share')
+            db_path = os.path.join(base, 'EKHO', 'data', 'BDD', 'ekho.db')
+        # Si no es frozen, Database() calculará la ruta por defecto correctamente
     return Database(db_path)
 
 
