@@ -520,6 +520,16 @@ export const bridge = {
       return [];
     }
   },
+
+  async deletePreviewCover(coverUrl: string): Promise<void> {
+    const api = getApi();
+    if (!api) return;
+    try {
+      await api.delete_preview_cover(coverUrl);
+    } catch {
+      // ignore
+    }
+  },
 };
 
 export { fmtDuration };
