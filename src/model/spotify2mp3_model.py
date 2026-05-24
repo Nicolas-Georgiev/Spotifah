@@ -729,7 +729,7 @@ class Spotify2MP3Converter(BaseModel):
         except Exception as e:
             raise Exception(f"Error al obtener información de Spotify: {e}")
 
-    def search_on_youtube(self, track_name, artist_name):
+    def search_on_youtube(self, track_name, artist_name, expected_duration_s: int = 0):
         """Busca la pista en YouTube usando yt-dlp con múltiples estrategias"""
 
         # Si tenemos información específica, usarla
@@ -755,7 +755,7 @@ class Spotify2MP3Converter(BaseModel):
         ydl_opts = {
             'quiet': True,
             'no_warnings': True,
-            'default_search': 'ytsearch5:',  # Buscar 5 resultados para mejor selección
+            'default_search': 'ytsearch10:',  # 10 resultados para mejor selección
         }
         
         # Probar múltiples consultas de búsqueda
@@ -766,9 +766,9 @@ class Spotify2MP3Converter(BaseModel):
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl: # type: ignore
                     info = ydl.extract_info(search_query, download=False)
                     if info and 'entries' in info and info['entries']:
-                        # Filtrar resultados para encontrar el mejor match
                         best_video = self._select_best_youtube_result(
-                            info['entries'], track_name, artist_name
+                            info['entries'], track_name, artist_name,
+                            expected_duration_s=expected_duration_s
                         )
                         
                         if best_video:
@@ -786,64 +786,123 @@ class Spotify2MP3Converter(BaseModel):
         raise Exception("No se encontraron resultados en YouTube")
 
     @staticmethod
-    def _select_best_youtube_result(entries, track_name, artist_name):
-        """Selecciona el mejor resultado de YouTube basado en criterios"""
+    def _select_best_youtube_result(entries, track_name, artist_name, expected_duration_s: int = 0):
+        """Selecciona el mejor resultado de YouTube basado en criterios de puntuación.
+        
+        Criterios principales (en orden de importancia):
+        1. Proximidad a la duración real de Spotify (evita previews cortos)
+        2. Presencia de título y artista en el nombre del vídeo
+        3. Canal oficial (Topic, VEVO, etc.)
+        4. Penalizaciones por palabras clave problemáticas
+        """
         if not entries:
             return None
-        
-        # Si solo hay un resultado, devolverlo
-        if len(entries) == 1:
-            return entries[0]
-        
-        # Criterios de puntuación para seleccionar mejor resultado
+
         scored_entries = []
-        
+
+        track_lower  = (track_name  or '').lower()
+        artist_lower = (artist_name or '').lower()
+
         for entry in entries:
             if not entry:
                 continue
-                
-            title = entry.get('title', '').lower()
-            uploader = entry.get('uploader', '').lower()
-            duration = entry.get('duration', 0)
-            
+
+            title      = (entry.get('title', '')       or '').lower()
+            uploader   = (entry.get('uploader', '')    or '').lower()
+            channel    = (entry.get('channel', '')     or '').lower()
+            description= (entry.get('description', '') or '').lower()
+            duration   = entry.get('duration', 0) or 0
+
             score = 0
-            
-            # Penalizar videos muy cortos o muy largos
-            if duration:
-                if 30 <= duration <= 600:  # Entre 30 segundos y 10 minutos
-                    score += 10
-                elif duration > 600:
-                    score -= 5
-            
-            # Bonificar si contiene las palabras de búsqueda
-            if track_name and track_name.lower() in title:
-                score += 15
-            if artist_name and artist_name.lower() in title:
-                score += 15
-                
-            # Bonificar si es de canal musical oficial
-            music_keywords = ['official', 'music', 'records', 'entertainment']
-            for keyword in music_keywords:
-                if keyword in uploader:
+
+            # ── 1. DURACIÓN (criterio más importante) ──────────────────────────
+            if expected_duration_s > 0 and duration > 0:
+                ratio = duration / expected_duration_s      # 1.0 = perfecto
+                diff  = abs(duration - expected_duration_s)
+
+                if ratio < 0.5:                            # Menos de la mitad → preview
+                    score -= 60
+                elif ratio < 0.75:                         # 25-50 % más corto
+                    score -= 25
+                elif 0.85 <= ratio <= 1.20:                # ±15 % del esperado
+                    score += 50
+                elif 0.75 <= ratio < 0.85 or 1.20 < ratio <= 1.40:
+                    score += 20                            # ±15-40 % → aceptable
+                elif ratio > 2.0:                          # Más del doble → mix/medley
+                    score -= 20
+            else:
+                # Sin duración conocida: penalizar vídeos muy cortos
+                if 0 < duration < 90:
+                    score -= 30
+                elif 90 <= duration <= 600:
                     score += 5
+
+            # ── 2. TÍTULO / ARTISTA en el nombre del vídeo ────────────────────
+            # Coincidencia exacta de palabras individuales (más robusta que substring)
+            def word_overlap(text: str, query: str) -> int:
+                if not query:
+                    return 0
+                words = [w for w in query.split() if len(w) > 2]
+                return sum(1 for w in words if w in text)
+
+            track_words  = word_overlap(title, track_lower)
+            artist_words = word_overlap(title, artist_lower)
+            total_words  = max(len([w for w in track_lower.split()  if len(w) > 2]), 1)
+            artist_total = max(len([w for w in artist_lower.split() if len(w) > 2]), 1)
+
+            score += min(track_words  / total_words,  1.0) * 20   # hasta +20
+            score += min(artist_words / artist_total, 1.0) * 15   # hasta +15
+
+            # ── 3. CANAL OFICIAL ───────────────────────────────────────────────
+            uploader_and_channel = uploader + ' ' + channel
+            # Canal Topic = subida automática de YouTube Music (suele ser la versión oficial)
+            if uploader_and_channel.strip().endswith(' - topic') or ' - topic' in uploader_and_channel:
+                score += 25
+            # VEVO u otros sellos conocidos
+            official_keywords = ['vevo', 'official', 'records', 'music', 'entertainment', 'productions']
+            for kw in official_keywords:
+                if kw in uploader_and_channel:
+                    score += 8
                     break
-            
-            # Penalizar covers, remixes, etc.
-            avoid_keywords = ['cover', 'remix', 'live', 'concert', 'karaoke', 'instrumental']
-            for keyword in avoid_keywords:
-                if keyword in title:
-                    score -= 3
-            
+            # «Provided to YouTube» en la descripción → subida por sello discográfico
+            if 'provided to youtube' in description:
+                score += 15
+            if 'auto-generated by youtube' in description:
+                score += 10
+
+            # ── 4. PENALIZACIONES ─────────────────────────────────────────────
+            hard_avoid = ['preview', 'teaser', 'snippet', 'clip oficial', 'short clip']
+            for kw in hard_avoid:
+                if kw in title:
+                    score -= 30
+                    break
+
+            soft_avoid = ['cover', 'karaoke', 'instrumental', 'tutorial', 'reaction',
+                          'review', 'ranking', 'top 10', 'hora', '1 hour', '10 hours']
+            for kw in soft_avoid:
+                if kw in title:
+                    score -= 10
+
+            # Live / concierto penalizar levemente (pueden ser versiones válidas)
+            live_kws = ['live', 'concert', 'en vivo', 'acoustic', 'en directo']
+            for kw in live_kws:
+                if kw in title:
+                    score -= 5
+
             scored_entries.append((score, entry))
-        
-        # Ordenar por puntuación y devolver el mejor
+
         scored_entries.sort(key=lambda x: x[0], reverse=True)
-        
+
         if scored_entries:
             best_entry = scored_entries[0][1]
-            print(f"✅ Mejor resultado: {best_entry.get('title', 'Sin título')}")
+            best_score = scored_entries[0][0]
+            print(
+                f"✅ Mejor resultado (score={best_score:.0f}): "
+                f"{best_entry.get('title', 'Sin título')} "
+                f"[{best_entry.get('duration', '?')}s]"
+            )
             return best_entry
-        
+
         return entries[0]  # Fallback al primer resultado
 
     @staticmethod
@@ -973,7 +1032,8 @@ class Spotify2MP3Converter(BaseModel):
         
         # 2. Buscar la pista en YouTube
         print("🔍 Buscando en YouTube...")
-        youtube_info = self.search_on_youtube(titulo_final, artista_final)
+        spotify_duration_s = track_info.get('duracion_seg') or track_info.get('duration') or 0
+        youtube_info = self.search_on_youtube(titulo_final, artista_final, expected_duration_s=int(spotify_duration_s))
         print(f"✅ Encontrado en YouTube: {youtube_info['title']}")
         
         # 3. Descargar desde YouTube
