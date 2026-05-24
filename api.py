@@ -1035,7 +1035,7 @@ class Api:
         except Exception as e:
             return {"ok": False, "error": str(e)}
 
-    def rename_playlist(self, playlist_id: str, name: str, description: str = "") -> dict:
+    def rename_playlist(self, playlist_id: str, name: str, description: str = "", cover_base64: str = None) -> dict:
         if playlist_id == "all":
             return {"ok": False, "error": "No se puede renombrar esta playlist"}
         try:
@@ -1048,12 +1048,29 @@ class Api:
                     return {"ok": False, "error": "Playlist no encontrada"}
                 if row["nombre"] == "Favoritos":
                     return {"ok": False, "error": "No se puede renombrar la playlist de favoritos"}
+
+                import base64
+                updates = ["nombre = ?", "descripcion = ?"]
+                params = [name.strip(), description.strip()]
+
+                if cover_base64:
+                    try:
+                        cover_data = cover_base64
+                        if "," in cover_data:
+                            cover_data = cover_data.split(",")[1]
+                        cover_blob = base64.b64decode(cover_data)
+                        updates.append("caratula_blob = ?")
+                        params.append(cover_blob)
+                    except Exception:
+                        return {"ok": False, "error": "Error al procesar la imagen de portada"}
+
+                params.append(int(playlist_id))
                 cur.execute(
-                    "UPDATE playlists SET nombre = ?, descripcion = ? WHERE id_playlist = ?",
-                    (name.strip(), description.strip(), int(playlist_id)),
+                    f"UPDATE playlists SET {', '.join(updates)} WHERE id_playlist = ?",
+                    params,
                 )
                 conn.commit()
-                return {"ok": True, "data": {"message": "Playlist renombrada"}}
+                return {"ok": True, "data": {"message": "Playlist actualizada"}}
             finally:
                 conn.close()
         except Exception as e:

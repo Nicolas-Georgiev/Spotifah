@@ -424,11 +424,11 @@ export const bridge = {
     }
   },
 
-  async renamePlaylist(playlistId: string, name: string, description: string = ""): Promise<ActionResult> {
+  async renamePlaylist(playlistId: string, name: string, description: string = "", cover_base64?: string): Promise<ActionResult> {
     const api = getApi();
     if (!api) return { ok: false, error: "PyWebView no disponible" };
     try {
-      return await api.rename_playlist(playlistId, name, description);
+      return await api.rename_playlist(playlistId, name, description, cover_base64 || "");
     } catch (e: any) {
       return { ok: false, error: e?.message ?? "Error al renombrar" };
     }

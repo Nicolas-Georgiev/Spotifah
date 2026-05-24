@@ -117,6 +117,7 @@ export function SongEditDialog({ song, open, onOpenChange, onSongUpdated }: Prop
               variant="outline"
               size="sm"
               type="button"
+              className="hover:bg-muted hover:text-foreground"
               onClick={() => fileInputRef.current?.click()}
             >
               <Upload className="w-4 h-4 mr-2" />
@@ -142,7 +143,7 @@ export function SongEditDialog({ song, open, onOpenChange, onSongUpdated }: Prop
             </div>
           </div>
           <div className="flex justify-end gap-2">
-            <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
+            <Button variant="outline" type="button" className="hover:bg-muted hover:text-foreground" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
             <Button type="button" onClick={handleSave} disabled={saving}>
