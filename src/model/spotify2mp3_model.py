@@ -128,9 +128,15 @@ class SpotifyInfoExtractor:
                         pass
 
                 if client_id and client_secret:
-                    self.spotdl = Spotdl(client_id=client_id, client_secret=client_secret) # type: ignore
+                    self.spotdl = Spotdl(
+                        client_id=client_id,
+                        client_secret=client_secret,
+                        downloader_settings={"ffmpeg": self._get_ffmpeg_path()},
+                    )
                 else:
-                    self.spotdl = Spotdl() # type: ignore
+                    self.spotdl = Spotdl(
+                        downloader_settings={"ffmpeg": self._get_ffmpeg_path()},
+                    )
             else:
                 self.spotdl = None
 
@@ -139,6 +145,21 @@ class SpotifyInfoExtractor:
         except Exception as e:
             print(f"🚨 Error configurando SpotDL: {e}")
             raise RuntimeError("SpotDL es obligatorio para el funcionamiento")
+
+    @staticmethod
+    def _get_ffmpeg_path() -> str:
+        ffmpeg = os.environ.get('EKHO_FFMPEG_PATH')
+        if ffmpeg:
+            return ffmpeg
+        if getattr(sys, 'frozen', False):
+            bundled = os.path.join(
+                sys._MEIPASS,
+                'imageio_ffmpeg', 'binaries',
+                'ffmpeg-win-x86_64-v7.1.exe'
+            )
+            if os.path.exists(bundled):
+                return bundled
+        return 'ffmpeg'
 
     def get_track_info(self, spotify_url: str):
         """Obtiene información de una pista usando SpotDL y métodos alternativos como fallback"""
