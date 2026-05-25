@@ -1,87 +1,282 @@
-import { Sparkles, Music, Star } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Album, ArrowRight, Clock3, Music, Play, RefreshCw, Sparkles, Star } from "lucide-react";
+import { bridge, fmtDuration, type RecommendedSong, type Song } from "../../lib/bridge";
+import { useAppData } from "../../lib/app-data";
 import { GlassCard } from "../shared/GlassCard";
-import { SongCard } from "../shared/SongCard";
-import type { Song } from "../../lib/bridge";
+import { CoverArt } from "../shared/CoverArt";
 
-const MOCK_PLAYLISTS = [
-  { id: "p1", name: "Favoritos", cover: "" },
-  { id: "p2", name: "Energía", cover: "" },
-  { id: "p3", name: "Chill", cover: "" },
-  { id: "p4", name: "Descubrimientos", cover: "" },
-];
-
-const MOCK_RECOMMENDATIONS: Song[] = [
-  { id: "r1", title: "Neón Dreams", artist: "Luna Vortex", album: "Synthwave Vol.2", duration: 237, genre: "Electronic", source: "youtube", path: "", cover_url: "" },
-  { id: "r2", title: "Midnight Signal", artist: "The Echoes", album: "Signals", duration: 284, genre: "Indie", source: "spotify", path: "", cover_url: "" },
-  { id: "r3", title: "Aurora", artist: "Solar Drift", album: "Northern Lights", duration: 312, genre: "Ambient", source: "soundcloud", path: "", cover_url: "" },
-  { id: "r4", title: "Lost Frequencies", artist: "Crimson Tide", album: "Waves", duration: 198, genre: "Pop", source: "youtube", path: "", cover_url: "" },
-  { id: "r5", title: "Cyber Rain", artist: "Neon Pulse", album: "Digital Horizons", duration: 265, genre: "Electronic", source: "spotify", path: "", cover_url: "" },
-  { id: "r6", title: "Velvet Sky", artist: "Mira Sol", album: "Dusk", duration: 243, genre: "Lo-Fi", source: "soundcloud", path: "", cover_url: "" },
-  { id: "r7", title: "Ironclad", artist: "Hammerfall", album: "Steel Dawn", duration: 321, genre: "Rock", source: "youtube", path: "", cover_url: "" },
-  { id: "r8", title: "Brisa", artist: "Valentina Ríos", album: "Tropical", duration: 212, genre: "Latin", source: "spotify", path: "", cover_url: "" },
-];
+const FALLBACK_PLAYLIST = {
+  id: "all",
+  name: "Todas mis canciones",
+  description: "Analiza tu biblioteca completa para descubrir nuevos temas.",
+  is_public: false,
+  cover_url: "/portadas/all-songs.svg",
+};
 
 export function RecommendationsPage() {
+  const { playlists, songs, recentSongs, currentPlayingId, setCurrentPlayingId, triggerPlayerRefresh } = useAppData();
+  const availablePlaylists = useMemo(() => {
+    const filtered = playlists.length > 0 ? playlists : [FALLBACK_PLAYLIST];
+    const hasAll = filtered.some((playlist) => playlist.id === "all");
+    return hasAll ? filtered : [FALLBACK_PLAYLIST, ...filtered];
+  }, [playlists]);
+
+  const [selectedPlaylistId, setSelectedPlaylistId] = useState("all");
+  const [recommendations, setRecommendations] = useState<RecommendedSong[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [reloadToken, setReloadToken] = useState(0);
+
+  const selectedPlaylist =
+    availablePlaylists.find((playlist) => playlist.id === selectedPlaylistId) ?? availablePlaylists[0];
+
+  const featuredRecommendation = recommendations[0] ?? null;
+  const discoverySongs = (recentSongs.length > 0 ? recentSongs : songs).slice(0, 6);
+  const recommendationCount = recommendations.length;
+  const featuredReason = featuredRecommendation?.reason || "Mezcla de historial, similitud y popularidad";
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadRecommendations() {
+      setLoading(true);
+      setError(null);
+      try {
+        const items = await bridge.getRecommendations(selectedPlaylistId, 8);
+        if (cancelled) return;
+        setRecommendations(items);
+      } catch (err: any) {
+        if (!cancelled) {
+          setRecommendations([]);
+          setError(err?.message ?? "No se pudieron cargar las recomendaciones");
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    loadRecommendations();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedPlaylistId, reloadToken]);
+
+  const handlePlay = async (song: RecommendedSong) => {
+    const queue = recommendations.map((item) => item.id);
+    await bridge.playSong(song.id, queue);
+    setCurrentPlayingId(song.id);
+    triggerPlayerRefresh();
+  };
+
+  const handlePlaySong = async (song: Song) => {
+    await bridge.playSong(song.id);
+    setCurrentPlayingId(song.id);
+    triggerPlayerRefresh();
+  };
+
   return (
     <div className="space-y-8">
-      <header>
-        <h1 className="text-4xl font-bold flex items-center gap-3">
-          <Sparkles className="w-8 h-8 text-primary" />
-          Recomendaciones
-        </h1>
-        <p className="text-sm text-muted-foreground mt-2">
-          Descubre nueva música basada en tus playlists favoritas
-        </p>
-      </header>
+      <section className="relative overflow-hidden rounded-[2rem] border border-border/60 bg-gradient-to-br from-primary/15 via-background to-accent/10 p-6 shadow-2xl shadow-primary/10 sm:p-8">
+        <div className="absolute inset-0 opacity-[0.35] [background:radial-gradient(circle_at_top_right,_rgba(255,255,255,0.25),_transparent_28%),radial-gradient(circle_at_bottom_left,_rgba(124,58,237,0.14),_transparent_24%)]" />
+        <div className="relative grid gap-6 grid-cols-1">
+          <div className="space-y-5">
+            <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-background/60 px-3 py-1 text-xs font-medium text-primary backdrop-blur">
+              <Sparkles className="h-3.5 w-3.5" />
+              Recomendaciones según tu música
+            </div>
+            <div className="space-y-3">
+              <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
+                Descubre lo siguiente que vas a querer escuchar
+              </h1>
+              <p className="max-w-2xl text-sm text-muted-foreground sm:text-base">
+                El motor busca similitud musical con tu playlist de referencia para
+                mostrarte recomendaciones que se actualizan con tu biblioteca local.
+              </p>
+            </div>
 
-      <GlassCard>
-        <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-          <Music className="w-4 h-4 text-muted-foreground" />
-          Selecciona una playlist de referencia
-        </h2>
-        <div className="flex flex-wrap gap-3">
-          {MOCK_PLAYLISTS.map((p) => (
-            <button
-              key={p.id}
-              className="glass rounded-xl px-4 py-3 flex items-center gap-3 hover:bg-primary/20 hover:text-primary transition border border-transparent hover:border-primary/30 cursor-pointer"
-            >
-              <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center text-lg shrink-0">
-                ♪
+            <div className="flex flex-wrap gap-3 text-sm">
+              <div className="rounded-2xl border border-border/60 bg-background/70 px-4 py-3 backdrop-blur">
+                <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Playlist</div>
+                <div className="mt-1 font-semibold text-foreground">{selectedPlaylist.name}</div>
               </div>
-              <span className="font-medium">{p.name}</span>
-            </button>
-          ))}
-        </div>
-        <p className="text-xs text-muted-foreground mt-3">
-          Próximamente: selección funcional con análisis real de canciones
-        </p>
-      </GlassCard>
-
-      <section>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold flex items-center gap-2">
-            <Star className="w-4 h-4 text-muted-foreground" />
-            Canciones recomendadas para ti
-          </h2>
-          <span className="text-xs text-muted-foreground">Basado en tu playlist — {MOCK_PLAYLISTS[0].name}</span>
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-          {MOCK_RECOMMENDATIONS.map((s) => (
-            <SongCard key={s.id} song={s} />
-          ))}
+              <div className="rounded-2xl border border-border/60 bg-background/70 px-4 py-3 backdrop-blur">
+                <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Recomendaciones</div>
+                <div className="mt-1 font-semibold text-foreground">{recommendationCount}</div>
+              </div>
+              <div className="rounded-2xl border border-border/60 bg-background/70 px-4 py-3 backdrop-blur">
+                <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Señal dominante</div>
+                <div className="mt-1 font-semibold text-foreground">{featuredReason}</div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
       <GlassCard>
-        <h2 className="text-lg font-semibold mb-2">¿Cómo funcionarán las recomendaciones?</h2>
-        <ul className="text-sm text-muted-foreground space-y-1.5 list-disc list-inside">
-          <li>Se analizarán los géneros, artistas y estilos de tu playlist seleccionada</li>
-          <li>El sistema buscará canciones similares en tu biblioteca y fuentes externas</li>
-          <li>Recibirás sugerencias personalizadas con vista previa y reproducción directa</li>
+        <div className="mb-4 flex items-center gap-2 text-sm font-semibold">
+          <Music className="h-4 w-4 text-muted-foreground" />
+          Selecciona una playlist de referencia
+        </div>
+        <div className="flex flex-wrap gap-3">
+          {availablePlaylists.map((playlist) => {
+            const active = playlist.id === selectedPlaylistId;
+            return (
+              <button
+                key={playlist.id}
+                type="button"
+                onClick={() => setSelectedPlaylistId(playlist.id)}
+                className={`flex items-center gap-3 rounded-2xl border px-4 py-3 text-left transition ${
+                  active
+                    ? "border-primary/40 bg-primary/15 text-primary shadow-lg shadow-primary/10"
+                    : "border-border/60 bg-background/40 text-foreground hover:border-primary/25 hover:bg-primary/10"
+                }`}
+              >
+                <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl bg-primary/15 text-lg font-semibold text-primary">
+                  <CoverArt src={playlist.cover_url} alt={playlist.name} className="h-full w-full object-cover" />
+                </div>
+                <div className="min-w-0">
+                  <div className="truncate font-medium">{playlist.name}</div>
+                  <div className="truncate text-xs text-muted-foreground">
+                    {playlist.id === "all" ? "Biblioteca completa" : playlist.description || "Playlist local"}
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </GlassCard>
+
+      <section className="space-y-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h2 className="flex items-center gap-2 text-lg font-semibold">
+              <Star className="h-4 w-4 text-muted-foreground" />
+              Canciones recomendadas para ti
+            </h2>
+            <p className="text-xs text-muted-foreground">
+              Basado en {selectedPlaylist.id === "all" ? "tu actividad reciente" : `la playlist ${selectedPlaylist.name}`}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setReloadToken((value) => value + 1)}
+            className="inline-flex items-center gap-2 rounded-xl border border-border/60 bg-background/50 px-3 py-2 text-xs text-muted-foreground transition hover:border-primary/30 hover:text-foreground"
+            title="Recargar recomendaciones"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            Actualizar
+          </button>
+        </div>
+
+        {loading ? (
+          <GlassCard className="text-sm text-muted-foreground">Calculando recomendaciones...</GlassCard>
+        ) : error ? (
+          <GlassCard className="text-sm text-destructive">{error}</GlassCard>
+        ) : recommendations.length === 0 ? (
+          <GlassCard className="text-sm text-muted-foreground">
+            Todavía no hay suficientes datos para generar recomendaciones. Reproduce o importa algunas canciones y vuelve a intentarlo.
+          </GlassCard>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {recommendations.map((song) => {
+              const isPlaying = currentPlayingId === song.id;
+              const scorePct = Math.round((song.score || 0) * 100);
+              return (
+                <article key={song.id} className="group overflow-hidden rounded-3xl border border-border/60 bg-background/40 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-xl hover:shadow-primary/10">
+                  <button
+                    type="button"
+                    onClick={() => handlePlay(song)}
+                    className="block w-full text-left"
+                    aria-label={`Reproducir ${song.title}`}
+                  >
+                    <div className="relative aspect-square bg-muted/40">
+                      <div className="absolute left-3 top-3 rounded-full bg-background/85 px-2.5 py-1 text-[11px] font-semibold text-foreground backdrop-blur">
+                        {song.reason}
+                      </div>
+                      <div className="absolute right-3 top-3 rounded-full bg-primary/15 px-2.5 py-1 text-[11px] font-semibold text-primary backdrop-blur">
+                        {scorePct}% match
+                      </div>
+                      <div className="absolute bottom-3 right-3 rounded-full bg-background/85 p-2 text-foreground opacity-0 shadow-lg transition group-hover:opacity-100">
+                        <Play className="h-4 w-4" />
+                      </div>
+                    </div>
+                    <div className="space-y-2 p-4">
+                      <div>
+                        <h3 className="truncate font-semibold">{song.title}</h3>
+                        <p className="truncate text-sm text-muted-foreground">{song.artist}</p>
+                      </div>
+                      <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
+                        <span className="truncate">{song.album || song.genre || "Sin álbum"}</span>
+                        <span>{fmtDuration(song.duration || 0)}</span>
+                      </div>
+                      <div className="flex items-center justify-between gap-3 text-xs">
+                        <span className="rounded-full border border-border/60 bg-muted/30 px-2.5 py-1 text-muted-foreground capitalize">
+                          {song.source}
+                        </span>
+                        <span className={isPlaying ? "text-primary" : "text-muted-foreground"}>
+                          {isPlaying ? "Reproduciendo ahora" : "Reproducir"}
+                        </span>
+                      </div>
+                    </div>
+                  </button>
+                </article>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      <section className="space-y-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h2 className="flex items-center gap-2 text-lg font-semibold">
+              <ArrowRight className="h-4 w-4 text-muted-foreground" />
+              Sigue explorando
+            </h2>
+            <p className="text-xs text-muted-foreground">
+              Canciones recientes para acompañar las recomendaciones principales.
+            </p>
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {discoverySongs.length} pistas recientes
+          </div>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {discoverySongs.map((song) => {
+            const isPlaying = currentPlayingId === song.id;
+            return (
+              <button
+                key={song.id}
+                type="button"
+                onClick={() => handlePlaySong(song)}
+                className="group flex items-center gap-4 rounded-3xl border border-border/60 bg-background/40 p-3 text-left transition hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-lg hover:shadow-primary/10"
+              >
+                <div className="h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-muted/40">
+                  <CoverArt src={song.cover_url} alt={song.title} className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.04]" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="truncate font-semibold">{song.title}</div>
+                  <div className="truncate text-sm text-muted-foreground">{song.artist}</div>
+                  <div className="mt-1 flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                    <span className="truncate">{song.album || song.genre || "Sin álbum"}</span>
+                    <span className={isPlaying ? "text-primary" : ""}>{isPlaying ? "Reproduciendo" : "Escuchar"}</span>
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      <GlassCard>
+        <h2 className="mb-2 text-lg font-semibold">Cómo se calculan</h2>
+        <ul className="list-inside list-disc space-y-1.5 text-sm text-muted-foreground">
+          <li>Se vectorizan títulos, artistas, álbumes y géneros con embeddings locales.</li>
+          <li>La búsqueda mezcla similitud musical, recencia y popularidad con tu historial real.</li>
+          <li>Si eliges una playlist concreta, se usan sus canciones como semilla para el ranking.</li>
         </ul>
-        <p className="text-xs text-muted-foreground mt-4 border-t border-border/40 pt-3">
-          🚧 Esta sección está en desarrollo — los datos mostrados son solo una maqueta visual
-        </p>
       </GlassCard>
     </div>
   );

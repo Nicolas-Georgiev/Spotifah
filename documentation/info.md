@@ -17,8 +17,9 @@ reproducción y explorar colecciones musicales de forma intuitiva.
 - Conversor de enlaces: Herramienta para convertir contenidos de YouTube, 
 SoundCloud y Spotify en archivos mp3 con gestión automática de metadatos, 
 como título, artista y carátula. 
-- Recomendador inteligente: Algoritmo basado en aprendizaje automático que 
-ofrece sugerencias musicales acordes a gustos y tendencias de escucha. 
+- Recomendador inteligente: Motor semántico basado en embeddings persistidos en 
+	`data/BDD/ekho.db`, con búsqueda de similitud y mezcla de historial, popularidad 
+	y tendencias.
 - Sistema de playlists: Creación, edición y gestión avanzada de listas 
 personalizadas. 
 - Sincronización con Spotify: Integración directa para mostrar y descargar 
@@ -27,6 +28,13 @@ En definitiva, Ekho proporciona una solución completa y flexible para amantes d
 la música que buscan personalización, accesibilidad y versatilidad, reuniendo en una 
 sola plataforma todos los recursos necesarios para disfrutar, descubrir y gestionar 
 su colección musical de manera inteligente y eficiente.
+
+## Arquitectura actual
+
+- `src/model/`: entidades de dominio, embeddings y utilidades del recomendador.
+- `src/controller/`: motor de recomendaciones y coordinacion de la logica.
+- `src/databaseManager/`: acceso a la base SQLite `data/BDD/ekho.db`.
+- `lovable-code/src/`: frontend React consumiendo la API de Python via PyWebView.
 
 ## Ventajas ante la competencia
 Te preguntarás: ¿Por qué elegir EKHO y no cualquier otra aplicacion main stream? Muy sencillo:

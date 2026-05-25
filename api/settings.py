@@ -11,6 +11,7 @@ class SettingsMixin:
                 if os.path.isdir(path) or self._ensure_dir(path):
                     self._music_dir = path
                     self.library.music_folder = path
+                    self.library.reload_tracks()
         except Exception:
             pass
 
@@ -48,6 +49,7 @@ class SettingsMixin:
                 self._music_dir = new_path
                 from model.music_library import MusicLibrary
                 self.library = MusicLibrary(self._music_dir)
+                self._sync_local_music_library()
             os.makedirs(os.path.dirname(self._settings_file), exist_ok=True)
             with open(self._settings_file, "w", encoding="utf-8") as f:
                 json.dump(settings, f, indent=2, ensure_ascii=False)

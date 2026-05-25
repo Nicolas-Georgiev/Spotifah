@@ -47,7 +47,6 @@ try:
 except ImportError:
     try:
         from spotdl import Spotdl
-        from spotdl.utils.config import get_config
         SPOTDL_API_MODE = "legacy_spotdl_class"
         print("✅ Usando API legacy de spotdl para metadatos de Spotify")
     except ImportError:

@@ -105,7 +105,8 @@ def main():
         ("mutagen", "mutagen"),
         ("requests", "requests"),
         ("yt-dlp>=2023.1.0", "yt_dlp"),
-        ("spotdl", "spotdl")
+        ("spotdl", "spotdl"),
+        ("pygame", "pygame")
     ]
     
     missing_packages = []
@@ -192,9 +193,19 @@ def main():
         print("   🚨 spotdl es REQUERIDO para metadatos confiables de Spotify")
         spotdl_ok = False
 
+    # Test específico de spotdl (OBLIGATORIO)
+    try:
+        import pygame
+        print(f"   ✅ pygame: FUNCIONAL")
+        pygame_ok = True
+    except Exception as e:
+        print(f"   ❌ pygame: FALTA - OBLIGATORIO ({e})")
+        print("   🚨 pygame es REQUERIDO para metadatos confiables de Spotify")
+        pygame_ok = False
+
     # Mostrar resultado final
     print("\n=== RESULTADO ===")
-    if moviepy_ok and pytubefix_ok and mutagen_ok and ytdlp_ok and setuptools_ok and spotdl_ok and ffmpeg_ok:
+    if moviepy_ok and pytubefix_ok and mutagen_ok and ytdlp_ok and setuptools_ok and spotdl_ok and ffmpeg_ok and pygame_ok:
         print("🎉 ¡TODAS LAS DEPENDENCIAS ESTÁN COMPLETAS!")
     else:
         for package, import_name in packages_to_check:

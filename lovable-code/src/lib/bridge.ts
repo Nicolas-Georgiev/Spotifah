@@ -13,6 +13,12 @@ export interface Song {
   is_downloaded?: boolean;
   download_date?: string;
 }
+export interface RecommendedSong extends Song {
+  score: number;
+  reason: string;
+  play_count?: number;
+  added_at?: string;
+}
 
 export interface Playlist {
   id: string;
@@ -206,6 +212,10 @@ export const bridge = {
 
   getSongs(): Promise<Song[]> {
     return bridge.getPlaylistSongs("all");
+  },
+
+  getRecommendations(playlistId: string = "all", limit: number = 8): Promise<RecommendedSong[]> {
+    return apiArray<RecommendedSong>("get_recommendations", playlistId, limit);
   },
 
   convertYoutube(url: string): Promise<ConvertResult> {

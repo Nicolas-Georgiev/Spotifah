@@ -116,4 +116,20 @@ Proximamente: empaquetado con PyInstaller incluyendo Node.js + el frontend.
     ├── music/              # MP3 descargados
     ├── metadata/
     └── BDD/ekho.db         # Base de datos SQLite
+
+## Recomendador
+
+El recomendador trabaja directamente sobre `data/BDD/ekho.db` y guarda embeddings persistidos en la tabla `embeddings`.
+
+Componentes principales:
+- `src/model/recommender_models.py`
+- `src/model/recommender_embedding.py`
+- `src/controller/recommender_engine.py`
+
+El flujo general es:
+1. Leer canciones, artistas e historial desde `ekho.db`
+2. Cargar embeddings ya guardados si existen
+3. Calcular sólo los embeddings faltantes
+4. Persistirlos en la base de datos
+5. Generar recomendaciones
 ```
