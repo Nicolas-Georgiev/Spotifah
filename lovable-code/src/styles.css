@@ -1,5 +1,4 @@
-@import "tailwindcss" source(none);
-@source "../src";
+@import "tailwindcss";
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
@@ -169,6 +168,8 @@
   }
   .font-mono { font-family: var(--font-mono); }
   h1, h2, h3 { letter-spacing: -0.01em; }
+  button { cursor: pointer; }
+  button:disabled { cursor: not-allowed; }
 }
 
 @layer utilities {

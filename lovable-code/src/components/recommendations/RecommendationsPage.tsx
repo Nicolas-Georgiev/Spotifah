@@ -26,6 +26,7 @@ export function RecommendationsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
+  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
 
   const selectedPlaylist =
     availablePlaylists.find((playlist) => playlist.id === selectedPlaylistId) ?? availablePlaylists[0];
@@ -63,6 +64,27 @@ export function RecommendationsPage() {
   }, [selectedPlaylistId, reloadToken]);
 
   const handlePlay = async (song: RecommendedSong) => {
+    const isExternal = song.source?.toLowerCase() !== "local" && !song.path;
+    if (isExternal) {
+      if (!song.external_url) {
+        setError("No se pudo importar desde Spotify: URL no disponible");
+        return;
+      }
+      setActionLoadingId(song.id);
+      setError(null);
+      try {
+        const result = await bridge.convertSpotify(song.external_url);
+        if (!result.ok) {
+          setError(result.error ?? "No se pudo importar desde Spotify");
+        } else {
+          setReloadToken((value) => value + 1);
+        }
+      } finally {
+        setActionLoadingId(null);
+      }
+      return;
+    }
+
     const queue = recommendations.map((item) => item.id);
     await bridge.playSong(song.id, queue);
     setCurrentPlayingId(song.id);
@@ -178,49 +200,39 @@ export function RecommendationsPage() {
             Todavía no hay suficientes datos para generar recomendaciones. Reproduce o importa algunas canciones y vuelve a intentarlo.
           </GlassCard>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {recommendations.map((song) => {
               const isPlaying = currentPlayingId === song.id;
-              const scorePct = Math.round((song.score || 0) * 100);
+              const isExternal = song.source?.toLowerCase() !== "local" && !song.path;
+              const isActionLoading = actionLoadingId === song.id;
               return (
-                <article key={song.id} className="group overflow-hidden rounded-3xl border border-border/60 bg-background/40 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-xl hover:shadow-primary/10">
-                  <button
-                    type="button"
-                    onClick={() => handlePlay(song)}
-                    className="block w-full text-left"
-                    aria-label={`Reproducir ${song.title}`}
-                  >
-                    <div className="relative aspect-square bg-muted/40">
-                      <div className="absolute left-3 top-3 rounded-full bg-background/85 px-2.5 py-1 text-[11px] font-semibold text-foreground backdrop-blur">
-                        {song.reason}
-                      </div>
-                      <div className="absolute right-3 top-3 rounded-full bg-primary/15 px-2.5 py-1 text-[11px] font-semibold text-primary backdrop-blur">
-                        {scorePct}% match
-                      </div>
-                      <div className="absolute bottom-3 right-3 rounded-full bg-background/85 p-2 text-foreground opacity-0 shadow-lg transition group-hover:opacity-100">
-                        <Play className="h-4 w-4" />
-                      </div>
+                <button
+                  key={song.id}
+                  type="button"
+                  onClick={() => handlePlay(song)}
+                  className="group flex items-center gap-4 rounded-3xl border border-border/60 bg-background/40 p-3 text-left transition hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-lg hover:shadow-primary/10"
+                  disabled={isActionLoading}
+                >
+                  <div className="h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-muted/40">
+                    <CoverArt src={song.cover_url} alt={song.title} className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.04]" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate font-semibold">{song.title}</div>
+                    <div className="truncate text-sm text-muted-foreground">{song.artist}</div>
+                    <div className="mt-1 flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                      <span className="truncate">{song.album || song.genre || "Sin álbum"}</span>
+                      <span className={isPlaying ? "text-primary" : ""}>
+                        {isExternal
+                          ? isActionLoading
+                            ? "Importando..."
+                            : "Importar"
+                          : isPlaying
+                          ? "Reproduciendo"
+                          : "Escuchar"}
+                      </span>
                     </div>
-                    <div className="space-y-2 p-4">
-                      <div>
-                        <h3 className="truncate font-semibold">{song.title}</h3>
-                        <p className="truncate text-sm text-muted-foreground">{song.artist}</p>
-                      </div>
-                      <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
-                        <span className="truncate">{song.album || song.genre || "Sin álbum"}</span>
-                        <span>{fmtDuration(song.duration || 0)}</span>
-                      </div>
-                      <div className="flex items-center justify-between gap-3 text-xs">
-                        <span className="rounded-full border border-border/60 bg-muted/30 px-2.5 py-1 text-muted-foreground capitalize">
-                          {song.source}
-                        </span>
-                        <span className={isPlaying ? "text-primary" : "text-muted-foreground"}>
-                          {isPlaying ? "Reproduciendo ahora" : "Reproducir"}
-                        </span>
-                      </div>
-                    </div>
-                  </button>
-                </article>
+                  </div>
+                </button>
               );
             })}
           </div>

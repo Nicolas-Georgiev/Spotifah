@@ -1,11 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { bridge } from "../lib/bridge";
 import { SettingCard } from "../components/settings/SettingCard";
 import { Toggle } from "../components/settings/Toggle";
 import { BitrateSelect } from "../components/settings/BitrateSelect";
 import { ThemeSelect } from "../components/settings/ThemeSelect";
 import { DownloadPathSelect } from "../components/settings/DownloadPathSelect";
+import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/settings")({
   component: SettingsPage,
@@ -52,6 +53,10 @@ function SettingsPage() {
         <ThemeSelect />
       </SettingCard>
 
+      <SettingCard title="Spotify" subtitle="Conecta tu cuenta para recomendaciones más precisas">
+        <SpotifyConnect />
+      </SettingCard>
+
       <SettingCard title="Acerca de" subtitle="Informacion sobre EKHO">
         <div className="grid grid-cols-2 gap-3 text-sm font-mono">
           <span className="text-muted-foreground">Version</span>
@@ -60,6 +65,102 @@ function SettingsPage() {
           <span>2026.05.11</span>
         </div>
       </SettingCard>
+    </div>
+  );
+}
+
+function SpotifyConnect() {
+  const [loggedIn, setLoggedIn] = useState(false);
+  const [expiresAt, setExpiresAt] = useState<number | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [clientId, setClientId] = useState("");
+  const [clientSecret, setClientSecret] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const refresh = useCallback(async () => {
+    const s = await bridge.getSettings();
+    setLoggedIn(!!(s.spotify_access_token ?? null));
+    setExpiresAt(s.spotify_token_expires_at ?? null);
+  }, []);
+
+  useEffect(() => { refresh(); }, [refresh]);
+
+  useEffect(() => {
+    bridge.getSettings().then((s) => {
+      setClientId(s.spotify_client_id ?? s.SPOTIFY_CLIENT_ID ?? "");
+      setClientSecret(s.spotify_client_secret ?? s.SPOTIFY_CLIENT_SECRET ?? "");
+    });
+  }, []);
+
+  const handleSave = async () => {
+    // Open a blank popup immediately to avoid browser popup blockers
+    let popup: Window | null = null;
+    try {
+      popup = window.open("", "_blank");
+    } catch {}
+
+    setErrorMsg(null);
+    setSaving(true);
+    try {
+      await bridge.updateSettings({ spotify_client_id: clientId || null, spotify_client_secret: clientSecret || null });
+      // If credentials were provided, navigate the popup to the OAuth login URL
+      if (clientId && clientSecret) {
+        try {
+          const host = window.location.hostname || "127.0.0.1";
+          const url = `http://${host}:57291/spotify/login`;
+          if (popup) {
+            popup.location.href = url;
+          } else {
+            const ok = await bridge.openSpotifyLogin();
+            if (!ok) setErrorMsg("No se pudo abrir el navegador. Reinicia la app o abre esta URL manualmente: " + url);
+          }
+        } catch {
+          const ok = await bridge.openSpotifyLogin();
+          if (!ok) setErrorMsg("No se pudo abrir el navegador. Reinicia la app o abre esta URL manualmente: " + URL);
+        }
+      }
+    } catch (e) {
+      // ignore
+    } finally {
+      setSaving(false);
+    }
+
+    await refresh();
+  };
+
+  const handleLogout = async () => {
+    setLoading(true);
+    try {
+      await bridge.spotifyLogout();
+    } finally {
+      setLoading(false);
+      await refresh();
+    }
+  };
+
+  return (
+    <div className="grid gap-3">
+      <div className="text-sm text-muted-foreground">{loggedIn ? "Conectado a Spotify" : "No conectado"}</div>
+      <div className="flex items-center gap-2">
+        {loggedIn ? (
+          <Button onClick={handleLogout} variant="secondary" className={loading ? "cursor-not-allowed" : "cursor-pointer"} disabled={loading}>Desconectar</Button>
+        ) : (
+          <Button onClick={handleSave} className={saving ? "cursor-not-allowed" : "cursor-pointer"} disabled={saving}>Guardar credenciales</Button>
+        )}
+      </div>
+      {expiresAt ? (
+        <div className="text-xs text-muted-foreground">Token expira: {new Date(expiresAt * 1000).toLocaleString()}</div>
+      ) : null}
+
+      {errorMsg ? <div className="text-xs text-destructive">{errorMsg}</div> : null}
+
+      <div className="grid gap-2 pt-2">
+        <label className="text-xs text-muted-foreground">Client ID</label>
+        <input value={clientId} onChange={(e) => setClientId(e.target.value)} className="w-full rounded-md border px-3 py-2 bg-background/10 text-sm" />
+        <label className="text-xs text-muted-foreground">Client Secret</label>
+        <input value={clientSecret} onChange={(e) => setClientSecret(e.target.value)} className="w-full rounded-md border px-3 py-2 bg-background/10 text-sm" />
+      </div>
     </div>
   );
 }

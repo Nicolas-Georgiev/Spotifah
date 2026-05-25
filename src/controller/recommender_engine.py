@@ -16,6 +16,8 @@ from model.recommender_embedding import EmbeddingService
 
 
 def _ensure_utc(value: datetime) -> datetime:
+    if value is None:
+        return datetime.now(timezone.utc)
     if value.tzinfo is None:
         return value.replace(tzinfo=timezone.utc)
     return value.astimezone(timezone.utc)
@@ -47,12 +49,45 @@ def _genre_overlap(left: list[str], right: list[str]) -> float:
     return len(left_set & right_set) / len(left_set | right_set)
 
 
+class _VectorIndex:
+    def __init__(self) -> None:
+        self._ids: list[int] = []
+        self._matrix: np.ndarray | None = None
+
+    def build(self, ids: list[int], matrix: np.ndarray | None) -> None:
+        if not ids or matrix is None:
+            self._ids = []
+            self._matrix = None
+            return
+        mat = np.asarray(matrix, dtype=np.float32)
+        norms = np.linalg.norm(mat, axis=1, keepdims=True)
+        norms[norms == 0.0] = 1.0
+        self._matrix = mat / norms
+        self._ids = list(ids)
+
+    def search(self, query: Iterable[float], top_k: int = 10) -> list[tuple[int, float]]:
+        if self._matrix is None or not self._ids or top_k <= 0:
+            return []
+        q = np.asarray(list(query), dtype=np.float32)
+        q_norm = np.linalg.norm(q)
+        if q_norm == 0.0:
+            return []
+        q = q / q_norm
+        scores = np.dot(self._matrix, q)
+        top_k = min(top_k, len(self._ids))
+        idx = np.argpartition(-scores, top_k - 1)[:top_k]
+        idx = idx[np.argsort(-scores[idx])]
+        return [(self._ids[i], float(scores[i])) for i in idx]
+
+
 class RecommendationEngine:
     """Orquesta el flujo completo de recomendacion musical."""
 
     def __init__(self, source, embedding_service: EmbeddingService | None = None) -> None:
         self.source = source
         self.embedding_service = embedding_service or EmbeddingService()
+        self.song_index = _VectorIndex()
+        self.artist_index = _VectorIndex()
         self.refresh()
 
     def refresh(self) -> None:
@@ -92,6 +127,12 @@ class RecommendationEngine:
                         self.source.set_embedding(song.id, song.embedding)
                 except Exception:
                     pass
+
+        if self.songs:
+            song_vectors = np.asarray([song.embedding for song in self.songs], dtype=np.float32)
+            self.song_index.build([song.id for song in self.songs], song_vectors)
+        else:
+            self.song_index.build([], None)
 
         self._build_artist_embeddings()
 
