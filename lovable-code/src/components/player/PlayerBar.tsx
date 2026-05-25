@@ -61,6 +61,10 @@ export function PlayerBar() {
         setShuffle(data.shuffle);
         setRepeat(data.repeat);
         setCurrentPlayingId(data.id);
+      } else if (res.ok && !res.data) {
+        setNp(null);
+        setCurrentPlayingId(null);
+        setPosition(0);
       }
     };
     poll();

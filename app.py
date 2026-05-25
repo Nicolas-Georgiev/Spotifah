@@ -71,7 +71,7 @@ def main():
         height=800,
         min_size=(960, 600),
     )
-    webview.start(debug=True)
+    webview.start()
     print("Cerrando servidor...")
     server.shutdown()
 

@@ -311,6 +311,10 @@ export const bridge = {
     return apiCallOk("remove_song_from_playlist", playlistId, songId);
   },
 
+  deleteAllData(): Promise<ActionResult> {
+    return apiCallOk("delete_all_data");
+  },
+
   deleteSong(songId: string): Promise<ActionResult> {
     return apiCallOk("delete_song", songId);
   },
