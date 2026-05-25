@@ -87,9 +87,13 @@ export function PlayerBar() {
       if (prevNp && prevNp.is_playing && !res.is_playing && !justSkippedRef.current) {
         const dur = prevNp.duration;
         if (dur > 0 && res.position >= dur - 1) {
-          await bridge.nextSong();
-          await new Promise(r => setTimeout(r, 100));
-          refreshNowPlaying();
+          const nr = await bridge.nextSong();
+          if (nr.ok && nr.data?.now_playing) {
+            updateNowPlaying(nr.data.now_playing);
+          } else {
+            await new Promise(r => setTimeout(r, 100));
+            refreshNowPlaying();
+          }
         }
       }
     };
@@ -198,8 +202,12 @@ export function PlayerBar() {
     }, 500);
     const res = await bridge.prevSong();
     console.log("[PlayerBar] prevSong response:", JSON.stringify(res));
-    await new Promise(r => setTimeout(r, 100));
-    await refreshNowPlaying();
+    if (res.ok && res.data?.now_playing) {
+      updateNowPlaying(res.data.now_playing);
+    } else {
+      await new Promise(r => setTimeout(r, 100));
+      await refreshNowPlaying();
+    }
   };
   const handleNext = async () => {
     justSkippedRef.current = true;
@@ -208,8 +216,12 @@ export function PlayerBar() {
     }, 500);
     const res = await bridge.nextSong();
     console.log("[PlayerBar] nextSong response:", JSON.stringify(res));
-    await new Promise(r => setTimeout(r, 100));
-    await refreshNowPlaying();
+    if (res.ok && res.data?.now_playing) {
+      updateNowPlaying(res.data.now_playing);
+    } else {
+      await new Promise(r => setTimeout(r, 100));
+      await refreshNowPlaying();
+    }
   };
 
   const handleShuffle = async () => {

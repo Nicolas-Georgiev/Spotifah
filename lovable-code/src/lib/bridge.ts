@@ -245,11 +245,11 @@ export const bridge = {
     return apiCallOk("seek_song", position);
   },
 
-  nextSong(): Promise<ActionResult> {
+  nextSong(): Promise<ActionResult & { data?: { message: string; now_playing: NowPlayingData | null } }> {
     return apiCallOk("next_song");
   },
 
-  prevSong(): Promise<ActionResult> {
+  prevSong(): Promise<ActionResult & { data?: { message: string; now_playing: NowPlayingData | null } }> {
     return apiCallOk("prev_song");
   },
 

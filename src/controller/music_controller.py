@@ -5,10 +5,10 @@ import importlib
 try:
     pygame = importlib.import_module("pygame")
     HAS_PYGAME = True
-    print("✅ pygame disponible - Reproductor musical habilitado")
+    print("[OK] pygame disponible - Reproductor musical habilitado")
 except ImportError:
     HAS_PYGAME = False
-    print("⚠️ pygame no disponible - Reproductor musical deshabilitado")
+    print("[WARN] pygame no disponible - Reproductor musical deshabilitado")
     print("   Los conversores funcionarán normalmente")
 
 class MusicController:
@@ -34,10 +34,10 @@ class MusicController:
                 pygame.mixer.init()
                 self.mixer_ready = True
             except Exception as e:
-                print(f"⚠️ No se pudo inicializar el reproductor: {e}")
+                print(f"[WARN] No se pudo inicializar el reproductor: {e}")
                 print("   Verifica dispositivo de audio disponible")
         else:
-            print("⚠️ Reproductor musical no disponible (pygame no instalado)")
+            print("[WARN] Reproductor musical no disponible (pygame no instalado)")
 
     def _build_shuffle_order(self):
         n = len(self._queue_paths)
@@ -71,10 +71,10 @@ class MusicController:
 
     def _can_control_playback(self):
         if not HAS_PYGAME:
-            print("❌ Acción no disponible: pygame no está instalado")
+            print("[ERR] Acción no disponible: pygame no está instalado")
             return False
         if not self.mixer_ready:
-            print("❌ Acción no disponible: mezclador de audio no inicializado")
+            print("[ERR] Acción no disponible: mezclador de audio no inicializado")
             return False
         return True
 
@@ -94,6 +94,13 @@ class MusicController:
         self._queue_index = start_index
         if self._shuffle_enabled:
             self._build_shuffle_order()
+
+    def get_current_queue_id(self) -> int | None:
+        if not self.has_queue():
+            return None
+        if 0 <= self._queue_index < len(self._queue_ids):
+            return self._queue_ids[self._queue_index]
+        return None
 
     def clear_queue(self):
         self._queue_paths = []
@@ -122,7 +129,7 @@ class MusicController:
         if not self._can_control_playback():
             return
         if not file_path or not os.path.exists(file_path):
-            print(f"❌ Archivo no encontrado: {file_path}")
+            print(f"[ERR] Archivo no encontrado: {file_path}")
             return
         try:
             pygame.mixer.music.load(file_path)
@@ -131,15 +138,15 @@ class MusicController:
             self._start_pos = 0.0
             self._paused_pos = 0.0
             self._is_paused = False
-            print(f"🎵 Reproduciendo: {file_path}")
+            print(f"[PLAY] Reproduciendo: {file_path}")
         except Exception as e:
-            print(f"❌ Error al reproducir archivo: {e}")
+            print(f"[ERR] Error al reproducir archivo: {e}")
 
     def play_from_queue(self, queue_index: int = None) -> bool:
         if not self._can_control_playback():
             return False
         if not self.has_queue():
-            print("⚠️ No hay cola de reproducción")
+            print("[WARN] No hay cola de reproducción")
             return False
         if queue_index is not None:
             self._queue_index = queue_index
@@ -147,7 +154,7 @@ class MusicController:
             self._queue_index = 0
         path = self._queue_paths[self._queue_index]
         if not path or not os.path.exists(path):
-            print(f"❌ Archivo no encontrado en cola: {path}")
+            print(f"[ERR] Archivo no encontrado en cola: {path}")
             return False
         self._play_path(path)
         return True
@@ -163,11 +170,11 @@ class MusicController:
             if path and os.path.exists(path):
                 self._play_path(path)
                 return True
-            print("❌ Archivo no encontrado en cola")
+            print("[ERR] Archivo no encontrado en cola")
             return False
 
         if self.library.total_tracks() == 0:
-            print("⚠️ No hay pistas MP3 en la biblioteca")
+            print("[WARN] No hay pistas MP3 en la biblioteca")
             return False
 
         if self.current_index >= self.library.total_tracks():
@@ -178,7 +185,7 @@ class MusicController:
             self._play_path(track)
             return True
         else:
-            print("❌ No se pudo reproducir: archivo no encontrado")
+            print("[ERR] No se pudo reproducir: archivo no encontrado")
             return False
 
     def play_file(self, file_path):
@@ -191,11 +198,11 @@ class MusicController:
         if not self._can_control_playback():
             return False
         if not file_path:
-            print("❌ Ruta de archivo vacía")
+            print("[ERR] Ruta de archivo vacía")
             return False
         abs_path = os.path.normpath(os.path.abspath(file_path))
         if not os.path.exists(abs_path):
-            print(f"❌ Archivo no encontrado: {abs_path}")
+            print(f"[ERR] Archivo no encontrado: {abs_path}")
             return False
         try:
             normalized = os.path.normpath(abs_path)
@@ -221,7 +228,7 @@ class MusicController:
             self._play_path(abs_path)
             return True
         except Exception as e:
-            print(f"❌ Error al reproducir archivo: {e}")
+            print(f"[ERR] Error al reproducir archivo: {e}")
             return False
 
     def pause(self):
@@ -274,7 +281,7 @@ class MusicController:
 
                 return True
             except Exception as e:
-                print(f"❌ Error al hacer seek: {e}")
+                print(f"[ERR] Error al hacer seek: {e}")
                 return False
         return False
 
@@ -291,7 +298,7 @@ class MusicController:
 
         if self.has_queue():
             if len(self._queue_paths) == 0:
-                print("⚠️ No hay pistas en la cola")
+                print("[WARN] No hay pistas en la cola")
                 return
             if self._shuffle_enabled and len(self._shuffle_order) > 0:
                 cur_pos = self._shuffle_order.index(self._queue_index)
@@ -302,7 +309,7 @@ class MusicController:
             self._play_path(self._queue_paths[self._queue_index])
         else:
             if self.library.total_tracks() == 0:
-                print("⚠️ No hay pistas MP3 en la biblioteca")
+                print("[WARN] No hay pistas MP3 en la biblioteca")
                 return
             self.current_index = (self.current_index + 1) % self.library.total_tracks()
             self.play()
@@ -312,7 +319,7 @@ class MusicController:
             return
         if self.has_queue():
             if len(self._queue_paths) == 0:
-                print("⚠️ No hay pistas en la cola")
+                print("[WARN] No hay pistas en la cola")
                 return
             if self._shuffle_enabled and len(self._shuffle_order) > 0:
                 cur_pos = self._shuffle_order.index(self._queue_index)
@@ -323,7 +330,7 @@ class MusicController:
             self._play_path(self._queue_paths[self._queue_index])
         else:
             if self.library.total_tracks() == 0:
-                print("⚠️ No hay pistas MP3 en la biblioteca")
+                print("[WARN] No hay pistas MP3 en la biblioteca")
                 return
             self.current_index = (self.current_index - 1) % self.library.total_tracks()
             self.play()

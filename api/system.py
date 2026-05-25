@@ -1,12 +1,28 @@
 import os
+import sys
 import subprocess
 
 
 class SystemMixin:
+    def _get_ffmpeg_path(self) -> str:
+        env = os.environ.get('EKHO_FFMPEG_PATH')
+        if env:
+            return env
+        if getattr(sys, 'frozen', False):
+            bundled = os.path.join(
+                sys._MEIPASS,
+                'imageio_ffmpeg', 'binaries',
+                'ffmpeg-win-x86_64-v7.1.exe'
+            )
+            if os.path.exists(bundled):
+                return bundled
+        return 'ffmpeg'
+
     def _check_ffmpeg(self) -> tuple[bool, str]:
+        ffmpeg = self._get_ffmpeg_path()
         try:
             result = subprocess.run(
-                ["ffmpeg", "-version"],
+                [ffmpeg, "-version"],
                 capture_output=True,
                 text=True,
                 timeout=5,
@@ -65,10 +81,11 @@ class SystemMixin:
                 deps[name] = True
             except ImportError:
                 deps[name] = False
+        ffmpeg_path = self._get_ffmpeg_path()
         ffmpeg = False
         try:
             result = subprocess.run(
-                ["ffmpeg", "-version"],
+                [ffmpeg_path, "-version"],
                 capture_output=True,
                 text=True,
                 timeout=5,

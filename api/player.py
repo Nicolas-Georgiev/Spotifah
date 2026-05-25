@@ -28,15 +28,16 @@ class PlayerMixin(CoversMixin):
             self._pygame_inited = True
 
     def _build_now_playing_dict(self):
+        self._last_build_error = None
         try:
             if not self._pygame_inited:
-                print("[build_now_playing] pygame no inicializado")
+                self._last_build_error = "pygame no inicializado"
                 return None
             if not self._music_controller:
-                print("[build_now_playing] music_controller es None")
+                self._last_build_error = "music_controller es None"
                 return None
             if self._current_song_id is None:
-                print("[build_now_playing] _current_song_id es None")
+                self._last_build_error = "_current_song_id es None"
                 return None
             is_playing = bool(pygame.mixer.music.get_busy())
             conn = self.db.get_connection()
@@ -49,7 +50,7 @@ class PlayerMixin(CoversMixin):
                 """, (int(self._current_song_id),))
                 row = cur.fetchone()
                 if not row:
-                    print(f"[build_now_playing] cancion {self._current_song_id} no encontrada en DB")
+                    self._last_build_error = f"cancion {self._current_song_id} no encontrada en DB"
                     return None
                 pos = self._music_controller.get_absolute_position()
                 cover = row["caratula_url"] or ""
@@ -71,7 +72,7 @@ class PlayerMixin(CoversMixin):
             finally:
                 conn.close()
         except Exception as e:
-            print(f"[build_now_playing] error: {e}")
+            self._last_build_error = f"exception: {e}"
             return None
 
     def play_song(self, song_id: str, song_ids: list = None) -> dict:
@@ -235,14 +236,17 @@ class PlayerMixin(CoversMixin):
                         conn.commit()
                 finally:
                     conn.close()
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"[sync_current_song] error: {e}")
 
     def next_song(self) -> dict:
         try:
             self._init_player()
             with self._player_lock:
                 self._music_controller.next_track()
+                cid = self._music_controller.get_current_queue_id()
+                if cid is not None:
+                    self._current_song_id = str(cid)
             self._sync_current_song_from_player()
             np_data = self._build_now_playing_dict()
             return {
@@ -250,6 +254,7 @@ class PlayerMixin(CoversMixin):
                 "data": {
                     "message": "Siguiente cancion",
                     "now_playing": np_data,
+                    "debug": {"last_build_error": self._last_build_error} if np_data is None else None,
                 },
             }
         except Exception as e:
@@ -260,6 +265,9 @@ class PlayerMixin(CoversMixin):
             self._init_player()
             with self._player_lock:
                 self._music_controller.previous_track()
+                cid = self._music_controller.get_current_queue_id()
+                if cid is not None:
+                    self._current_song_id = str(cid)
             self._sync_current_song_from_player()
             np_data = self._build_now_playing_dict()
             return {
@@ -267,6 +275,7 @@ class PlayerMixin(CoversMixin):
                 "data": {
                     "message": "Cancion anterior",
                     "now_playing": np_data,
+                    "debug": {"last_build_error": self._last_build_error} if np_data is None else None,
                 },
             }
         except Exception as e:
@@ -303,6 +312,7 @@ class PlayerMixin(CoversMixin):
                     "queue_ids_len": len(self._music_controller._queue_ids) if self._music_controller else None,
                     "mixer_ready": self._music_controller.mixer_ready if self._music_controller else None,
                     "HAS_PYGAME": HAS_PYGAME,
+                    "last_build_error": getattr(self, "_last_build_error", None),
                 }
                 return {"ok": True, "data": None, "debug": debug}
             return {"ok": True, "data": np_data}

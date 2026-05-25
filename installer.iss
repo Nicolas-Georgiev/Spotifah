@@ -111,6 +111,7 @@ begin
   begin
     ForceDirectories(ExtractFileDir(SettingsPath));
     ForceDirectories(MusicPath);
+    StringChange(MusicPath, '\', '/');
     JsonContent := '{' + #13#10 +
       '  "volume": 80,' + #13#10 +
       '  "theme": "dark",' + #13#10 +
@@ -119,7 +120,7 @@ begin
       '  "crossfade": true,' + #13#10 +
       '  "automix": false,' + #13#10 +
       '  "crossfade_duration": 5,' + #13#10 +
-      '  "download_path": "' + StringChange(MusicPath, '\', '/') + '"' + #13#10 +
+      '  "download_path": "' + MusicPath + '"' + #13#10 +
       '}';
     SaveStringToFile(SettingsPath, JsonContent, False);
   end;
@@ -137,15 +138,15 @@ begin
   begin
     if not FFmpegFound() then
     begin
-      if MsgBox(
+      SuppressibleMsgBox(
         'FFmpeg no fue encontrado en el PATH del sistema.' + #13#10 + #13#10 +
-        'FFmpeg es necesario para descargar y convertir música.' + #13#10 +
-        'Puedes instalarlo después con:' + #13#10 +
+        'La app incluye su propia copia de FFmpeg empaquetada,' + #13#10 +
+        'por lo que las conversiones deberían funcionar igual.' + #13#10 + #13#10 +
+        'Si encuentras problemas, instálalo con:' + #13#10 +
         '  winget install Gyan.FFmpeg' + #13#10 + #13#10 +
-        '¿Deseas continuar la instalación de todas formas?',
-        mbConfirmation, MB_YESNO
-      ) = IDNO then
-        Result := False;
+        'Pulsa Aceptar para continuar con la instalación.',
+        mbInformation, MB_OK, IDOK
+      );
     end;
   end;
 end;

@@ -39,8 +39,21 @@ def _resolve_data_dir():
         return os.path.join(base, "EKHO", "data")
     return os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 
+def _set_ffmpeg_env():
+    if not getattr(sys, 'frozen', False):
+        return
+    ffmpeg = os.path.join(
+        sys._MEIPASS,
+        'imageio_ffmpeg', 'binaries',
+        'ffmpeg-win-x86_64-v7.1.exe'
+    )
+    if os.path.isfile(ffmpeg):
+        os.environ['IMAGEIO_FFMPEG_EXE'] = ffmpeg
+        os.environ['EKHO_FFMPEG_PATH'] = ffmpeg
+
 def main():
     _check_web_dir()
+    _set_ffmpeg_env()
     data_dir = _resolve_data_dir()
     print(f"Iniciando servidor estatico en {URL}...")
     server = serve(port=PORT, data_dir=data_dir)

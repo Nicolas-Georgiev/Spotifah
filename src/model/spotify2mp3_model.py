@@ -1,5 +1,6 @@
 # spotify2mp3_model.py
 import os
+import sys
 import re
 import json
 import requests
@@ -922,9 +923,19 @@ class Spotify2MP3Converter(BaseModel):
 
         outtmpl = filename_tmpl if filename_tmpl else os.path.join(output_path, '%(title)s.%(ext)s')
 
+        ffmpeg_path = os.environ.get('EKHO_FFMPEG_PATH')
+        if not ffmpeg_path and getattr(sys, 'frozen', False):
+            ffmpeg_path = os.path.join(
+                sys._MEIPASS,
+                'imageio_ffmpeg', 'binaries',
+                'ffmpeg-win-x86_64-v7.1.exe'
+            )
+        if not ffmpeg_path:
+            ffmpeg_path = 'ffmpeg'
         ydl_opts: Dict[str, Any] = {
             'format': 'bestaudio/best',
             'outtmpl': outtmpl,
+            'ffmpeg_location': ffmpeg_path,
             'postprocessors': [{
                 'key': 'FFmpegExtractAudio',
                 'preferredcodec': 'mp3',
