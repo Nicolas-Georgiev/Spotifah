@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Search } from "lucide-react";
-import { Link } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { bridge, type Song } from "../../lib/bridge";
+import { useAppData } from "../../lib/app-data";
 
 export function SearchBar() {
   const [query, setQuery] = useState("");
@@ -33,6 +34,18 @@ export function SearchBar() {
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
+  const { setCurrentPlayingId, triggerPlayerRefresh } = useAppData();
+  const navigate = useNavigate();
+
+  const handleSelectSong = useCallback(async (song: Song) => {
+    await bridge.playSong(song.id);
+    setCurrentPlayingId(song.id);
+    triggerPlayerRefresh();
+    navigate({ to: "/library/$playlistId", params: { playlistId: "all" } });
+    setFocused(false);
+    setQuery("");
+  }, [setCurrentPlayingId, triggerPlayerRefresh, navigate]);
+
   const showDropdown = focused && query.trim().length >= 2;
 
   return (
@@ -51,12 +64,11 @@ export function SearchBar() {
             <p className="px-4 py-6 text-sm text-muted-foreground text-center">Sin resultados</p>
           ) : (
             results.map((s) => (
-              <Link
+              <button
                 key={s.id}
-                to="/library/$playlistId"
-                params={{ playlistId: "all" }}
-                onClick={() => { setFocused(false); setQuery(""); }}
-                className="flex items-center gap-3 px-4 py-2.5 hover:bg-muted/30 transition"
+                type="button"
+                onClick={() => handleSelectSong(s)}
+                className="flex items-center gap-3 px-4 py-2.5 hover:bg-muted/30 transition w-full text-left"
               >
                 <div className="w-9 h-9 rounded bg-muted/40 flex items-center justify-center text-sm shrink-0 overflow-hidden">
                   {s.cover_url ? (
@@ -69,7 +81,7 @@ export function SearchBar() {
                   <p className="text-sm font-medium truncate">{s.title}</p>
                   <p className="text-xs text-muted-foreground truncate">{s.artist}</p>
                 </div>
-              </Link>
+              </button>
             ))
           )}
         </div>
