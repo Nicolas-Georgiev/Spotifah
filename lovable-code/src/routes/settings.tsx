@@ -1,5 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState, useCallback } from "react";
+import { toast } from "sonner";
+import { Trash2 } from "lucide-react";
 import { bridge } from "../lib/bridge";
 import { useAppData } from "../lib/app-data";
 import { SettingCard } from "../components/settings/SettingCard";
@@ -8,6 +10,19 @@ import { BitrateSelect } from "../components/settings/BitrateSelect";
 import { ThemeSelect } from "../components/settings/ThemeSelect";
 import { DownloadPathSelect } from "../components/settings/DownloadPathSelect";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogPortal,
+  AlertDialogOverlay,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogFooter,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from "../components/ui/alert-dialog";
 
 export const Route = createFileRoute("/settings")({
   component: SettingsPage,

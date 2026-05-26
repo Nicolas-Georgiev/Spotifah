@@ -3,6 +3,10 @@ import subprocess
 
 from frozen_utils import configure_ffmpeg_env, resolve_ffmpeg_exe, resolve_ffprobe_exe
 
+import contextlib
+import io
+with contextlib.redirect_stdout(io.StringIO()):
+    from model.music_library import MusicLibrary
 
 class SystemMixin:
     def delete_all_data(self) -> dict:
