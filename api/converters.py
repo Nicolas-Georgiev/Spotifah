@@ -24,6 +24,10 @@ class ConvertersMixin(CoversMixin):
                 converter = YouTube2MP3Converter()
                 converter.set_download_folder(self._music_dir)
                 result_path = converter.convert(url)
+            if hasattr(self, "_sync_local_music_library"):
+                self._sync_local_music_library()
+            if hasattr(self, "library") and self.library is not None:
+                self.library.reload_tracks()
             return {
                 "ok": True,
                 "data": {
@@ -49,6 +53,10 @@ class ConvertersMixin(CoversMixin):
                 converter = Spotify2MP3Converter()
                 converter.set_download_folder(self._music_dir)
                 result_path = converter.convert(url)
+            if hasattr(self, "_sync_local_music_library"):
+                self._sync_local_music_library()
+            if hasattr(self, "library") and self.library is not None:
+                self.library.reload_tracks()
             return {
                 "ok": True,
                 "data": {
@@ -72,6 +80,10 @@ class ConvertersMixin(CoversMixin):
                 result_path = converter.convert(url)
             if result_path is None:
                 return {"ok": False, "error": "La conversión falló", "log": f.getvalue()}
+            if hasattr(self, "_sync_local_music_library"):
+                self._sync_local_music_library()
+            if hasattr(self, "library") and self.library is not None:
+                self.library.reload_tracks()
             return {
                 "ok": True,
                 "data": {

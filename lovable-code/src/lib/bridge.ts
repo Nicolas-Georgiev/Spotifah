@@ -13,6 +13,14 @@ export interface Song {
   is_downloaded?: boolean;
   download_date?: string;
 }
+export interface RecommendedSong extends Song {
+  score: number;
+  reason: string;
+  play_count?: number;
+  added_at?: string;
+  external_url?: string;
+  external_id?: string;
+}
 
 export interface Playlist {
   id: string;
@@ -208,6 +216,27 @@ export const bridge = {
     return bridge.getPlaylistSongs("all");
   },
 
+  async getRecommendations(playlistId: string = "all", limit: number = 8): Promise<RecommendedSong[]> {
+    const raw = await apiArray<any>("get_recommendations", playlistId, limit);
+    return raw.map((item: any) => ({
+      id: String(item?.id ?? ""),
+      title: item?.title ?? "",
+      artist: item?.artist ?? "",
+      album: item?.album ?? "",
+      duration: Number(item?.duration ?? 0),
+      genre: item?.genre ?? "",
+      source: item?.source ?? "local",
+      path: item?.path ?? "",
+      cover_url: item?.cover_url ?? "",
+      score: Number(item?.score ?? 0),
+      reason: item?.reason ?? "",
+      play_count: Number(item?.play_count ?? 0),
+      added_at: item?.added_at ?? "",
+      external_url: item?.external_url ?? "",
+      external_id: item?.external_id ?? "",
+    } as RecommendedSong));
+  },
+
   convertYoutube(url: string): Promise<ConvertResult> {
     return apiCallOk<ConvertResult["data"]>("convert_youtube", url) as Promise<ConvertResult>;
   },
@@ -272,6 +301,46 @@ export const bridge = {
       return local;
     }
   },
+
+  recomputeAllEmbeddings(force: boolean = false): Promise<{ ok: boolean; updated?: number; skipped?: number; total?: number; error?: string }> {
+    return apiCallOk("recompute_all_embeddings", force);
+  },
+
+    // Open Spotify OAuth login page in the system browser
+    async openSpotifyLogin(): Promise<boolean> {
+      const api = getApi();
+      if (api && typeof api.open_spotify_login === "function") {
+        try {
+          const resp = await api.open_spotify_login();
+          return !!(resp && resp.ok);
+        } catch {}
+      }
+      try {
+        const host = window.location.hostname || "127.0.0.1";
+        const port = "57291";
+        const url = `http://${host}:${port}/spotify/login`;
+        window.open(url, "_blank");
+        return true;
+      } catch {
+        return false;
+      }
+    },
+
+    async spotifyLogout(): Promise<boolean> {
+      try {
+        const host = window.location.hostname || "127.0.0.1";
+        const port = "57291";
+        const url = `http://${host}:${port}/spotify/logout`;
+        const resp = await fetch(url, { method: "GET", cache: "no-store" });
+        if (resp.ok) {
+          try {
+            await this.updateSettings({ spotify_access_token: null, spotify_refresh_token: null, spotify_token_expires_at: null });
+          } catch {}
+          return true;
+        }
+      } catch {}
+      return false;
+    },
 
   async updateSettings(data: Record<string, any>): Promise<ActionResult> {
     for (const [key, value] of Object.entries(data)) {

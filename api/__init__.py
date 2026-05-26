@@ -22,12 +22,13 @@ from api.converters import ConvertersMixin
 from api.playlists import PlaylistsMixin
 from api.player import PlayerMixin
 from api.covers import CoversMixin
+from api.recommendations import RecommendationsMixin
 from api.settings import SettingsMixin
 from api.system import SystemMixin
 from api.local_import import LocalImportMixin
 
 
-class Api(ConvertersMixin, PlaylistsMixin, PlayerMixin, CoversMixin, SettingsMixin, SystemMixin, LocalImportMixin):
+class Api(ConvertersMixin, PlaylistsMixin, PlayerMixin, CoversMixin, RecommendationsMixin, SettingsMixin, SystemMixin, LocalImportMixin):
     def __init__(self):
         self._project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         self._is_frozen = getattr(sys, "frozen", False)
@@ -50,6 +51,7 @@ class Api(ConvertersMixin, PlaylistsMixin, PlayerMixin, CoversMixin, SettingsMix
         self.library = MusicLibrary(self._music_dir)
 
         self._apply_settings()
+        self._sync_local_music_library()
 
         self._music_controller = None
         self._pygame_inited = False
@@ -61,6 +63,8 @@ class Api(ConvertersMixin, PlaylistsMixin, PlayerMixin, CoversMixin, SettingsMix
 
         self._import_tasks: dict[str, dict] = {}
         self._import_counter = 0
+        self._recommendation_engine = None
+        self._recommendation_signature = None
 
     def _resolve_data_dir(self):
         if self._is_frozen:
@@ -83,6 +87,38 @@ class Api(ConvertersMixin, PlaylistsMixin, PlayerMixin, CoversMixin, SettingsMix
         if os.path.exists(seed):
             import shutil
             shutil.copy2(seed, target)
+
+    def _sync_local_music_library(self):
+        try:
+            import contextlib
+            import io
+            from model.db_adapter import upsert_cancion_json
+        except Exception:
+            return
+
+        if not os.path.isdir(self._music_dir):
+            return
+
+        db_path = self.db.db_path if hasattr(self.db, "db_path") else None
+        supported_extensions = {".mp3"}
+
+        for entry in os.scandir(self._music_dir):
+            if not entry.is_file():
+                continue
+            if os.path.splitext(entry.name)[1].lower() not in supported_extensions:
+                continue
+
+            try:
+                metadata = self._extract_metadata(entry.path)
+            except Exception:
+                metadata = {"titulo": os.path.splitext(entry.name)[0]}
+
+            metadata.update({
+                "ruta_local": entry.path,
+                "plataforma_origen": "local",
+            })
+            with contextlib.redirect_stdout(io.StringIO()):
+                upsert_cancion_json(metadata, db_path=db_path)
 
     def _ensure_system_playlists(self):
         try:

@@ -1,16 +1,12 @@
 import os
-import sys
 import subprocess
 
-_src_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "src")
-if _src_dir not in sys.path:
-    sys.path.insert(0, _src_dir)
+from frozen_utils import configure_ffmpeg_env, resolve_ffmpeg_exe, resolve_ffprobe_exe
 
 import contextlib
 import io
 with contextlib.redirect_stdout(io.StringIO()):
     from model.music_library import MusicLibrary
-
 
 class SystemMixin:
     def delete_all_data(self) -> dict:
@@ -66,58 +62,58 @@ class SystemMixin:
 
 
     def _get_ffmpeg_path(self) -> str:
-        env = os.environ.get('EKHO_FFMPEG_PATH')
-        if env:
-            return env
-        if getattr(sys, 'frozen', False):
-            bundled = os.path.join(
-                sys._MEIPASS,
-                'imageio_ffmpeg', 'binaries',
-                'ffmpeg-win-x86_64-v7.1.exe'
-            )
-            if os.path.exists(bundled):
-                return bundled
-        return 'ffmpeg'
+        try:
+            configure_ffmpeg_env()
+            return resolve_ffmpeg_exe()
+        except Exception:
+            return os.environ.get("EKHO_FFMPEG_PATH") or "ffmpeg"
 
     def _check_ffmpeg(self) -> tuple[bool, str]:
         ffmpeg = self._get_ffmpeg_path()
+        ffprobe = resolve_ffprobe_exe()
         try:
-            result = subprocess.run(
+            ffmpeg_result = subprocess.run(
                 [ffmpeg, "-version"],
                 capture_output=True,
                 text=True,
                 timeout=5,
             )
-            if result.returncode == 0:
+            ffprobe_result = subprocess.run(
+                [ffprobe, "-version"],
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+            if ffmpeg_result.returncode == 0 and ffprobe_result.returncode == 0:
                 return True, ""
-            return False, "ffmpeg no responde correctamente"
+            return False, "ffmpeg o ffprobe no responden correctamente"
         except FileNotFoundError:
             return False, (
-                "ffmpeg no está instalado. "
-                "Descárgalo desde https://ffmpeg.org/download.html "
-                "y asegúrate de que esté en el PATH del sistema"
+                "ffmpeg/ffprobe no estan instalados. "
+                "Descargalo desde https://ffmpeg.org/download.html "
+                "y asegurate de que este en el PATH del sistema"
             )
         except Exception as e:
-            return False, f"Error al verificar ffmpeg: {e}"
+            return False, f"Error al verificar ffmpeg/ffprobe: {e}"
 
     def _check_spotify_creds(self) -> tuple[bool, str]:
         client_id = os.getenv("SPOTIFY_CLIENT_ID") or os.getenv("SPOTDL_CLIENT_ID")
         client_secret = os.getenv("SPOTIFY_CLIENT_SECRET") or os.getenv("SPOTDL_CLIENT_SECRET")
         if not client_id or not client_secret:
             try:
-                dotenv_path = os.path.join(self._project_root, '.env')
+                dotenv_path = os.path.join(self._project_root, ".env")
                 if os.path.exists(dotenv_path):
-                    with open(dotenv_path, 'r', encoding='utf-8') as f:
+                    with open(dotenv_path, "r", encoding="utf-8") as f:
                         for line in f:
                             line = line.strip()
-                            if not line or line.startswith('#') or '=' not in line:
+                            if not line or line.startswith("#") or "=" not in line:
                                 continue
-                            k, v = line.split('=', 1)
+                            k, v = line.split("=", 1)
                             k = k.strip()
                             v = v.strip().strip('"').strip("'")
-                            if k in ('SPOTIFY_CLIENT_ID', 'SPOTDL_CLIENT_ID') and not client_id:
+                            if k in ("SPOTIFY_CLIENT_ID", "SPOTDL_CLIENT_ID") and not client_id:
                                 client_id = v
-                            if k in ('SPOTIFY_CLIENT_SECRET', 'SPOTDL_CLIENT_SECRET') and not client_secret:
+                            if k in ("SPOTIFY_CLIENT_SECRET", "SPOTDL_CLIENT_SECRET") and not client_secret:
                                 client_secret = v
             except Exception:
                 pass
@@ -125,10 +121,10 @@ class SystemMixin:
             return True, ""
         return False, (
             "SPOTIFY_CLIENT_ID y SPOTIFY_CLIENT_SECRET no configurados.\n"
-            "Crea un archivo .env en la raíz del proyecto con:\n"
+            "Crea un archivo .env en la raiz del proyecto con:\n"
             "SPOTIFY_CLIENT_ID=tu_client_id\n"
             "SPOTIFY_CLIENT_SECRET=tu_client_secret\n"
-            "o configúralos como variables de entorno."
+            "o configuralos como variables de entorno."
         )
 
     def get_system_status(self) -> dict:
@@ -143,15 +139,22 @@ class SystemMixin:
             except ImportError:
                 deps[name] = False
         ffmpeg_path = self._get_ffmpeg_path()
+        ffprobe_path = resolve_ffprobe_exe()
         ffmpeg = False
         try:
-            result = subprocess.run(
+            ffmpeg_result = subprocess.run(
                 [ffmpeg_path, "-version"],
                 capture_output=True,
                 text=True,
                 timeout=5,
             )
-            ffmpeg = result.returncode == 0
+            ffprobe_result = subprocess.run(
+                [ffprobe_path, "-version"],
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+            ffmpeg = ffmpeg_result.returncode == 0 and ffprobe_result.returncode == 0
         except Exception:
             ffmpeg = False
         return {

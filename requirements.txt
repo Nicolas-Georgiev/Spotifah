@@ -3,6 +3,11 @@
 # Biblioteca para requests HTTP (descargas, API calls)
 requests
 
+# Capa de analitica y recomendacion local (IA)
+numpy
+scikit-learn
+sentence-transformers
+
 # Compatibilidad spotdl en Python 3.14 (provee pkg_resources)
 setuptools<81
 
@@ -26,7 +31,7 @@ pytubefix
 
 # === REPRODUCTOR ===
 # PyGame: Reproducción de audio local
-pygame
+pygame>=2.6.0; python_version < "3.14"
 
 # === DESKTOP APP (PyWebView) ===
 # PyWebView: Ventana nativa para la UI web

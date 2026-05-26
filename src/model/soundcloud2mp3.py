@@ -151,19 +151,16 @@ class SoundCloudConverter:
         outtmpl = str(Path(self.download_folder) / f"{base_name}.%(ext)s")
         expected_mp3 = str(Path(self.download_folder) / f"{base_name}.mp3")
 
-        ffmpeg_path = os.environ.get('EKHO_FFMPEG_PATH')
-        if not ffmpeg_path and getattr(sys, 'frozen', False):
-            ffmpeg_path = os.path.join(
-                sys._MEIPASS,
-                'imageio_ffmpeg', 'binaries',
-                'ffmpeg-win-x86_64-v7.1.exe'
-            )
-        if not ffmpeg_path:
-            ffmpeg_path = 'ffmpeg'
+        try:
+            from frozen_utils import configure_ffmpeg_env, resolve_ytdlp_ffmpeg_location
+            configure_ffmpeg_env()
+            ffmpeg_location = resolve_ytdlp_ffmpeg_location()
+        except Exception:
+            ffmpeg_location = os.environ.get('EKHO_FFMPEG_PATH') or 'ffmpeg'
         ydl_opts = {
             'format': 'bestaudio/best',
             'outtmpl': outtmpl,
-            'ffmpeg_location': ffmpeg_path,
+            'ffmpeg_location': ffmpeg_location,
             'postprocessors': [{
                 'key': 'FFmpegExtractAudio',
                 'preferredcodec': 'mp3',

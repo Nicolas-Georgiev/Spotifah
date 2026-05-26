@@ -4,6 +4,7 @@ __pycache__/
 BDD/
 data/
 .env
+.venv
 # Logs
 logs
 *.log

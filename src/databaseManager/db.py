@@ -1,5 +1,7 @@
 import os
+import sys
 import sqlite3
+import json
 
 SCHEMA_SQL = r"""
 PRAGMA foreign_keys = ON;
@@ -82,6 +84,11 @@ CREATE TABLE IF NOT EXISTS descargas (
     FOREIGN KEY (id_cancion) REFERENCES canciones(id_cancion) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS embeddings (
+    id_cancion INTEGER PRIMARY KEY,
+    vector TEXT
+);
+
 INSERT OR IGNORE INTO usuarios (id_usuario, nombre_usuario, correo, contraseña_hash, pais, preferencias_generos, preferencias_artistas)
 VALUES
 (1,'Usuario','usuario@mail.com','hash',NULL,NULL,NULL);
@@ -124,5 +131,48 @@ class Database:
             conn.executescript(SCHEMA_SQL)
             conn.commit()
             print(f"Base de datos creada en: {self.db_path}")
+        finally:
+            conn.close()
+
+    def set_embedding(self, song_id: int, vector) -> None:
+        conn = self.get_connection()
+        try:
+            vec_text = json.dumps([float(x) for x in vector])
+            conn.execute(
+                "INSERT OR REPLACE INTO embeddings (id_cancion, vector) VALUES (?, ?)",
+                (int(song_id), vec_text),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+    def get_embedding(self, song_id: int):
+        conn = self.get_connection()
+        try:
+            cur = conn.cursor()
+            cur.execute("SELECT vector FROM embeddings WHERE id_cancion = ?", (int(song_id),))
+            row = cur.fetchone()
+            if not row:
+                return None
+            return json.loads(row["vector"])
+        finally:
+            conn.close()
+
+    def get_embeddings(self, song_ids: list[int]) -> dict:
+        if not song_ids:
+            return {}
+        placeholders = ",".join(["?"] * len(song_ids))
+        conn = self.get_connection()
+        try:
+            cur = conn.cursor()
+            cur.execute(f"SELECT id_cancion, vector FROM embeddings WHERE id_cancion IN ({placeholders})", tuple(song_ids))
+            rows = cur.fetchall()
+            result = {}
+            for row in rows:
+                try:
+                    result[int(row["id_cancion"])] = json.loads(row["vector"])
+                except Exception:
+                    continue
+            return result
         finally:
             conn.close()

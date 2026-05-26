@@ -1676,3 +1676,18 @@ class Api:
             "ffmpeg": ffmpeg,
             "music_count": len(self.library.tracks),
         }
+
+    def open_spotify_login(self) -> dict:
+        """Open the system browser to the local spotify login endpoint.
+
+        Returns a small dict with success status so the frontend can react.
+        """
+        try:
+            import webbrowser
+            host = "127.0.0.1"
+            port = 57291
+            url = f"http://{host}:{port}/spotify/login"
+            webbrowser.open(url, new=2)
+            return {"ok": True}
+        except Exception as e:
+            return {"ok": False, "error": str(e)}

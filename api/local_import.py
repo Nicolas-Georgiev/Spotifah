@@ -89,6 +89,10 @@ class LocalImportMixin:
             if song_id:
                 from model.db_adapter import registrar_descarga
                 registrar_descarga(song_id, db_path=db_path)
+            if hasattr(self, "_sync_local_music_library"):
+                self._sync_local_music_library()
+            if hasattr(self, "library") and self.library is not None:
+                self.library.reload_tracks()
             return {
                 "id": str(song_id) if song_id else None,
                 "title": saved.get("titulo", ""),
