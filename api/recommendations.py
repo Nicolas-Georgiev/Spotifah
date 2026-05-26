@@ -1369,19 +1369,15 @@ class RecommendationsMixin:
 
     def get_recommendations(self, playlist_id: str = "all", limit: int = 8, refresh_key=None) -> list:
         try:
-            engine = self._get_recommendation_engine()
             if not self._recs_spotify_enabled():
-                return self._local_recommendations(engine, playlist_id, limit, refresh_key=refresh_key)
+                return []
 
+            if not self._get_spotify_token():
+                return []
+
+            engine = self._get_recommendation_engine()
             spotify_items = self._spotify_recommendations(engine, playlist_id, limit, refresh_key=refresh_key)
-            # If Spotify returned a non-empty list, prefer those. If it returned
-            # None (meaning Spotify not available) or an empty list, fall back
-            # to the local recommendation engine.
-            if spotify_items:
-                if len(spotify_items) < limit:
-                    spotify_items = self._fill_local_recommendations(engine, spotify_items, limit, refresh_key=refresh_key)
-                return spotify_items
-            return self._local_recommendations(engine, playlist_id, limit, refresh_key=refresh_key)
+            return spotify_items or []
         except Exception:
             return []
 

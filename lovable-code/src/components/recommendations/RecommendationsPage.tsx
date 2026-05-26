@@ -204,7 +204,9 @@ export function RecommendationsPage() {
           <GlassCard className="text-sm text-destructive">{error}</GlassCard>
         ) : recommendations.length === 0 ? (
           <GlassCard className="text-sm text-muted-foreground">
-            Todavía no hay suficientes datos para generar recomendaciones. Reproduce o importa algunas canciones y vuelve a intentarlo.
+            {songs.length === 0
+              ? "Necesitas tener canciones en tu biblioteca para buscar similitudes."
+              : "Hacen falta los tokens de Spotify para buscar recomendaciones."}
           </GlassCard>
         ) : (
           <div className="grid gap-5 lg:grid-cols-2">
