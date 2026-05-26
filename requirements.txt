@@ -1,44 +1,30 @@
-# === BIBLIOTECAS ESENCIALES ===
-
-# Biblioteca para requests HTTP (descargas, API calls)
+# === CORE HTTP ===
 requests
 
-# Capa de analitica y recomendacion local (IA)
+# === NUMPY / IA ===
 numpy
-scikit-learn
-sentence-transformers
 
-# Compatibilidad spotdl en Python 3.14 (provee pkg_resources)
-setuptools<81
+# scikit-learn  # opcional
+# sentence-transformers  # opcional
 
-# === CONVERSIÓN DE AUDIO ===
-# Conversión de formatos de audio/video (única biblioteca de conversión)
-moviepy==1.0.3
-
-# Metadatos de audio MP3 (única biblioteca de metadatos)
-mutagen
-
-# === SPOTIFY Y YOUTUBE ===
-# SpotDL: Extracción de metadatos de Spotify y descarga (OBLIGATORIO)
-spotdl
-
-# yt-dlp: Búsqueda y descarga desde YouTube (OBLIGATORIO)
-yt-dlp>=2023.1.0
-
-# === BIBLIOTECAS COMPLEMENTARIAS ===
-# PyTubefix: Para funcionalidades adicionales de YouTube si es necesario
-pytubefix
-
-# === REPRODUCTOR ===
-# PyGame: Reproducción de audio local
-pygame>=2.6.0; python_version < "3.14"
-
-# === DESKTOP APP (PyWebView) ===
-# PyWebView: Ventana nativa para la UI web
-pywebview>=5.0
-
-# PyInstaller: Empaquetado a ejecutable
+# === BUILD TOOLS ===
+setuptools>=70
+wheel
 pyinstaller>=6.0
 
-# === NOTAS ===
-# FFmpeg: Requerido por spotdl y moviepy (instalar: winget install Gyan.FFmpeg)
+# === AUDIO / VIDEO ===
+moviepy>=1.0.3,<2.0
+mutagen
+imageio
+imageio-ffmpeg
+babel
+
+# === SPOTIFY / YOUTUBE ===
+spotdl==4.2.11
+yt-dlp>=2024.1.0,<2026
+pytubefix
+
+# === UI ===
+pygame>=2.6.0; python_version < "3.14"
+pywebview>=5.0
+

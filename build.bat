@@ -51,10 +51,10 @@ if not exist "web\index.html" (
 :: -------------------------------------------------------
 echo [2/3] Construyendo ejecutable...
 
-for /f "delims=" %%i in ('py -c "import site; print(site.getsitepackages()[0])"') do set SITE_PACKAGES=%%i
+for /f "delims=" %%i in ('python -c "import site; print(site.getsitepackages()[0])"') do set SITE_PACKAGES=%%i
 echo    site-packages: %SITE_PACKAGES%
 
-for /f "delims=" %%i in ('py -c "import webview, os; print(os.path.join(os.path.dirname(webview.__file__), \"__pyinstaller\"))"') do set WEBVIEW_HOOKS=%%i
+for /f "delims=" %%i in ('python -c "import webview, os; print(os.path.join(os.path.dirname(webview.__file__), \"__pyinstaller\"))"') do set WEBVIEW_HOOKS=%%i
 echo    webview hooks: %WEBVIEW_HOOKS%
 
 :: Limpiar build anterior
@@ -75,50 +75,41 @@ pyinstaller ^
     --add-data "assets\portadas;assets\portadas" ^
     --add-data "data\BDD\ekho.db;data\BDD" ^
     --paths "src" ^
-    --collect-all "tls_client" ^
-    --collect-all "spotapi" ^
-    --collect-all "SpotipyFree" ^
-    --collect-all "spotdl" ^
-    --collect-all "pykakasi" ^
     --collect-all "yt_dlp" ^
     --collect-all "pytubefix" ^
+    --collect-all "webview" ^
+    --collect-all "spotdl" ^
+    --collect-all "pykakasi" ^
     --collect-all "moviepy" ^
     --collect-all "imageio" ^
-    --collect-all "webview" ^
-    --collect-all "pygame" ^
-    --collect-all "ytmusicapi" ^
+    --collect-all "imageio-ffmpeg" ^
+    --collect-all "numpy" ^
+    --collect-all "requests" ^
+    --collect-all "babel" ^
+    --collect-all "spotdl" ^
+    --collect-all "spotipy" ^
+    --collect-all "click" ^
+    --hidden-import "moviepy.editor" ^
+    --hidden-import "imageio.v2" ^
+    --hidden-import "imageio_ffmpeg" ^
+    --hidden-import "pygame" ^
+    --hidden-import "ytmusicapi" ^
+    --hidden-import "tls_client" ^
     --hidden-import "model.spotify2mp3_model" ^
     --hidden-import "model.youtube2mp3_model" ^
     --hidden-import "model.soundcloud2mp3" ^
-    --hidden-import "model.music_library" ^
-    --hidden-import "model.conversor_model" ^
-    --hidden-import "model.playlist_model" ^
-    --hidden-import "model.db_adapter" ^
     --hidden-import "controller.music_controller" ^
-    --hidden-import "controller.playlist_controller" ^
-    --hidden-import "controller.conversor_controller" ^
-    --hidden-import "controller.spotify2mp3_controller" ^
-    --hidden-import "controller.youtube2mp3_controller" ^
-    --hidden-import "controller.soundcloud2mp3_controller" ^
     --hidden-import "databaseManager.db" ^
-    --hidden-import "databaseManager.BDD" ^
-    --hidden-import "frozen_utils" ^
-    --hidden-import "mutagen" ^
-    --hidden-import "mutagen.mp3" ^
-    --hidden-import "mutagen.id3" ^
-    --hidden-import "requests" ^
+    --hidden-import "gettext" ^
+    --exclude-module "torch" ^
+    --exclude-module "transformers" ^
+    --exclude-module "scipy" ^
+    --collect-all "moviepy" ^
+    --collect-all "imageio" ^
+    --collect-all "imageio_ffmpeg" ^
     --copy-metadata "imageio" ^
     --copy-metadata "imageio-ffmpeg" ^
     --copy-metadata "moviepy" ^
-    --copy-metadata "mutagen" ^
-    --copy-metadata "requests" ^
-    --copy-metadata "yt-dlp" ^
-    --copy-metadata "spotdl" ^
-    --copy-metadata "tls-client" ^
-    --copy-metadata "pytubefix" ^
-    --copy-metadata "pygame" ^
-    --copy-metadata "pykakasi" ^
-    --copy-metadata "pywebview" ^
     "app.py"
 
 if %errorlevel% neq 0 (

@@ -25,50 +25,19 @@ except Exception as _db_e:
     print(f"⚠️ youtube2mp3_model: db_adapter no disponible ({_db_e})")
     _DB_ADAPTER_OK = False
 
-# Intentar múltiples bibliotecas de audio para conversión
-HAS_CONVERSION = False
-CONVERTER_TYPE = None
-
 try:
     from moviepy.editor import AudioFileClip
-    HAS_CONVERSION = True
-    CONVERTER_TYPE = "moviepy"
     print("✅ Usando moviepy para conversión de audio de YouTube")
 except ImportError:
-    try:
-        from pydub import AudioSegment
-        HAS_CONVERSION = True
-        CONVERTER_TYPE = "pydub"
-        print("✅ Usando pydub para conversión de audio de YouTube")
-    except ImportError:
-        HAS_CONVERSION = False
-        print("⚠️ No hay bibliotecas de conversión disponibles. Solo cambio de extensión.")
-        print("   Instala moviepy: pip install moviepy")
-        print("   O instala pydub: pip install pydub")
-
-# Intentar importar bibliotecas para metadatos de audio
-HAS_METADATA = False
-METADATA_TYPE = None
+    print("⚠️ No hay biblioteca de conversión disponibles. Solo cambio de extensión.")
+    print("   Instala moviepy: pip install moviepy")
 
 try:
     from mutagen.mp3 import MP3
-    from mutagen.id3 import ID3
-    from mutagen.id3._frames import APIC, TIT2, TPE1, TALB
-    HAS_METADATA = True
-    METADATA_TYPE = "mutagen"
     print("✅ Usando mutagen para metadatos de audio de YouTube")
 except ImportError:
-    try:
-        import eyed3
-        HAS_METADATA = True
-        METADATA_TYPE = "eyed3"
-        print("✅ Usando eyed3 para metadatos de audio")
-    except ImportError:
-        HAS_METADATA = False
-        print("⚠️ Sin bibliotecas de metadatos. Las portadas no se incrustarán.")
-        print("   Instala mutagen: pip install mutagen")
-        print("   O instala eyed3: pip install eyed3")
-
+    print("⚠️ Sin biblioteca de metadatos. Las portadas no se incrustarán.")
+    print("   Instala mutagen: pip install mutagen")
 
 class YouTube2MP3Converter:
     def __init__(self):
@@ -116,8 +85,8 @@ class YouTube2MP3Converter:
             if not preferred_stream:
                 preferred_stream = audio_streams.first()
             
-            print(f"Descargando stream: {preferred_stream.mime_type} - {preferred_stream.abr}") # type: ignore
-            out_file = preferred_stream.download(output_path=downloads_dir) # type: ignore
+            print(f"Descargando stream: {preferred_stream.mime_type} - {preferred_stream.abr}") 
+            out_file = preferred_stream.download(output_path=downloads_dir) 
             
             # Extraer todos los metadatos disponibles de YouTube
             keywords = []
@@ -175,10 +144,6 @@ class YouTube2MP3Converter:
                              album="", year="", genre="", comment=""):
         """Añade metadatos al archivo MP3 incluyendo la portada y origen"""
         try:
-            if not HAS_METADATA:
-                print("⚠️ Sin bibliotecas de metadatos disponibles")
-                return False
-
             # Verificar que el archivo MP3 existe y tiene contenido
             if not os.path.exists(mp3_path):
                 print(f"❌ El archivo MP3 no existe: {mp3_path}")
@@ -190,135 +155,87 @@ class YouTube2MP3Converter:
 
             print("🏷️ Añadiendo metadatos al MP3...")
             
-            if METADATA_TYPE == "mutagen":
-                # Usar mutagen - con verificación de archivo válido
-                from mutagen.mp3 import MP3
-                from mutagen.id3 import ID3, APIC, TIT2, TPE1, TXXX # type: ignore
+            # Usar mutagen - con verificación de archivo válido
+            from mutagen.mp3 import MP3
+            from mutagen.id3 import ID3, APIC, TIT2, TPE1, TXXX 
+            
+            try:
+                # Cargar el archivo MP3 con validación
+                audio_file = MP3(mp3_path, ID3=ID3)
                 
-                try:
-                    # Cargar el archivo MP3 con validación
-                    audio_file = MP3(mp3_path, ID3=ID3)
-                    
-                    # Verificar que se pudo cargar correctamente
-                    if audio_file.info is None:
-                        print("❌ El archivo MP3 no es válido o está corrupto")
-                        return False
-                        
-                    print(f"📊 Duración del MP3: {audio_file.info.length:.1f} segundos")
-                    
-                except Exception as e:
-                    print(f"❌ Error cargando archivo MP3: {e}")
-                    print("🔧 Intentando reparar/recrear metadatos...")
-                    
-                    # Intentar crear un objeto MP3 básico
-                    try:
-                        audio_file = MP3(mp3_path)
-                        if audio_file.tags is None:
-                            audio_file.add_tags()
-                    except Exception as repair_error:
-                        print(f"❌ No se pudo reparar el archivo: {repair_error}")
-                        return False
-                
-                # Añadir ID3 tag si no existe
-                if audio_file.tags is None:
-                    audio_file.add_tags()
-                
-                # Añadir metadatos completos
-                from mutagen.id3 import COMM, TALB, TDRC, TCON  # type: ignore
-                audio_file.tags.add(TIT2(encoding=3, text=title))   # type: ignore  # Título
-                audio_file.tags.add(TPE1(encoding=3, text=artist))  # type: ignore  # Artista
-                if album:
-                    audio_file.tags.add(TALB(encoding=3, text=album))   # type: ignore  # Álbum
-                if year:
-                    audio_file.tags.add(TDRC(encoding=3, text=str(year)))  # type: ignore  # Año
-                if genre:
-                    audio_file.tags.add(TCON(encoding=3, text=genre))   # type: ignore  # Género
-
-                # Comentario con origen y descripción
-                comment_text = comment if comment else f"Origen: {origin}"
-                audio_file.tags.add(COMM(  # type: ignore
-                    encoding=3,
-                    lang='spa',
-                    desc='',
-                    text=[comment_text]
-                ))
-                
-                # Añadir portada si está disponible
-                if thumbnail_path and os.path.exists(thumbnail_path):
-                    try:
-                        with open(thumbnail_path, 'rb') as img:
-                            image_data = img.read()
-                            if len(image_data) > 0:
-                                audio_file.tags.add(APIC( # type: ignore
-                                    encoding=3,  # UTF-8
-                                    mime='image/jpeg',  # MIME type
-                                    type=3,  # Cover (front)
-                                    desc='Cover',
-                                    data=image_data
-                                ))
-                                print(f"✅ Portada incrustada ({len(image_data)} bytes)")
-                            else:
-                                print("⚠️ Archivo de portada vacío")
-                    except Exception as img_error:
-                        print(f"⚠️ Error añadiendo portada: {img_error}")
-                else:
-                    print("ℹ️ No hay portada para añadir")
-                
-                # Guardar cambios con manejo de errores
-                try:
-                    audio_file.save()
-                    print(f"✅ Metadatos añadidos correctamente (Origen: {origin})")
-                    return True
-                except Exception as save_error:
-                    print(f"❌ Error guardando metadatos: {save_error}")
+                # Verificar que se pudo cargar correctamente
+                if audio_file.info is None:
+                    print("❌ El archivo MP3 no es válido o está corrupto")
                     return False
+                    
+                print(f"📊 Duración del MP3: {audio_file.info.length:.1f} segundos")
                 
-            elif METADATA_TYPE == "eyed3":
-                # Usar eyed3 con verificación similar
-                import eyed3
+            except Exception as e:
+                print(f"❌ Error cargando archivo MP3: {e}")
+                print("🔧 Intentando reparar/recrear metadatos...")
                 
+                # Intentar crear un objeto MP3 básico
                 try:
-                    audio_file = eyed3.load(mp3_path)
-                    if audio_file is None:
-                        print("❌ El archivo MP3 no es válido para eyed3")
-                        return False
-                        
-                    if audio_file.tag is None:
-                        audio_file.initTag()
-                    
-                    # Añadir metadatos completos
-                    audio_file.tag.title = title
-                    audio_file.tag.artist = artist
-                    if album:
-                        audio_file.tag.album = album
-                    if year:
-                        audio_file.tag.recording_date = eyed3.core.Date(int(year[:4]))
-                    if genre:
-                        audio_file.tag.genre = genre
-
-                    # Comentario con origen y descripción
-                    comment_text = comment if comment else f"Origen: {origin}"
-                    audio_file.tag.comments.set(comment_text) # type: ignore
-                    
-                    # Añadir portada
-                    if thumbnail_path and os.path.exists(thumbnail_path):
-                        try:
-                            with open(thumbnail_path, 'rb') as img:
-                                image_data = img.read()
-                                audio_file.tag.images.set(3, image_data, 'image/jpeg') # type: ignore
-                                print(f"✅ Portada incrustada ({len(image_data)} bytes)")
-                        except Exception as img_error:
-                            print(f"⚠️ Error añadiendo portada: {img_error}")
-                    
-                    audio_file.tag.save() # type: ignore
-                    print(f"✅ Metadatos añadidos correctamente (Origen: {origin})")
-                    return True
-                    
-                except Exception as e:
-                    print(f"❌ Error con eyed3: {e}")
+                    audio_file = MP3(mp3_path)
+                    if audio_file.tags is None:
+                        audio_file.add_tags()
+                except Exception as repair_error:
+                    print(f"❌ No se pudo reparar el archivo: {repair_error}")
                     return False
             
-            return False
+            # Añadir ID3 tag si no existe
+            if audio_file.tags is None:
+                audio_file.add_tags()
+            
+            # Añadir metadatos completos
+            from mutagen.id3 import COMM, TALB, TDRC, TCON  
+            audio_file.tags.add(TIT2(encoding=3, text=title))     # Título
+            audio_file.tags.add(TPE1(encoding=3, text=artist))    # Artista
+            if album:
+                audio_file.tags.add(TALB(encoding=3, text=album))     # Álbum
+            if year:
+                audio_file.tags.add(TDRC(encoding=3, text=str(year)))    # Año
+            if genre:
+                audio_file.tags.add(TCON(encoding=3, text=genre))     # Género
+
+            # Comentario con origen y descripción
+            comment_text = comment if comment else f"Origen: {origin}"
+            audio_file.tags.add(COMM(  
+                encoding=3,
+                lang='spa',
+                desc='',
+                text=[comment_text]
+            ))
+            
+            # Añadir portada si está disponible
+            if thumbnail_path and os.path.exists(thumbnail_path):
+                try:
+                    with open(thumbnail_path, 'rb') as img:
+                        image_data = img.read()
+                        if len(image_data) > 0:
+                            audio_file.tags.add(APIC( 
+                                encoding=3,  # UTF-8
+                                mime='image/jpeg',  # MIME type
+                                type=3,  # Cover (front)
+                                desc='Cover',
+                                data=image_data
+                            ))
+                            print(f"✅ Portada incrustada ({len(image_data)} bytes)")
+                        else:
+                            print("⚠️ Archivo de portada vacío")
+                except Exception as img_error:
+                    print(f"⚠️ Error añadiendo portada: {img_error}")
+            else:
+                print("ℹ️ No hay portada para añadir")
+                
+            # Guardar cambios con manejo de errores
+            try:
+                audio_file.save()
+                print(f"✅ Metadatos añadidos correctamente (Origen: {origin})")
+                return True
+            except Exception as save_error:
+                print(f"❌ Error guardando metadatos: {save_error}")
+                return False
             
         except Exception as e:
             print(f"❌ Error crítico añadiendo metadatos: {e}")
@@ -349,53 +266,25 @@ class YouTube2MP3Converter:
             conversion_success = False
             
             # Intentar moviepy primero (más confiable)
-            if HAS_CONVERSION and CONVERTER_TYPE == "moviepy":
-                try:
-                    print("🎬 Usando moviepy para conversión...")
-                    from moviepy.editor import AudioFileClip
-                    
-                    audio_clip = AudioFileClip(file_path)
-                    audio_clip.write_audiofile(mp3_path, verbose=False, logger=None)
-                    audio_clip.close()
-                    
-                    # Verificar que el archivo se creó correctamente
-                    if os.path.exists(mp3_path) and os.path.getsize(mp3_path) > 0:
-                        os.remove(file_path)  # Eliminar original
-                        print("✅ Conversión completada con moviepy")
-                        conversion_success = True
-                        return mp3_path
-                    else:
-                        print("❌ Archivo MP3 no se creó correctamente con moviepy")
+            try:
+                print("🎬 Usando moviepy para conversión...")
+                from moviepy.editor import AudioFileClip
+                
+                audio_clip = AudioFileClip(file_path)
+                audio_clip.write_audiofile(mp3_path, verbose=False, logger=None)
+                audio_clip.close()
+                
+                # Verificar que el archivo se creó correctamente
+                if os.path.exists(mp3_path) and os.path.getsize(mp3_path) > 0:
+                    os.remove(file_path)  # Eliminar original
+                    print("✅ Conversión completada con moviepy")
+                    conversion_success = True
+                    return mp3_path
+                else:
+                    print("❌ Archivo MP3 no se creó correctamente con moviepy")
                         
-                except Exception as e:
-                    print(f"❌ Error con moviepy: {e}")
-            
-            # Intentar pydub como segunda opción
-            if not conversion_success and HAS_CONVERSION and CONVERTER_TYPE == "pydub":
-                try:
-                    print("🎵 Usando pydub para conversión...")
-                    from pydub import AudioSegment
-                    
-                    if file_ext == '.webm':
-                        audio = AudioSegment.from_file(file_path, format="webm")
-                    elif file_ext in ['.mp4', '.m4a']:
-                        audio = AudioSegment.from_file(file_path, format="mp4")
-                    else:
-                        audio = AudioSegment.from_file(file_path)
-                    
-                    audio.export(mp3_path, format="mp3", bitrate="192k")
-                    
-                    # Verificar que el archivo se creó correctamente
-                    if os.path.exists(mp3_path) and os.path.getsize(mp3_path) > 0:
-                        os.remove(file_path)  # Eliminar original
-                        print("✅ Conversión completada con pydub")
-                        conversion_success = True
-                        return mp3_path
-                    else:
-                        print("❌ Archivo MP3 no se creó correctamente con pydub")
-                        
-                except Exception as e:
-                    print(f"❌ Error con pydub: {e}")
+            except Exception as e:
+                print(f"❌ Error con moviepy: {e}")
             
             # Si no se pudo convertir con bibliotecas especializadas
             if not conversion_success:
@@ -456,57 +345,50 @@ class YouTube2MP3Converter:
             description = video_info.get('description', '')
             comment_str = description[:200] if description else f"Origen: {source}"
 
-            # Descargar y agregar portada si las bibliotecas están disponibles
-            if HAS_METADATA and video_info['thumbnail_url']:
-                try:
-                    print("🖼️ Procesando portada...")
-                    thumbnail_filename = os.path.splitext(mp3_file)[0] + "_thumbnail.jpg"
-                    
-                    if self.download_thumbnail(video_info['thumbnail_url'], thumbnail_filename):
-                        if os.path.exists(thumbnail_filename) and os.path.getsize(thumbnail_filename) > 0:
-                            print("📸 Portada descargada, añadiendo metadatos...")
-                            success = self.add_metadata_to_mp3(
-                                mp3_file,
-                                video_info['title'],
-                                video_info['author'],
-                                thumbnail_filename,
-                                origin=source,
-                                album=video_info.get('author', ''),
-                                year=year_str,
-                                genre=genre_str,
-                                comment=comment_str,
-                            )
-                            if success:
-                                print("✅ Metadatos y portada añadidos correctamente")
-                            else:
-                                print("⚠️ Metadatos añadidos sin portada")
-                            try:
-                                os.remove(thumbnail_filename)
-                                print("🗑️ Thumbnail temporal eliminada")
-                            except:
-                                pass
+            try:
+                print("🖼️ Procesando portada...")
+                thumbnail_filename = os.path.splitext(mp3_file)[0] + "_thumbnail.jpg"
+                
+                if self.download_thumbnail(video_info['thumbnail_url'], thumbnail_filename):
+                    if os.path.exists(thumbnail_filename) and os.path.getsize(thumbnail_filename) > 0:
+                        print("📸 Portada descargada, añadiendo metadatos...")
+                        success = self.add_metadata_to_mp3(
+                            mp3_file,
+                            video_info['title'],
+                            video_info['author'],
+                            thumbnail_filename,
+                            origin=source,
+                            album=video_info.get('author', ''),
+                            year=year_str,
+                            genre=genre_str,
+                            comment=comment_str,
+                        )
+                        if success:
+                            print("✅ Metadatos y portada añadidos correctamente")
                         else:
-                            print("❌ Error: Thumbnail descargada pero vacía o inválida")
-                            self.add_metadata_to_mp3(
-                                mp3_file, video_info['title'], video_info['author'],
-                                origin=source, album=video_info.get('author', ''),
-                                year=year_str, genre=genre_str, comment=comment_str,
-                            )
+                            print("⚠️ Metadatos añadidos sin portada")
+                        try:
+                            os.remove(thumbnail_filename)
+                            print("🗑️ Thumbnail temporal eliminada")
+                        except:
+                            pass
                     else:
-                        print("❌ No se pudo descargar la portada")
+                        print("❌ Error: Thumbnail descargada pero vacía o inválida")
                         self.add_metadata_to_mp3(
                             mp3_file, video_info['title'], video_info['author'],
                             origin=source, album=video_info.get('author', ''),
                             year=year_str, genre=genre_str, comment=comment_str,
                         )
-                except Exception as e:
-                    print(f"⚠️ Error con metadatos/portada: {e}")
-                    print("🎵 El archivo MP3 se creó correctamente sin metadatos")
-            else:
-                if not HAS_METADATA:
-                    print("💡 Tip: Instala 'mutagen' para agregar portadas a tus MP3")
-                elif not video_info.get('thumbnail_url'):
-                    print("⚠️ No se encontró URL de portada en el video")
+                else:
+                    print("❌ No se pudo descargar la portada")
+                    self.add_metadata_to_mp3(
+                        mp3_file, video_info['title'], video_info['author'],
+                        origin=source, album=video_info.get('author', ''),
+                        year=year_str, genre=genre_str, comment=comment_str,
+                    )
+            except Exception as e:
+                print(f"⚠️ Error con metadatos/portada: {e}")
+                print("💡 Tip: Instala 'mutagen' para agregar portadas a tus MP3")
 
             # ── Guardar en BD directamente (sin archivo JSON intermedio) ──
             mp3_abs = os.path.normpath(os.path.abspath(mp3_file))

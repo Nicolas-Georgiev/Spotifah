@@ -2,6 +2,13 @@ import os
 import sys
 import time
 import urllib.request
+import gettext
+
+if getattr(sys, "frozen", False):
+    os.environ["LANG"] = "en_US.UTF-8"
+    os.environ["LC_ALL"] = "en_US.UTF-8"
+
+    gettext.translation = lambda *args, **kwargs: gettext.NullTranslations()
 
 SRC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "src")
 if SRC_DIR not in sys.path:

@@ -8,6 +8,9 @@ import tempfile
 import datetime
 from model.conversor_model import BaseModel
 
+_SHARED_SPOTDL = None
+_SPOTDL_LOCK = __import__('threading').Lock()
+
 # Adaptador de BD — importación segura para no bloquear si la BD no está disponible
 try:
     from model.db_adapter import upsert_cancion, registrar_descarga
@@ -26,7 +29,7 @@ except ImportError:
 
 try:
     from mutagen.mp3 import MP3
-    from mutagen.id3 import ID3, APIC, TIT2, TPE1, TALB # type: ignore
+    from mutagen.id3 import ID3, APIC, TIT2, TPE1, TALB 
     print("✅ Usando mutagen para metadatos de audio de Spotify")
 except ImportError:
     print("⚠️ mutagen no disponible. Instala: pip install mutagen")
@@ -41,18 +44,12 @@ except ImportError:
     raise ImportError("yt-dlp es requerido para descargas")
 
 try:
-    from spotdl.search.song_gatherer import from_spotify_url as spotdl_from_spotify_url
-    SPOTDL_API_MODE = "song_gatherer"
-    print("✅ Usando spotdl.search.song_gatherer para metadatos de Spotify")
+    from spotdl import Spotdl
+    print("✅ Usando API legacy de spotdl para metadatos de Spotify")
 except ImportError:
-    try:
-        from spotdl import Spotdl
-        SPOTDL_API_MODE = "legacy_spotdl_class"
-        print("✅ Usando API legacy de spotdl para metadatos de Spotify")
-    except ImportError:
-        print("🚨 ERROR: spotdl no disponible - ES OBLIGATORIO")
-        print("   📦 INSTALAR: pip install spotdl")
-        raise ImportError("spotdl es requerido para el funcionamiento")
+    print("🚨 ERROR: spotdl no disponible - ES OBLIGATORIO")
+    print("   📦 INSTALAR: pip install spotdl")
+    raise ImportError("spotdl es requerido para el funcionamiento")
 
 # Singleton de SpotifyInfoExtractor — spotdl usa SpotifyClient global internamente,
 # por lo que crear múltiples instancias de Spotdl() causa conflictos.
@@ -70,10 +67,8 @@ def _get_shared_extractor() -> 'SpotifyInfoExtractor':
                 _SHARED_INFO_EXTRACTOR = SpotifyInfoExtractor()
     return _SHARED_INFO_EXTRACTOR
 
-
 class SpotifyInfoExtractor:
-    """Extrae información de Spotify usando spotdl como método principal y métodos alternativos como fallback"""
-
+    """Extrae información de Spotify usando spotdl como método principal y métodos alternativos como fallback"""   
     def __init__(self):
         self.session = requests.Session()
         self.session.headers.update({
@@ -81,63 +76,50 @@ class SpotifyInfoExtractor:
         })
         # Configurar spotdl (OBLIGATORIO)
         try:
-            if SPOTDL_API_MODE == "legacy_spotdl_class":
-                # Compatibilidad con versiones antiguas de SpotDL
-                # Priorizar variables de entorno, luego .env, finalmente la configuración interna de spotdl
-                client_id = os.getenv('SPOTDL_CLIENT_ID') or os.getenv('SPOTIFY_CLIENT_ID') or os.getenv('CLIENT_ID')
-                client_secret = os.getenv('SPOTDL_CLIENT_SECRET') or os.getenv('SPOTIFY_CLIENT_SECRET') or os.getenv('CLIENT_SECRET')
+            # Compatibilidad con versiones antiguas de SpotDL
+            # Priorizar variables de entorno, luego .env, finalmente la configuración interna de spotdl
+            client_id = os.getenv('SPOTDL_CLIENT_ID') or os.getenv('SPOTIFY_CLIENT_ID') or os.getenv('CLIENT_ID')
+            client_secret = os.getenv('SPOTDL_CLIENT_SECRET') or os.getenv('SPOTIFY_CLIENT_SECRET') or os.getenv('CLIENT_SECRET')
 
-                # Intentar cargar desde .env en la raíz del proyecto si no están en el entorno
-                if not client_id or not client_secret:
+            # Intentar cargar desde .env en la raíz del proyecto si no están en el entorno
+            if not client_id or not client_secret:
+                try:
                     try:
-                        try:
-                            from frozen_utils import get_dotenv_path
-                            dotenv_path = get_dotenv_path()
-                        except ImportError:
-                            project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-                            dotenv_path = os.path.join(project_root, '.env')
-                        if os.path.exists(dotenv_path):
-                            with open(dotenv_path, 'r', encoding='utf-8') as f:
-                                for line in f:
-                                    line = line.strip()
-                                    if not line or line.startswith('#') or '=' not in line:
-                                        continue
-                                    k, v = line.split('=', 1)
-                                    k = k.strip()
-                                    v = v.strip().strip('"').strip("'")
-                                    if k in ('SPOTDL_CLIENT_ID', 'SPOTDL_CLIENT_SECRET', 'SPOTIFY_CLIENT_ID', 'SPOTIFY_CLIENT_SECRET', 'CLIENT_ID', 'CLIENT_SECRET'):
-                                        if 'CLIENT_ID' in k and not client_id:
-                                            client_id = v
-                                        if 'CLIENT_SECRET' in k and not client_secret:
-                                            client_secret = v
-                    except Exception:
-                        # No bloquear si falla la lectura del .env
-                        pass
+                        from frozen_utils import get_dotenv_path
+                        dotenv_path = get_dotenv_path()
+                    except ImportError:
+                        project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+                        dotenv_path = os.path.join(project_root, '.env')
+                    if os.path.exists(dotenv_path):
+                        with open(dotenv_path, 'r', encoding='utf-8') as f:
+                            for line in f:
+                                line = line.strip()
+                                if not line or line.startswith('#') or '=' not in line:
+                                    continue
+                                k, v = line.split('=', 1)
+                                k = k.strip()
+                                v = v.strip().strip('"').strip("'")
+                                if k in ('SPOTDL_CLIENT_ID', 'SPOTDL_CLIENT_SECRET', 'SPOTIFY_CLIENT_ID', 'SPOTIFY_CLIENT_SECRET', 'CLIENT_ID', 'CLIENT_SECRET'):
+                                    if 'CLIENT_ID' in k and not client_id:
+                                        client_id = v
+                                    if 'CLIENT_SECRET' in k and not client_secret:
+                                        client_secret = v
+                except Exception:
+                    # No bloquear si falla la lectura del .env
+                    pass
 
-                # Finalmente intentar obtener configuración interna de spotdl si aún faltan
-                if not client_id or not client_secret:
-                    try:
-                        config = get_config() # type: ignore
-                        if not client_id:
-                            client_id = config.get('client_id')
-                        if not client_secret:
-                            client_secret = config.get('client_secret')
-                    except Exception:
-                        # dejar como None si no hay config
-                        pass
+            if client_id and client_secret:
+                global _SHARED_SPOTDL
 
-                if client_id and client_secret:
-                    self.spotdl = Spotdl(
-                        client_id=client_id,
-                        client_secret=client_secret,
-                        downloader_settings={"ffmpeg": self._get_ffmpeg_path()},
-                    )
-                else:
-                    self.spotdl = Spotdl(
-                        downloader_settings={"ffmpeg": self._get_ffmpeg_path()},
-                    )
-            else:
-                self.spotdl = None
+                with _SPOTDL_LOCK:
+                    if _SHARED_SPOTDL is None:
+                        _SHARED_SPOTDL = Spotdl(
+                            client_id=client_id,
+                            client_secret=client_secret,
+                            downloader_settings={"ffmpeg": self._get_ffmpeg_path()},
+                        )
+
+                self.spotdl = _SHARED_SPOTDL
 
             print("✅ SpotDL configurado exitosamente")
             
@@ -227,72 +209,58 @@ class SpotifyInfoExtractor:
 
     def _get_info_from_spotdl(self, spotify_url: str):
         """Método PRINCIPAL: Extraer información usando SpotDL"""
-        try:
-            # Resolver metadatos con API de SpotDL compatible con múltiples versiones
-            if SPOTDL_API_MODE == "song_gatherer":
-                song = spotdl_from_spotify_url(spotify_url) # type: ignore
-                if song is None:
-                    print("⚠️ SpotDL: No se encontraron resultados")
-                    return None
-            else:
-                songs = self.spotdl.search([spotify_url]) # type: ignore
-                if not songs or len(songs) == 0:
-                    print("⚠️ SpotDL: No se encontraron resultados")
-                    return None
-                song = songs[0]
-
-            song_name = getattr(song, 'name', None) or getattr(song, 'song_name', None)
-            song_artists = getattr(song, 'artists', None) or getattr(song, 'contributing_artists', None) or []
-            song_cover_url = getattr(song, 'cover_url', None) or getattr(song, 'album_cover_url', None) or ''
-            song_album_name = getattr(song, 'album_name', None)
-            song_duration = getattr(song, 'duration', None)
-            song_genres = getattr(song, 'genres', None) or []
-            song_isrc = getattr(song, 'isrc', None) or ''
-            song_release_date = getattr(song, 'date', None) or getattr(song, 'album_release', None) or ''
-            lyrics = (getattr(song, 'lyrics', None) or '').strip()
-
-            if isinstance(song_artists, str):
-                artists_value = song_artists
-            else:
-                artists_value = ', '.join(song_artists) if song_artists else 'Artista Desconocido'
-            
-            # Extraer metadatos completos
-            track_info = {
-                'titulo': song_name or 'Título Desconocido',
-                'artista': artists_value,
-                'album': song_album_name or 'Álbum Desconocido',
-                'duracion_seg': int(song_duration or 180),
-                'genero': ', '.join(song_genres) if song_genres else 'Género Desconocido',
-                'plataforma_origen': 'Spotify',
-                'url_origen': spotify_url,
-                'ruta_local': '',  # Se llenará cuando se descargue
-                'caratula_url': song_cover_url,
-                'letra': lyrics.strip() if lyrics else 'Letra no disponible',
-                # Campos adicionales para compatibilidad
-                'name': song_name or 'Unknown Title',
-                'artist': artists_value if artists_value else 'Unknown Artist',
-                'image_url': song_cover_url,
-                'duration': int(song_duration or 180),
-                'track_id': self._extract_spotify_id(spotify_url),
-                'isrc': song_isrc,
-                'release_date': str(song_release_date) if song_release_date else '',
-                'genres': song_genres
-            }
-            
-            # Validar que tenemos información útil
-            if (track_info['titulo'] != 'Título Desconocido' and 
-                track_info['artista'] != 'Artista Desconocido' and
-                len(track_info['artista']) > 1):
-                return track_info
-            else:
-                print("⚠️ SpotDL: Metadatos incompletos")
-                return None
-                
-        except Exception as e:
-            print(f"⚠️ Error en SpotDL: {e}")
+        songs = self.spotdl.search([spotify_url]) 
+        if not songs or len(songs) == 0:
+            print("⚠️ SpotDL: No se encontraron resultados")
             return None
-            
+        song = songs[0]
 
+        song_name = getattr(song, 'name', None) or getattr(song, 'song_name', None)
+        song_artists = getattr(song, 'artists', None) or getattr(song, 'contributing_artists', None) or []
+        song_cover_url = getattr(song, 'cover_url', None) or getattr(song, 'album_cover_url', None) or ''
+        song_album_name = getattr(song, 'album_name', None)
+        song_duration = getattr(song, 'duration', None)
+        song_genres = getattr(song, 'genres', None) or []
+        song_isrc = getattr(song, 'isrc', None) or ''
+        song_release_date = getattr(song, 'date', None) or getattr(song, 'album_release', None) or ''
+        lyrics = (getattr(song, 'lyrics', None) or '').strip()
+
+        if isinstance(song_artists, str):
+            artists_value = song_artists
+        else:
+            artists_value = ', '.join(song_artists) if song_artists else 'Artista Desconocido'
+        
+        # Extraer metadatos completos
+        track_info = {
+            'titulo': song_name or 'Título Desconocido',
+            'artista': artists_value,
+            'album': song_album_name or 'Álbum Desconocido',
+            'duracion_seg': int(song_duration or 180),
+            'genero': ', '.join(song_genres) if song_genres else 'Género Desconocido',
+            'plataforma_origen': 'Spotify',
+            'url_origen': spotify_url,
+            'ruta_local': '',  # Se llenará cuando se descargue
+            'caratula_url': song_cover_url,
+            'letra': lyrics.strip() if lyrics else 'Letra no disponible',
+            # Campos adicionales para compatibilidad
+            'name': song_name or 'Unknown Title',
+            'artist': artists_value if artists_value else 'Unknown Artist',
+            'image_url': song_cover_url,
+            'duration': int(song_duration or 180),
+            'track_id': self._extract_spotify_id(spotify_url),
+            'isrc': song_isrc,
+            'release_date': str(song_release_date) if song_release_date else '',
+            'genres': song_genres
+        }
+        
+        # Validar que tenemos información útil
+        if (track_info['titulo'] != 'Título Desconocido' and 
+            track_info['artista'] != 'Artista Desconocido' and
+            len(track_info['artista']) > 1):
+            return track_info
+        else:
+            print("⚠️ SpotDL: Metadatos incompletos")
+            return None
 
     @staticmethod
     def _extract_spotify_id(url: str):
@@ -312,7 +280,7 @@ class SpotifyInfoExtractor:
         """Método 1: Extraer información de la página principal de Spotify"""
         try:
             main_url = f"https://open.spotify.com/track/{track_id}"
-            response = self.session.get(main_url, timeout=15) # type: ignore
+            response = self.session.get(main_url, timeout=15) 
             
             if response.status_code == 200:
                 html = response.text
@@ -470,7 +438,7 @@ class SpotifyInfoExtractor:
         """Método 2: Usar endpoint OEmbed público de Spotify"""
         try:
             oembed_url = f"https://open.spotify.com/oembed?url=https://open.spotify.com/track/{track_id}"
-            response = self.session.get(oembed_url, timeout=10) # type: ignore
+            response = self.session.get(oembed_url, timeout=10) 
             
             if response.status_code == 200:
                 data = response.json()
@@ -514,7 +482,7 @@ class SpotifyInfoExtractor:
         """Método 2: Extraer de página embed de Spotify"""
         try:
             embed_url = f"https://open.spotify.com/embed/track/{track_id}"
-            response = self.session.get(embed_url, timeout=10) # type: ignore
+            response = self.session.get(embed_url, timeout=10) 
             
             if response.status_code == 200:
                 html = response.text
@@ -632,7 +600,7 @@ class SpotifyInfoExtractor:
             # iTunes Search API
             url = "https://itunes.apple.com/search"
             params = {'term': track_id, 'media': 'music', 'entity': 'song', 'limit': 1}
-            response = self.session.get(url, params=params, timeout=5) # type: ignore
+            response = self.session.get(url, params=params, timeout=5) 
             
             if response.status_code == 200:
                 data = response.json()
@@ -783,7 +751,7 @@ class Spotify2MP3Converter(BaseModel):
             try:
                 print(f"🔍 Buscando: {search_query}")
                 
-                with yt_dlp.YoutubeDL(ydl_opts) as ydl: # type: ignore
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl: 
                     info = ydl.extract_info(search_query, download=False)
                     if info and 'entries' in info and info['entries']:
                         best_video = self._select_best_youtube_result(
@@ -956,7 +924,7 @@ class Spotify2MP3Converter(BaseModel):
         }
         
         try:
-            with yt_dlp_module.YoutubeDL(ydl_opts) as ydl:  # type: ignore
+            with yt_dlp_module.YoutubeDL(ydl_opts) as ydl:  
                 ydl.download([youtube_url])
 
             # Si se indicó el nombre exacto, devolver esa ruta
@@ -1005,21 +973,21 @@ class Spotify2MP3Converter(BaseModel):
         try:
             print("🏷️ Añadiendo metadatos con mutagen...")
             
-            audio = MP3(file_path, ID3=ID3) # type: ignore
+            audio = MP3(file_path, ID3=ID3) 
             
             # Añadir tags básicos usando la nueva estructura de metadatos
             titulo = track_info.get('titulo', track_info.get('name', ''))
             artista = track_info.get('artista', ', '.join(track_info.get('artists', [])))
             album = track_info.get('album', track_info.get('album', {}).get('name', '') if isinstance(track_info.get('album'), dict) else track_info.get('album', ''))
             
-            audio.tags.add(TIT2(encoding=3, text=titulo)) # type: ignore
-            audio.tags.add(TPE1(encoding=3, text=artista)) # type: ignore
-            audio.tags.add(TALB(encoding=3, text=album)) # type: ignore
+            audio.tags.add(TIT2(encoding=3, text=titulo)) 
+            audio.tags.add(TPE1(encoding=3, text=artista)) 
+            audio.tags.add(TALB(encoding=3, text=album)) 
             
             # Añadir portada si está disponible
             if album_art_path and os.path.exists(album_art_path):
                 with open(album_art_path, 'rb') as img:
-                    audio.tags.add(APIC( # type: ignore
+                    audio.tags.add(APIC( 
                         encoding=3,
                         mime='image/jpeg',
                         type=3,
@@ -1034,7 +1002,7 @@ class Spotify2MP3Converter(BaseModel):
         except Exception as e:
             print(f"⚠️ Error al añadir metadatos: {e}")
 
-    def convert(self, spotify_url): # type: ignore
+    def convert(self, spotify_url): 
         """Convierte una URL de Spotify a MP3"""
         # Usar carpeta configurada (o la por defecto)
         downloads_dir = self.download_folder
@@ -1161,11 +1129,8 @@ class Spotify2MP3Converter(BaseModel):
                 'spotify:album:'             in url)
 
     def get_playlist_songs(self, url: str):
-        """Devuelve lista de objetos Song de spotdl para una playlist/álbum."""
-        if SPOTDL_API_MODE != 'legacy_spotdl_class':
-            raise RuntimeError('La versión de spotdl instalada no soporta búsqueda de playlists')
         clean_url = self._normalize_spotify_url(url)
-        songs = self.info_extractor.spotdl.search([clean_url])  # type: ignore
+        songs = self.info_extractor.spotdl.search([clean_url]) 
         if not songs:
             raise RuntimeError(f'No se encontraron canciones en: {clean_url}')
         return songs

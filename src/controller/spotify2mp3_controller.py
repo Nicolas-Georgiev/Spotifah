@@ -24,7 +24,7 @@ class Spotify2MP3Controller(BaseController):
         self.view = SpotifyView()
         self.current_session = None
     
-    def validate_input(self, url: str) -> bool: # type: ignore
+    def validate_input(self, url: str) -> bool:
         """Validate that the URL is from Spotify"""
         if not url or not url.strip():
             return False
@@ -38,7 +38,7 @@ class Spotify2MP3Controller(BaseController):
         
         return any(indicator in url for indicator in spotify_indicators)
     
-    def process_conversion(self, spotify_url: str) -> str: # type: ignore
+    def process_conversion(self, spotify_url: str) -> str: 
         """Process Spotify to MP3 conversion"""
         self.view.show_conversion_steps()
         self.show_progress("🔍 Extrayendo metadatos de Spotify...")
