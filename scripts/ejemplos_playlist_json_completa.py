@@ -32,7 +32,7 @@ def ejemplo_1_guardar_playlist_completa():
     print("="*70)
     
     # Primero, asegurémonos de tener algunas canciones en la BD
-    print("\n📥 Guardando canciones de ejemplo...")
+    print("\n[INBOX] Guardando canciones de ejemplo...")
     cancion1 = upsert_cancion_json({
         'titulo': 'Bohemian Rhapsody',
         'artista': 'Queen',
@@ -59,13 +59,13 @@ def ejemplo_1_guardar_playlist_completa():
     })
     
     if not all([cancion1, cancion2, cancion3]):
-        print("❌ Error al guardar canciones de ejemplo")
+        print("[ERR] Error al guardar canciones de ejemplo")
         return None
     
-    print(f"✅ Canciones guardadas: {cancion1['id_cancion']}, {cancion2['id_cancion']}, {cancion3['id_cancion']}")
+    print(f"[OK] Canciones guardadas: {cancion1['id_cancion']}, {cancion2['id_cancion']}, {cancion3['id_cancion']}")
     
     # Ahora crear la playlist completa
-    print("\n📚 Creando playlist completa...")
+    print("\n[BOOKS] Creando playlist completa...")
     playlist = guardar_playlist_json_completa(
         id_usuario=1,
         nombre="Rock Clásico",
@@ -76,7 +76,7 @@ def ejemplo_1_guardar_playlist_completa():
     )
     
     if playlist:
-        print("\n✅ Playlist guardada exitosamente!")
+        print("\n[OK] Playlist guardada exitosamente!")
         print(f"   ID: {playlist['id_playlist']}")
         print(f"   Nombre: {playlist['nombre']}")
         print(f"   Descripción: {playlist['descripcion']}")
@@ -84,17 +84,17 @@ def ejemplo_1_guardar_playlist_completa():
         print(f"   Duración total: {playlist['duracion_total']} segundos")
         print(f"   ¿Tiene carátula?: {'Sí' if playlist.get('caratula_base64') else 'No'}")
         
-        print("\n🎵 Canciones incluidas:")
+        print("\n[MUSIC] Canciones incluidas:")
         for cancion in playlist['canciones']:
             print(f"   {cancion['orden']}. {cancion['titulo']} - {cancion['artista']} ({cancion['duracion_seg']}s)")
         
-        print("\n📄 JSON completo (primeros 500 caracteres):")
+        print("\n[FILE] JSON completo (primeros 500 caracteres):")
         json_str = json.dumps(playlist, indent=2, ensure_ascii=False)
         print(json_str[:500] + "..." if len(json_str) > 500 else json_str)
         
         return playlist['id_playlist']
     else:
-        print("❌ Error al guardar playlist")
+        print("[ERR] Error al guardar playlist")
         return None
 
 
@@ -104,33 +104,33 @@ def ejemplo_2_obtener_playlist_completa(id_playlist):
     print("EJEMPLO 2: Obtener playlist completa desde BD")
     print("="*70)
     
-    print(f"\n🔍 Obteniendo playlist ID {id_playlist}...")
+    print(f"\n[SEARCH] Obteniendo playlist ID {id_playlist}...")
     playlist = obtener_playlist_json_completa(id_playlist)
     
     if playlist:
-        print("\n✅ Playlist obtenida!")
+        print("\n[OK] Playlist obtenida!")
         print(f"   Nombre: {playlist['nombre']}")
         print(f"   Creada: {playlist.get('fecha_creacion', 'N/A')}")
         print(f"   Total canciones: {len(playlist['canciones'])}")
         print(f"   Duración total: {playlist.get('duracion_total', 0)} segundos ({playlist.get('duracion_total', 0) // 60} minutos)")
         
-        print("\n🎵 Lista de canciones:")
+        print("\n[MUSIC] Lista de canciones:")
         for cancion in playlist['canciones']:
             print(f"   {cancion['orden']}. {cancion['titulo']}")
             print(f"      Artista: {cancion['artista']}")
             print(f"      Álbum: {cancion.get('album', 'N/A')}")
             print(f"      Duración: {cancion['duracion_seg']}s")
             if cancion.get('caratula_base64'):
-                print(f"      ✅ Tiene carátula en base64 ({len(cancion['caratula_base64'])} chars)")
+                print(f"      [OK] Tiene carátula en base64 ({len(cancion['caratula_base64'])} chars)")
         
         # Si tiene carátula de playlist, mostrar info
         if playlist.get('caratula_base64'):
-            print(f"\n🖼️ Carátula de playlist disponible ({len(playlist['caratula_base64'])} caracteres en base64)")
+            print(f"\n[COVER] Carátula de playlist disponible ({len(playlist['caratula_base64'])} caracteres en base64)")
             print(f"   Para usar en HTML: <img src=\"data:image/jpeg;base64,{playlist['caratula_base64'][:50]}...\" />")
         
         return playlist
     else:
-        print("❌ No se pudo obtener la playlist")
+        print("[ERR] No se pudo obtener la playlist")
         return None
 
 
@@ -141,7 +141,7 @@ def ejemplo_3_actualizar_playlist(id_playlist):
     print("="*70)
     
     # Agregar una nueva canción
-    print("\n📥 Agregando nueva canción...")
+    print("\n[INBOX] Agregando nueva canción...")
     nueva_cancion = upsert_cancion_json({
         'titulo': 'Sweet Child O Mine',
         'artista': 'Guns N Roses',
@@ -151,22 +151,22 @@ def ejemplo_3_actualizar_playlist(id_playlist):
     })
     
     if not nueva_cancion:
-        print("❌ Error al agregar canción")
+        print("[ERR] Error al agregar canción")
         return False
     
     # Obtener playlist actual
-    print(f"\n🔍 Obteniendo playlist actual...")
+    print(f"\n[SEARCH] Obteniendo playlist actual...")
     playlist_actual = obtener_playlist_json_completa(id_playlist)
     
     if not playlist_actual:
-        print("❌ No se pudo obtener playlist")
+        print("[ERR] No se pudo obtener playlist")
         return False
     
     # Agregar la nueva canción a la lista
     canciones_ids = [c['id_cancion'] for c in playlist_actual['canciones']]
     canciones_ids.append(nueva_cancion['id_cancion'])
     
-    print(f"\n🔄 Actualizando playlist con {len(canciones_ids)} canciones...")
+    print(f"\n[SYNC] Actualizando playlist con {len(canciones_ids)} canciones...")
     playlist_actualizada = actualizar_playlist_json_completa(
         id_playlist=id_playlist,
         nombre="Rock Clásico [Actualizada]",
@@ -174,18 +174,18 @@ def ejemplo_3_actualizar_playlist(id_playlist):
     )
     
     if playlist_actualizada:
-        print("\n✅ Playlist actualizada!")
+        print("\n[OK] Playlist actualizada!")
         print(f"   Nuevo nombre: {playlist_actualizada['nombre']}")
         print(f"   Total canciones: {playlist_actualizada['total_canciones']}")
         print(f"   Duración total: {playlist_actualizada['duracion_total']}s")
         
-        print("\n🎵 Nuevas canciones:")
+        print("\n[MUSIC] Nuevas canciones:")
         for cancion in playlist_actualizada['canciones']:
             print(f"   {cancion['orden']}. {cancion['titulo']} - {cancion['artista']}")
         
         return True
     else:
-        print("❌ Error al actualizar playlist")
+        print("[ERR] Error al actualizar playlist")
         return False
 
 
@@ -200,7 +200,7 @@ def ejemplo_4_playlist_con_imagen_local():
         "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg=="
     )
     
-    print("\n📚 Creando playlist con imagen local...")
+    print("\n[BOOKS] Creando playlist con imagen local...")
     playlist = guardar_playlist_json_completa(
         id_usuario=1,
         nombre="Mi Playlist Personalizada",
@@ -211,23 +211,23 @@ def ejemplo_4_playlist_con_imagen_local():
     )
     
     if playlist:
-        print("\n✅ Playlist creada con carátula!")
+        print("\n[OK] Playlist creada con carátula!")
         print(f"   ID: {playlist['id_playlist']}")
         print(f"   Nombre: {playlist['nombre']}")
         print(f"   Tiene carátula: {'Sí' if playlist.get('caratula_base64') else 'No'}")
         
         if playlist.get('caratula_base64'):
-            print(f"\n🖼️ Carátula almacenada en base64")
+            print(f"\n[COVER] Carátula almacenada en base64")
             print(f"   Tamaño: {len(playlist['caratula_base64'])} caracteres")
             print(f"   Primeros 100 chars: {playlist['caratula_base64'][:100]}...")
             
             # Ejemplo de uso en HTML
-            print("\n💡 Uso en HTML:")
+            print("\n[TIP] Uso en HTML:")
             print(f'   <img src="data:image/png;base64,{playlist["caratula_base64"][:50]}..." />')
         
         return playlist['id_playlist']
     else:
-        print("❌ Error al crear playlist")
+        print("[ERR] Error al crear playlist")
         return None
 
 
@@ -237,11 +237,11 @@ def ejemplo_5_exportar_playlist_completa(id_playlist):
     print("EJEMPLO 5: Exportar playlist completa a archivo JSON")
     print("="*70)
     
-    print(f"\n🔍 Obteniendo playlist {id_playlist}...")
+    print(f"\n[SEARCH] Obteniendo playlist {id_playlist}...")
     playlist = obtener_playlist_json_completa(id_playlist)
     
     if not playlist:
-        print("❌ No se pudo obtener playlist")
+        print("[ERR] No se pudo obtener playlist")
         return False
     
     # Crear directorio de exportación
@@ -250,20 +250,20 @@ def ejemplo_5_exportar_playlist_completa(id_playlist):
     
     export_file = os.path.join(export_dir, f'playlist_{id_playlist}_completa.json')
     
-    print(f"\n💾 Exportando a {export_file}...")
+    print(f"\n[SAVE] Exportando a {export_file}...")
     
     try:
         with open(export_file, 'w', encoding='utf-8') as f:
             json.dump(playlist, f, indent=2, ensure_ascii=False)
         
         file_size = os.path.getsize(export_file)
-        print(f"\n✅ Playlist exportada exitosamente!")
+        print(f"\n[OK] Playlist exportada exitosamente!")
         print(f"   Archivo: {export_file}")
         print(f"   Tamaño: {file_size:,} bytes ({file_size / 1024:.2f} KB)")
         print(f"   Canciones incluidas: {len(playlist['canciones'])}")
         
         # Mostrar estructura del JSON
-        print("\n📋 Estructura del JSON exportado:")
+        print("\n[LIST] Estructura del JSON exportado:")
         print(f"   - id_playlist: {playlist.get('id_playlist')}")
         print(f"   - nombre: {playlist.get('nombre')}")
         print(f"   - descripcion: {playlist.get('descripcion')}")
@@ -275,15 +275,15 @@ def ejemplo_5_exportar_playlist_completa(id_playlist):
         return True
         
     except Exception as e:
-        print(f"❌ Error al exportar: {e}")
+        print(f"[ERR] Error al exportar: {e}")
         return False
 
 
 def main():
     """Ejecuta todos los ejemplos"""
-    print("\n" + "🎵"*35)
+    print("\n" + "[MUSIC]"*35)
     print("EJEMPLOS DE PLAYLISTS COMPLETAS COMO JSON CON IMÁGENES BLOB")
-    print("🎵"*35)
+    print("[MUSIC]"*35)
     
     try:
         # Ejemplo 1: Guardar playlist completa
@@ -303,19 +303,19 @@ def main():
         ejemplo_4_playlist_con_imagen_local()
         
         print("\n" + "="*70)
-        print("✅ TODOS LOS EJEMPLOS COMPLETADOS")
+        print("[OK] TODOS LOS EJEMPLOS COMPLETADOS")
         print("="*70)
         
-        print("\n📋 Resumen de características:")
-        print("   ✅ Playlists se guardan como JSON completo")
-        print("   ✅ Todas las canciones incluidas en un solo campo")
-        print("   ✅ Imágenes almacenadas como BLOB en la BD")
-        print("   ✅ Imágenes decodificadas a base64 para visualización")
-        print("   ✅ Compatibilidad con formato antiguo (playlist_canciones)")
-        print("   ✅ Exportación completa a archivos JSON")
+        print("\n[LIST] Resumen de características:")
+        print("   [OK] Playlists se guardan como JSON completo")
+        print("   [OK] Todas las canciones incluidas en un solo campo")
+        print("   [OK] Imágenes almacenadas como BLOB en la BD")
+        print("   [OK] Imágenes decodificadas a base64 para visualización")
+        print("   [OK] Compatibilidad con formato antiguo (playlist_canciones)")
+        print("   [OK] Exportación completa a archivos JSON")
         
     except Exception as e:
-        print(f"\n❌ Error: {e}")
+        print(f"\n[ERR] Error: {e}")
         import traceback
         traceback.print_exc()
 

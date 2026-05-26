@@ -16,7 +16,7 @@ class SoundCloudView:
     """Minimal view for SoundCloud (same interface as other views)"""
 
     def get_user_input(self) -> str:
-        print("\n🎵 Ingresa la URL de SoundCloud (pista o set/playlist):")
+        print("\n[MUSIC] Ingresa la URL de SoundCloud (pista o set/playlist):")
         print("  • https://soundcloud.com/artista/cancion")
         print("  • https://soundcloud.com/artista/sets/nombre-playlist\n")
         try:
@@ -26,30 +26,30 @@ class SoundCloudView:
 
     def show_welcome(self) -> None:
         print("\n" + "=" * 60)
-        print("  🎵 CONVERSOR DE SOUNDCLOUD A MP3")
+        print("  [MUSIC] CONVERSOR DE SOUNDCLOUD A MP3")
         print("=" * 60)
 
     def show_system_info(self) -> None:
-        print("💡 Soporta pistas individuales y sets/playlists completas")
+        print("[TIP] Soporta pistas individuales y sets/playlists completas")
 
     def show_conversion_steps(self) -> None:
-        print("\n📋 Pasos del proceso:")
+        print("\n[LIST] Pasos del proceso:")
         for s in [
-            "🔍 Obtener información de la pista",
-            "⬇️  Descargar audio",
-            "🏷️  Añadir metadatos",
-            "💾 Guardar archivo final",
+            "[SEARCH] Obtener información de la pista",
+            "[DOWN]  Descargar audio",
+            "[TAG]  Añadir metadatos",
+            "[SAVE] Guardar archivo final",
         ]:
             print(f"  {s}")
 
     def show_result(self, result: str) -> None:
-        print(f"\n✅ Descargado: {result}")
+        print(f"\n[OK] Descargado: {result}")
 
     def show_error(self, msg: str) -> None:
-        print(f"\n❌ {msg}")
+        print(f"\n[ERR] {msg}")
 
     def show_message(self, msg: str) -> None:
-        print(f"ℹ️  {msg}")
+        print(f"[INFO]  {msg}")
 
     def ask_continue(self) -> bool:
         try:
@@ -59,7 +59,7 @@ class SoundCloudView:
             return False
 
     def show_goodbye(self) -> None:
-        print("\n👋 Hasta luego desde SoundCloud.\n")
+        print("\n[HELLO] Hasta luego desde SoundCloud.\n")
 
 
 class SoundCloud2MP3Controller(BaseController):
@@ -77,7 +77,7 @@ class SoundCloud2MP3Controller(BaseController):
 
     def process_conversion(self, url: str) -> str:  
         self.view.show_conversion_steps()
-        self.show_progress("⬇️  Descargando desde SoundCloud...")
+        self.show_progress("[DOWN]  Descargando desde SoundCloud...")
         return self.model.convert(url)
 
     def convert_single_track(self) -> bool:
@@ -93,7 +93,7 @@ class SoundCloud2MP3Controller(BaseController):
                 return False
 
             if self.model.is_playlist_url(url):
-                print("\n📋 Set/playlist de SoundCloud detectado.")
+                print("\n[LIST] Set/playlist de SoundCloud detectado.")
                 print("Obteniendo lista de pistas... (puede tardar unos segundos)")
                 try:
                     track_urls = self.model.get_playlist_track_urls(url)
@@ -102,14 +102,14 @@ class SoundCloud2MP3Controller(BaseController):
                     self.handle_error(e)
                     return False
 
-                print(f"\n🎵 Se encontraron {total} pistas.")
+                print(f"\n[MUSIC] Se encontraron {total} pistas.")
                 confirm = input("¿Descargar todas? [s/N]: ").strip().lower()
                 if confirm not in ("s", "si", "yes", "y"):
-                    print("⏹️  Descarga cancelada.")
+                    print("[STOP]  Descarga cancelada.")
                     return False
 
                 results = self.model.convert_playlist(url)
-                print(f"\n✅ Descargadas {len(results)}/{total} pistas")
+                print(f"\n[OK] Descargadas {len(results)}/{total} pistas")
                 return len(results) > 0
 
             result_path = self.process_conversion(url)
@@ -117,7 +117,7 @@ class SoundCloud2MP3Controller(BaseController):
             return True
 
         except KeyboardInterrupt:
-            self.show_progress("⏹️  Operación cancelada por el usuario")
+            self.show_progress("[STOP]  Operación cancelada por el usuario")
             return False
         except Exception as e:
             self.handle_error(e)
@@ -135,7 +135,7 @@ class SoundCloud2MP3Controller(BaseController):
                     if not self.view.ask_continue():
                         break
                 except KeyboardInterrupt:
-                    print("\n⏹️  Programa interrumpido por el usuario")
+                    print("\n[STOP]  Programa interrumpido por el usuario")
                     break
                 except Exception as e:
                     self.handle_error(e)
@@ -145,6 +145,6 @@ class SoundCloud2MP3Controller(BaseController):
             self.view.show_goodbye()
 
         except KeyboardInterrupt:
-            print("\n⏹️  Programa terminado")
+            print("\n[STOP]  Programa terminado")
         except Exception as e:
             self.handle_error(e)

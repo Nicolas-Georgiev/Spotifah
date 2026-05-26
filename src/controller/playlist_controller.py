@@ -41,10 +41,10 @@ class PlaylistController:
         """
         # Validaciones
         if not nombre or nombre.strip() == "":
-            return False, "❌ El nombre de la playlist no puede estar vacío", None
+            return False, "[ERR] El nombre de la playlist no puede estar vacío", None
         
         if len(nombre) > 100:
-            return False, "❌ El nombre es demasiado largo (máximo 100 caracteres)", None
+            return False, "[ERR] El nombre es demasiado largo (máximo 100 caracteres)", None
         
         # Crear playlist
         id_playlist = self.model.create_playlist(
@@ -55,9 +55,9 @@ class PlaylistController:
         )
         
         if id_playlist:
-            return True, f"✅ Playlist '{nombre}' creada correctamente (ID: {id_playlist})", id_playlist
+            return True, f"[OK] Playlist '{nombre}' creada correctamente (ID: {id_playlist})", id_playlist
         else:
-            return False, "❌ Error al crear la playlist", None
+            return False, "[ERR] Error al crear la playlist", None
 
     def list_my_playlists(self) -> Tuple[bool, str, List[Dict]]:
         """
@@ -69,9 +69,9 @@ class PlaylistController:
         playlists = self.model.get_all_playlists(self.current_user_id)
         
         if not playlists:
-            return True, "ℹ️ No tienes playlists creadas", []
+            return True, "[INFO] No tienes playlists creadas", []
         
-        return True, f"📋 Encontradas {len(playlists)} playlist(s)", playlists
+        return True, f"[LIST] Encontradas {len(playlists)} playlist(s)", playlists
 
     def list_all_playlists(self) -> Tuple[bool, str, List[Dict]]:
         """
@@ -83,9 +83,9 @@ class PlaylistController:
         playlists = self.model.get_all_playlists()
         
         if not playlists:
-            return True, "ℹ️ No hay playlists en el sistema", []
+            return True, "[INFO] No hay playlists en el sistema", []
         
-        return True, f"📋 Encontradas {len(playlists)} playlist(s)", playlists
+        return True, f"[LIST] Encontradas {len(playlists)} playlist(s)", playlists
 
     def get_playlist_details(self, id_playlist: int) -> Tuple[bool, str, Optional[Dict]]:
         """
@@ -100,9 +100,9 @@ class PlaylistController:
         playlist = self.model.get_playlist_by_id(id_playlist)
         
         if not playlist:
-            return False, f"❌ No se encontró la playlist con ID {id_playlist}", None
+            return False, f"[ERR] No se encontró la playlist con ID {id_playlist}", None
         
-        return True, "✅ Playlist encontrada", playlist
+        return True, "[OK] Playlist encontrada", playlist
 
     def modify_playlist(self, id_playlist: int, nombre: Optional[str] = None, 
                        descripcion: Optional[str] = None, publica: Optional[bool] = None) -> Tuple[bool, str]:
@@ -121,14 +121,14 @@ class PlaylistController:
         # Verificar que la playlist existe
         playlist = self.model.get_playlist_by_id(id_playlist)
         if not playlist:
-            return False, f"❌ No se encontró la playlist con ID {id_playlist}"
+            return False, f"[ERR] No se encontró la playlist con ID {id_playlist}"
         
         # Validar nombre si se proporciona
         if nombre is not None:
             if nombre.strip() == "":
-                return False, "❌ El nombre no puede estar vacío"
+                return False, "[ERR] El nombre no puede estar vacío"
             if len(nombre) > 100:
-                return False, "❌ El nombre es demasiado largo (máximo 100 caracteres)"
+                return False, "[ERR] El nombre es demasiado largo (máximo 100 caracteres)"
             nombre = nombre.strip()
         
         # Validar descripción si se proporciona
@@ -139,9 +139,9 @@ class PlaylistController:
         success = self.model.update_playlist(id_playlist, nombre, descripcion, publica)
         
         if success:
-            return True, "✅ Playlist actualizada correctamente"
+            return True, "[OK] Playlist actualizada correctamente"
         else:
-            return False, "❌ Error al actualizar la playlist"
+            return False, "[ERR] Error al actualizar la playlist"
 
     def remove_playlist(self, id_playlist: int) -> Tuple[bool, str]:
         """
@@ -156,15 +156,15 @@ class PlaylistController:
         # Verificar que la playlist existe
         playlist = self.model.get_playlist_by_id(id_playlist)
         if not playlist:
-            return False, f"❌ No se encontró la playlist con ID {id_playlist}"
+            return False, f"[ERR] No se encontró la playlist con ID {id_playlist}"
         
         # Eliminar
         success = self.model.delete_playlist(id_playlist)
         
         if success:
-            return True, f"✅ Playlist '{playlist['nombre']}' eliminada correctamente"
+            return True, f"[OK] Playlist '{playlist['nombre']}' eliminada correctamente"
         else:
-            return False, "❌ Error al eliminar la playlist"
+            return False, "[ERR] Error al eliminar la playlist"
 
     # ==================== GESTIÓN DE CANCIONES EN PLAYLISTS ====================
 
@@ -182,25 +182,25 @@ class PlaylistController:
         # Verificar que la playlist existe
         playlist = self.model.get_playlist_by_id(id_playlist)
         if not playlist:
-            return False, f"❌ No se encontró la playlist con ID {id_playlist}"
+            return False, f"[ERR] No se encontró la playlist con ID {id_playlist}"
         
         # Verificar que la canción existe
         cancion = self.model.get_song_by_id(id_cancion)
         if not cancion:
-            return False, f"❌ No se encontró la canción con ID {id_cancion}"
+            return False, f"[ERR] No se encontró la canción con ID {id_cancion}"
         
         # Verificar que la canción no esté ya en la playlist
         canciones = self.model.get_playlist_songs(id_playlist)
         if any(c['id_cancion'] == id_cancion for c in canciones):
-            return False, f"⚠️ La canción '{cancion['titulo']}' ya está en la playlist"
+            return False, f"[WARN] La canción '{cancion['titulo']}' ya está en la playlist"
         
         # Añadir canción
         success = self.model.add_song_to_playlist(id_playlist, id_cancion)
         
         if success:
-            return True, f"✅ Canción '{cancion['titulo']}' añadida a la playlist"
+            return True, f"[OK] Canción '{cancion['titulo']}' añadida a la playlist"
         else:
-            return False, "❌ Error al añadir la canción a la playlist"
+            return False, "[ERR] Error al añadir la canción a la playlist"
 
     def remove_song_from_playlist_by_id(self, id_playlist: int, id_cancion: int) -> Tuple[bool, str]:
         """
@@ -216,20 +216,20 @@ class PlaylistController:
         # Verificar que la playlist existe
         playlist = self.model.get_playlist_by_id(id_playlist)
         if not playlist:
-            return False, f"❌ No se encontró la playlist con ID {id_playlist}"
+            return False, f"[ERR] No se encontró la playlist con ID {id_playlist}"
         
         # Verificar que la canción existe en la playlist
         canciones = self.model.get_playlist_songs(id_playlist)
         if not any(c['id_cancion'] == id_cancion for c in canciones):
-            return False, "⚠️ La canción no está en esta playlist"
+            return False, "[WARN] La canción no está en esta playlist"
         
         # Eliminar canción
         success = self.model.remove_song_from_playlist(id_playlist, id_cancion)
         
         if success:
-            return True, "✅ Canción eliminada de la playlist"
+            return True, "[OK] Canción eliminada de la playlist"
         else:
-            return False, "❌ Error al eliminar la canción"
+            return False, "[ERR] Error al eliminar la canción"
 
     def view_playlist_songs(self, id_playlist: int) -> Tuple[bool, str, List[Dict]]:
         """
@@ -244,15 +244,15 @@ class PlaylistController:
         # Verificar que la playlist existe
         playlist = self.model.get_playlist_by_id(id_playlist)
         if not playlist:
-            return False, f"❌ No se encontró la playlist con ID {id_playlist}", []
+            return False, f"[ERR] No se encontró la playlist con ID {id_playlist}", []
         
         # Obtener canciones
         canciones = self.model.get_playlist_songs(id_playlist)
         
         if not canciones:
-            return True, f"ℹ️ La playlist '{playlist['nombre']}' está vacía", []
+            return True, f"[INFO] La playlist '{playlist['nombre']}' está vacía", []
         
-        return True, f"🎵 {len(canciones)} canción(es) en '{playlist['nombre']}'", canciones
+        return True, f"[MUSIC] {len(canciones)} canción(es) en '{playlist['nombre']}'", canciones
 
     def move_song_in_playlist(self, id_playlist: int, id_cancion: int, nueva_posicion: int) -> Tuple[bool, str]:
         """
@@ -269,24 +269,24 @@ class PlaylistController:
         # Verificar que la playlist existe
         playlist = self.model.get_playlist_by_id(id_playlist)
         if not playlist:
-            return False, f"❌ No se encontró la playlist con ID {id_playlist}"
+            return False, f"[ERR] No se encontró la playlist con ID {id_playlist}"
         
         # Verificar que la canción está en la playlist
         canciones = self.model.get_playlist_songs(id_playlist)
         if not any(c['id_cancion'] == id_cancion for c in canciones):
-            return False, "⚠️ La canción no está en esta playlist"
+            return False, "[WARN] La canción no está en esta playlist"
         
         # Validar la nueva posición
         if nueva_posicion < 1 or nueva_posicion > len(canciones):
-            return False, f"❌ Posición inválida. Debe estar entre 1 y {len(canciones)}"
+            return False, f"[ERR] Posición inválida. Debe estar entre 1 y {len(canciones)}"
         
         # Reordenar
         success = self.model.reorder_song_in_playlist(id_playlist, id_cancion, nueva_posicion)
         
         if success:
-            return True, f"✅ Canción movida a la posición {nueva_posicion}"
+            return True, f"[OK] Canción movida a la posición {nueva_posicion}"
         else:
-            return False, "❌ Error al reordenar la canción"
+            return False, "[ERR] Error al reordenar la canción"
 
     # ==================== BÚSQUEDA Y LISTADO DE CANCIONES ====================
 
@@ -300,9 +300,9 @@ class PlaylistController:
         canciones = self.model.get_all_songs()
         
         if not canciones:
-            return True, "ℹ️ No hay canciones en la base de datos", []
+            return True, "[INFO] No hay canciones en la base de datos", []
         
-        return True, f"🎵 Encontradas {len(canciones)} canción(es)", canciones
+        return True, f"[MUSIC] Encontradas {len(canciones)} canción(es)", canciones
 
     def search_songs_by_query(self, query: str) -> Tuple[bool, str, List[Dict]]:
         """
@@ -315,14 +315,14 @@ class PlaylistController:
             Tupla (éxito, mensaje, lista_canciones)
         """
         if not query or query.strip() == "":
-            return False, "❌ Debes proporcionar un término de búsqueda", []
+            return False, "[ERR] Debes proporcionar un término de búsqueda", []
         
         canciones = self.model.search_songs(query.strip())
         
         if not canciones:
-            return True, f"ℹ️ No se encontraron canciones con '{query}'", []
+            return True, f"[INFO] No se encontraron canciones con '{query}'", []
         
-        return True, f"🔍 Encontradas {len(canciones)} canción(es) con '{query}'", canciones
+        return True, f"[SEARCH] Encontradas {len(canciones)} canción(es) con '{query}'", canciones
 
     # ==================== UTILIDADES ====================
 
@@ -339,7 +339,7 @@ class PlaylistController:
         # Obtener información de la playlist
         playlist = self.model.get_playlist_by_id(id_playlist)
         if not playlist:
-            return False, f"❌ No se encontró la playlist con ID {id_playlist}", None
+            return False, f"[ERR] No se encontró la playlist con ID {id_playlist}", None
         
         # Obtener canciones
         canciones = self.model.get_playlist_songs(id_playlist)
@@ -355,4 +355,4 @@ class PlaylistController:
             'duracion_total_min': duracion_total // 60
         }
         
-        return True, "✅ Resumen generado", resumen
+        return True, "[OK] Resumen generado", resumen

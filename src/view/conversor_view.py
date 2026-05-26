@@ -18,7 +18,7 @@ class BaseView(ABC):
     def show_welcome(self) -> None:
         """Show generic welcome message"""
         print("\n" + "="*60)
-        print(f"  🎵 {self.get_converter_name()} 🎵")
+        print(f"  [MUSIC] {self.get_converter_name()} [MUSIC]")
         print(f"  {self.get_converter_description()}")
         print(f"  {self.app_name} {self.version}")
         print("="*60 + "\n")
@@ -45,10 +45,10 @@ class BaseView(ABC):
             user_input = input().strip()
             return user_input
         except (EOFError, KeyboardInterrupt):
-            print("\n\n❌ Operación cancelada por el usuario.")
+            print("\n\n[ERR] Operación cancelada por el usuario.")
             return ""
         except Exception as e:
-            print(f"\n❌ Error al leer entrada: {e}")
+            print(f"\n[ERR] Error al leer entrada: {e}")
             return ""
     
     @abstractmethod
@@ -58,25 +58,25 @@ class BaseView(ABC):
     
     def show_message(self, message: str) -> None:
         """Show informational message"""
-        print(f"ℹ️  {message}")
+        print(f"[INFO]  {message}")
     
     def show_success(self, message: str) -> None:
         """Show success message"""
-        print(f"\n✅ {message}")
+        print(f"\n[OK] {message}")
     
     def show_error(self, error_message: str) -> None:
         """Show error message"""
-        print(f"\n❌ Error: {error_message}\n")
+        print(f"\n[ERR] Error: {error_message}\n")
     
     def show_result(self, file_path: str) -> None:
         """Show conversion result"""
-        print(f"\n🎉 ¡Conversión completada!")
-        print(f"📁 Archivo guardado en: {file_path}")
-        print(f"🎜️ El archivo incluye metadatos y portada\n")
+        print(f"\n[DONE] ¡Conversión completada!")
+        print(f"[FOLDER] Archivo guardado en: {file_path}")
+        print(f"[ALBUM] El archivo incluye metadatos y portada\n")
     
     def show_progress_steps(self, steps: List[str]) -> None:
         """Show process steps"""
-        print("\n📋 Proceso de conversión:")
+        print("\n[LIST] Proceso de conversión:")
         for i, step in enumerate(steps, 1):
             print(f"  {i}. {step}")
         print()
@@ -95,7 +95,7 @@ class BaseView(ABC):
     def show_instructions(self, instructions: List[str]) -> None:
         """Show detailed instructions"""
         print("\n" + "="*70)
-        print("  📋 INSTRUCCIONES DE USO")
+        print("  [LIST] INSTRUCCIONES DE USO")
         print("="*70)
         
         for i, instruction in enumerate(instructions, 1):

@@ -1,14 +1,31 @@
 import os
 import sys
 import time
+import io
 import urllib.request
 import gettext
+
+
+def _fix_stdout_encoding():
+    for stream_name in ("stdout", "stderr"):
+        stream = getattr(sys, stream_name, None)
+        if stream is None:
+            setattr(sys, stream_name, io.TextIOWrapper(io.BufferedWriter(open(os.devnull, 'wb')), encoding='utf-8', errors='replace'))
+        elif hasattr(stream, 'reconfigure'):
+            try:
+                stream.reconfigure(encoding='utf-8', errors='replace')
+            except Exception:
+                pass
+
 
 if getattr(sys, "frozen", False):
     os.environ["LANG"] = "en_US.UTF-8"
     os.environ["LC_ALL"] = "en_US.UTF-8"
+    os.environ["PYTHONIOENCODING"] = "utf-8"
 
     gettext.translation = lambda *args, **kwargs: gettext.NullTranslations()
+
+    _fix_stdout_encoding()
 
 SRC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "src")
 if SRC_DIR not in sys.path:

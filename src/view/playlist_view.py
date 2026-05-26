@@ -54,25 +54,25 @@ class PlaylistView:
             playlist: Diccionario con datos de la playlist
             detailed: Si True, muestra información detallada
         """
-        visibilidad = "🌍 Pública" if playlist.get('publica', 0) == 1 else "🔒 Privada"
+        visibilidad = "[GLOBE] Pública" if playlist.get('publica', 0) == 1 else "[LOCK] Privada"
         canciones = playlist.get('total_canciones', 0)
         
-        print(f"\n📋 [{playlist['id_playlist']}] {playlist['nombre']}")
-        print(f"   👤 Por: {playlist.get('nombre_usuario', 'Desconocido')}")
-        print(f"   🎵 Canciones: {canciones} | {visibilidad}")
+        print(f"\n[LIST] [{playlist['id_playlist']}] {playlist['nombre']}")
+        print(f"   [USER] Por: {playlist.get('nombre_usuario', 'Desconocido')}")
+        print(f"   [MUSIC] Canciones: {canciones} | {visibilidad}")
         
         if detailed:
             descripcion = playlist.get('descripcion', '')
             if descripcion:
-                print(f"   📝 {descripcion}")
+                print(f"   [NOTE] {descripcion}")
             fecha = playlist.get('fecha_creacion', '')
             if fecha:
-                print(f"   📅 Creada: {fecha}")
+                print(f"   [DATE] Creada: {fecha}")
 
     def display_playlists_list(self, playlists: list):
         """Muestra una lista de playlists"""
         if not playlists:
-            print("\nℹ️ No hay playlists para mostrar")
+            print("\n[INFO] No hay playlists para mostrar")
             return
         
         for playlist in playlists:
@@ -93,19 +93,19 @@ class PlaylistView:
         album = song.get('album', '')
         genero = song.get('genero', '')
         
-        print(f"\n   🎵 {orden_str}[{song['id_cancion']}] {titulo}")
-        print(f"      👤 {artista} | ⏱️ {duracion}", end='')
+        print(f"\n   [MUSIC] {orden_str}[{song['id_cancion']}] {titulo}")
+        print(f"      [USER] {artista} | [TIMER] {duracion}", end='')
         
         if album:
-            print(f" | 💿 {album}", end='')
+            print(f" | [DISC] {album}", end='')
         if genero:
-            print(f" | 🎸 {genero}", end='')
+            print(f" | [GUITAR] {genero}", end='')
         print()
 
     def display_songs_list(self, songs: list, show_order: bool = False):
         """Muestra una lista de canciones"""
         if not songs:
-            print("\nℹ️ No hay canciones para mostrar")
+            print("\n[INFO] No hay canciones para mostrar")
             return
         
         for song in songs:
@@ -116,22 +116,22 @@ class PlaylistView:
         playlist = summary['playlist']
         canciones = summary['canciones']
         
-        self.print_header(f"📋 {playlist['nombre']}")
+        self.print_header(f"[LIST] {playlist['nombre']}")
         
-        print(f"\n👤 Creador: {playlist.get('nombre_usuario', 'Desconocido')}")
+        print(f"\n[USER] Creador: {playlist.get('nombre_usuario', 'Desconocido')}")
         descripcion = playlist.get('descripcion', '')
         if descripcion:
-            print(f"📝 Descripción: {descripcion}")
+            print(f"[NOTE] Descripción: {descripcion}")
         
-        visibilidad = "🌍 Pública" if playlist.get('publica', 0) == 1 else "🔒 Privada"
-        print(f"👁️ Visibilidad: {visibilidad}")
+        visibilidad = "[GLOBE] Pública" if playlist.get('publica', 0) == 1 else "[LOCK] Privada"
+        print(f"[VIEW] Visibilidad: {visibilidad}")
         
-        print(f"\n📊 Estadísticas:")
-        print(f"   🎵 Total de canciones: {summary['total_canciones']}")
-        print(f"   ⏱️ Duración total: {summary['duracion_total_min']} min ({summary['duracion_total_seg']} seg)")
+        print(f"\n[CHART] Estadísticas:")
+        print(f"   [MUSIC] Total de canciones: {summary['total_canciones']}")
+        print(f"   [TIMER] Duración total: {summary['duracion_total_min']} min ({summary['duracion_total_seg']} seg)")
         
         if canciones:
-            print(f"\n🎶 Canciones:")
+            print(f"\n[MUSIC] Canciones:")
             self.display_songs_list(canciones, show_order=True)
 
     # ==================== MENÚS PRINCIPALES ====================
@@ -144,35 +144,35 @@ class PlaylistView:
             Opción seleccionada por el usuario
         """
         self.clear_screen()
-        self.print_header("🎵 GESTOR DE PLAYLISTS 🎵")
+        self.print_header("[MUSIC] GESTOR DE PLAYLISTS [MUSIC]")
         
         print("\n[PLAYLISTS]")
-        print("  1. 📋 Ver mis playlists")
-        print("  2. ➕ Crear nueva playlist")
-        print("  3. ✏️  Editar playlist")
-        print("  4. 🗑️  Eliminar playlist")
+        print("  1. [LIST] Ver mis playlists")
+        print("  2. [PLUS] Crear nueva playlist")
+        print("  3. [EDIT]  Editar playlist")
+        print("  4. [TRASH]  Eliminar playlist")
         
         print("\n[CANCIONES]")
-        print("  5. 🎵 Ver canciones de una playlist")
-        print("  6. ➕ Añadir canción a playlist")
-        print("  7. ➖ Eliminar canción de playlist")
-        print("  8. 🔀 Reordenar canción en playlist")
+        print("  5. [MUSIC] Ver canciones de una playlist")
+        print("  6. [PLUS] Añadir canción a playlist")
+        print("  7. [MINUS] Eliminar canción de playlist")
+        print("  8. [SHUFFLE] Reordenar canción en playlist")
         
         print("\n[EXPLORAR]")
-        print("  9. 🔍 Buscar canciones")
-        print(" 10. 📜 Ver todas las canciones")
+        print("  9. [SEARCH] Buscar canciones")
+        print(" 10. [SCROLL] Ver todas las canciones")
         
-        print("\n  0. 🚪 Salir")
+        print("\n  0. [DOOR] Salir")
         
         self.print_separator()
-        return input("\n👉 Selecciona una opción: ").strip()
+        return input("\n[POINT] Selecciona una opción: ").strip()
 
     # ==================== OPERACIONES CON PLAYLISTS ====================
 
     def view_my_playlists(self):
         """Muestra las playlists del usuario"""
         self.clear_screen()
-        self.print_header("📋 MIS PLAYLISTS")
+        self.print_header("[LIST] MIS PLAYLISTS")
         
         success, message, playlists = self.controller.list_my_playlists()
         print(f"\n{message}")
@@ -185,21 +185,21 @@ class PlaylistView:
     def create_playlist(self):
         """Interfaz para crear una nueva playlist"""
         self.clear_screen()
-        self.print_header("➕ CREAR NUEVA PLAYLIST")
+        self.print_header("[PLUS] CREAR NUEVA PLAYLIST")
         
         print("\n")
-        nombre = input("📝 Nombre de la playlist: ").strip()
+        nombre = input("[NOTE] Nombre de la playlist: ").strip()
         if not nombre:
-            print("❌ Operación cancelada")
+            print("[ERR] Operación cancelada")
             self.wait_for_key()
             return
         
-        descripcion = input("📄 Descripción (opcional): ").strip()
+        descripcion = input("[FILE] Descripción (opcional): ").strip()
         
-        publica_input = input("🌍 ¿Hacer pública? (s/N): ").strip().lower()
+        publica_input = input("[GLOBE] ¿Hacer pública? (s/N): ").strip().lower()
         publica = publica_input == 's'
         
-        print("\n⏳ Creando playlist...")
+        print("\n[SAND] Creando playlist...")
         success, message, id_playlist = self.controller.create_new_playlist(nombre, descripcion, publica)
         print(f"\n{message}")
         
@@ -208,7 +208,7 @@ class PlaylistView:
     def edit_playlist(self):
         """Interfaz para editar una playlist"""
         self.clear_screen()
-        self.print_header("✏️ EDITAR PLAYLIST")
+        self.print_header("[EDIT] EDITAR PLAYLIST")
         
         # Mostrar playlists del usuario
         success, message, playlists = self.controller.list_my_playlists()
@@ -220,14 +220,14 @@ class PlaylistView:
             return
         
         print("\n")
-        id_playlist = input("🔢 ID de la playlist a editar (Enter para cancelar): ").strip()
+        id_playlist = input("[NUM] ID de la playlist a editar (Enter para cancelar): ").strip()
         if not id_playlist:
             return
         
         try:
             id_playlist = int(id_playlist)
         except ValueError:
-            print("❌ ID inválido")
+            print("[ERR] ID inválido")
             self.wait_for_key()
             return
         
@@ -238,14 +238,14 @@ class PlaylistView:
             self.wait_for_key()
             return
         
-        print(f"\n📋 Editando: {playlist['nombre']}")
+        print(f"\n[LIST] Editando: {playlist['nombre']}")
         print("(Dejar en blanco para mantener el valor actual)\n")
         
-        nuevo_nombre = input(f"📝 Nuevo nombre [{playlist['nombre']}]: ").strip()
-        nueva_desc = input(f"📄 Nueva descripción [{playlist.get('descripcion', '')}]: ").strip()
+        nuevo_nombre = input(f"[NOTE] Nuevo nombre [{playlist['nombre']}]: ").strip()
+        nueva_desc = input(f"[FILE] Nueva descripción [{playlist.get('descripcion', '')}]: ").strip()
         
         publica_actual = "Sí" if playlist.get('publica', 0) == 1 else "No"
-        publica_input = input(f"🌍 ¿Pública? (s/n) [{publica_actual}]: ").strip().lower()
+        publica_input = input(f"[GLOBE] ¿Pública? (s/n) [{publica_actual}]: ").strip().lower()
         
         nueva_publica = None
         if publica_input == 's':
@@ -267,7 +267,7 @@ class PlaylistView:
     def delete_playlist(self):
         """Interfaz para eliminar una playlist"""
         self.clear_screen()
-        self.print_header("🗑️ ELIMINAR PLAYLIST")
+        self.print_header("[TRASH] ELIMINAR PLAYLIST")
         
         # Mostrar playlists del usuario
         success, message, playlists = self.controller.list_my_playlists()
@@ -279,21 +279,21 @@ class PlaylistView:
             return
         
         print("\n")
-        id_playlist = input("🔢 ID de la playlist a eliminar (Enter para cancelar): ").strip()
+        id_playlist = input("[NUM] ID de la playlist a eliminar (Enter para cancelar): ").strip()
         if not id_playlist:
             return
         
         try:
             id_playlist = int(id_playlist)
         except ValueError:
-            print("❌ ID inválido")
+            print("[ERR] ID inválido")
             self.wait_for_key()
             return
         
         # Confirmar
-        confirmacion = input(f"\n⚠️ ¿Seguro que quieres eliminar la playlist? (s/N): ").strip().lower()
+        confirmacion = input(f"\n[WARN] ¿Seguro que quieres eliminar la playlist? (s/N): ").strip().lower()
         if confirmacion != 's':
-            print("❌ Operación cancelada")
+            print("[ERR] Operación cancelada")
             self.wait_for_key()
             return
         
@@ -307,7 +307,7 @@ class PlaylistView:
     def view_playlist_songs(self):
         """Muestra las canciones de una playlist"""
         self.clear_screen()
-        self.print_header("🎵 CANCIONES DE PLAYLIST")
+        self.print_header("[MUSIC] CANCIONES DE PLAYLIST")
         
         # Mostrar playlists del usuario
         success, message, playlists = self.controller.list_my_playlists()
@@ -319,14 +319,14 @@ class PlaylistView:
             return
         
         print("\n")
-        id_playlist = input("🔢 ID de la playlist (Enter para cancelar): ").strip()
+        id_playlist = input("[NUM] ID de la playlist (Enter para cancelar): ").strip()
         if not id_playlist:
             return
         
         try:
             id_playlist = int(id_playlist)
         except ValueError:
-            print("❌ ID inválido")
+            print("[ERR] ID inválido")
             self.wait_for_key()
             return
         
@@ -344,7 +344,7 @@ class PlaylistView:
     def add_song_to_playlist(self):
         """Interfaz para añadir una canción a una playlist"""
         self.clear_screen()
-        self.print_header("➕ AÑADIR CANCIÓN A PLAYLIST")
+        self.print_header("[PLUS] AÑADIR CANCIÓN A PLAYLIST")
         
         # Mostrar playlists
         success, message, playlists = self.controller.list_my_playlists()
@@ -356,20 +356,20 @@ class PlaylistView:
             return
         
         print("\n")
-        id_playlist = input("🔢 ID de la playlist (Enter para cancelar): ").strip()
+        id_playlist = input("[NUM] ID de la playlist (Enter para cancelar): ").strip()
         if not id_playlist:
             return
         
         try:
             id_playlist = int(id_playlist)
         except ValueError:
-            print("❌ ID inválido")
+            print("[ERR] ID inválido")
             self.wait_for_key()
             return
         
         # Mostrar canciones disponibles
         self.clear_screen()
-        self.print_header("🎵 CANCIONES DISPONIBLES")
+        self.print_header("[MUSIC] CANCIONES DISPONIBLES")
         
         success, message, canciones = self.controller.list_all_songs()
         print(f"\n{message}")
@@ -381,14 +381,14 @@ class PlaylistView:
             return
         
         print("\n")
-        id_cancion = input("🔢 ID de la canción a añadir (Enter para cancelar): ").strip()
+        id_cancion = input("[NUM] ID de la canción a añadir (Enter para cancelar): ").strip()
         if not id_cancion:
             return
         
         try:
             id_cancion = int(id_cancion)
         except ValueError:
-            print("❌ ID inválido")
+            print("[ERR] ID inválido")
             self.wait_for_key()
             return
         
@@ -400,7 +400,7 @@ class PlaylistView:
     def remove_song_from_playlist(self):
         """Interfaz para eliminar una canción de una playlist"""
         self.clear_screen()
-        self.print_header("➖ ELIMINAR CANCIÓN DE PLAYLIST")
+        self.print_header("[MINUS] ELIMINAR CANCIÓN DE PLAYLIST")
         
         # Mostrar playlists
         success, message, playlists = self.controller.list_my_playlists()
@@ -412,14 +412,14 @@ class PlaylistView:
             return
         
         print("\n")
-        id_playlist = input("🔢 ID de la playlist (Enter para cancelar): ").strip()
+        id_playlist = input("[NUM] ID de la playlist (Enter para cancelar): ").strip()
         if not id_playlist:
             return
         
         try:
             id_playlist = int(id_playlist)
         except ValueError:
-            print("❌ ID inválido")
+            print("[ERR] ID inválido")
             self.wait_for_key()
             return
         
@@ -432,7 +432,7 @@ class PlaylistView:
             self.wait_for_key()
             return
         
-        self.print_header("🎵 CANCIONES EN LA PLAYLIST")
+        self.print_header("[MUSIC] CANCIONES EN LA PLAYLIST")
         print(f"\n{message}")
         
         if canciones:
@@ -442,14 +442,14 @@ class PlaylistView:
             return
         
         print("\n")
-        id_cancion = input("🔢 ID de la canción a eliminar (Enter para cancelar): ").strip()
+        id_cancion = input("[NUM] ID de la canción a eliminar (Enter para cancelar): ").strip()
         if not id_cancion:
             return
         
         try:
             id_cancion = int(id_cancion)
         except ValueError:
-            print("❌ ID inválido")
+            print("[ERR] ID inválido")
             self.wait_for_key()
             return
         
@@ -461,7 +461,7 @@ class PlaylistView:
     def reorder_song_in_playlist(self):
         """Interfaz para reordenar una canción en una playlist"""
         self.clear_screen()
-        self.print_header("🔀 REORDENAR CANCIÓN EN PLAYLIST")
+        self.print_header("[SHUFFLE] REORDENAR CANCIÓN EN PLAYLIST")
         
         # Mostrar playlists
         success, message, playlists = self.controller.list_my_playlists()
@@ -473,14 +473,14 @@ class PlaylistView:
             return
         
         print("\n")
-        id_playlist = input("🔢 ID de la playlist (Enter para cancelar): ").strip()
+        id_playlist = input("[NUM] ID de la playlist (Enter para cancelar): ").strip()
         if not id_playlist:
             return
         
         try:
             id_playlist = int(id_playlist)
         except ValueError:
-            print("❌ ID inválido")
+            print("[ERR] ID inválido")
             self.wait_for_key()
             return
         
@@ -493,7 +493,7 @@ class PlaylistView:
             self.wait_for_key()
             return
         
-        self.print_header("🎵 CANCIONES EN LA PLAYLIST")
+        self.print_header("[MUSIC] CANCIONES EN LA PLAYLIST")
         print(f"\n{message}")
         
         if canciones:
@@ -503,11 +503,11 @@ class PlaylistView:
             return
         
         print("\n")
-        id_cancion = input("🔢 ID de la canción a mover (Enter para cancelar): ").strip()
+        id_cancion = input("[NUM] ID de la canción a mover (Enter para cancelar): ").strip()
         if not id_cancion:
             return
         
-        nueva_pos = input("📍 Nueva posición: ").strip()
+        nueva_pos = input("[PIN] Nueva posición: ").strip()
         if not nueva_pos:
             return
         
@@ -515,7 +515,7 @@ class PlaylistView:
             id_cancion = int(id_cancion)
             nueva_pos = int(nueva_pos)
         except ValueError:
-            print("❌ Valores inválidos")
+            print("[ERR] Valores inválidos")
             self.wait_for_key()
             return
         
@@ -529,14 +529,14 @@ class PlaylistView:
     def search_songs(self):
         """Interfaz para buscar canciones"""
         self.clear_screen()
-        self.print_header("🔍 BUSCAR CANCIONES")
+        self.print_header("[SEARCH] BUSCAR CANCIONES")
         
         print("\n")
-        query = input("🔎 Buscar por título, artista o álbum: ").strip()
+        query = input("[SEARCH] Buscar por título, artista o álbum: ").strip()
         if not query:
             return
         
-        print("\n⏳ Buscando...")
+        print("\n[SAND] Buscando...")
         success, message, canciones = self.controller.search_songs_by_query(query)
         
         print(f"\n{message}")
@@ -548,7 +548,7 @@ class PlaylistView:
     def view_all_songs(self):
         """Muestra todas las canciones disponibles"""
         self.clear_screen()
-        self.print_header("📜 TODAS LAS CANCIONES")
+        self.print_header("[SCROLL] TODAS LAS CANCIONES")
         
         success, message, canciones = self.controller.list_all_songs()
         print(f"\n{message}")
@@ -580,15 +580,15 @@ class PlaylistView:
             
             if option == '0':
                 self.clear_screen()
-                print("\n👋 ¡Hasta pronto!\n")
+                print("\n[HELLO] ¡Hasta pronto!\n")
                 break
             
             if option in menu_options:
                 try:
                     menu_options[option]()
                 except Exception as e:
-                    print(f"\n❌ Error: {e}")
+                    print(f"\n[ERR] Error: {e}")
                     self.wait_for_key()
             else:
-                print("\n❌ Opción inválida")
+                print("\n[ERR] Opción inválida")
                 self.wait_for_key()

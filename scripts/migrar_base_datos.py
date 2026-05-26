@@ -18,15 +18,15 @@ def migrar_base_datos():
         db_path = os.path.join(project_root, 'data', 'BDD', 'ekho.db')
         
         if not os.path.exists(db_path):
-            print(f"❌ No se encontró la base de datos en: {db_path}")
+            print(f"[ERR] No se encontró la base de datos en: {db_path}")
             print("   La BD se creará automáticamente al ejecutar el programa.")
             return False
         
         print("\n" + "="*70)
-        print("🔄 MIGRACIÓN DE BASE DE DATOS")
+        print("[SYNC] MIGRACIÓN DE BASE DE DATOS")
         print("="*70)
         
-        print(f"\n📂 Base de datos: {db_path}")
+        print(f"\n[FOLDER] Base de datos: {db_path}")
         
         # Conectar a la BD
         conn = sqlite3.connect(db_path)
@@ -41,12 +41,12 @@ def migrar_base_datos():
         columnas_canciones = [col['name'] for col in cur.fetchall()]
         
         if 'caratula_blob' not in columnas_canciones:
-            print("   ⚠️  Columna 'caratula_blob' no existe, agregando...")
+            print("   [WARN]  Columna 'caratula_blob' no existe, agregando...")
             cur.execute("ALTER TABLE canciones ADD COLUMN caratula_blob BLOB")
             cambios_realizados.append("Agregada columna 'caratula_blob' a tabla 'canciones'")
-            print("   ✅ Columna 'caratula_blob' agregada")
+            print("   [OK] Columna 'caratula_blob' agregada")
         else:
-            print("   ✅ Columna 'caratula_blob' ya existe")
+            print("   [OK] Columna 'caratula_blob' ya existe")
         
         # 2. Verificar y agregar playlist_json a playlists
         print("\n[2/3] Verificando tabla 'playlists'...")
@@ -54,22 +54,22 @@ def migrar_base_datos():
         columnas_playlists = [col['name'] for col in cur.fetchall()]
         
         if 'playlist_json' not in columnas_playlists:
-            print("   ⚠️  Columna 'playlist_json' no existe, agregando...")
+            print("   [WARN]  Columna 'playlist_json' no existe, agregando...")
             cur.execute("ALTER TABLE playlists ADD COLUMN playlist_json TEXT")
             cambios_realizados.append("Agregada columna 'playlist_json' a tabla 'playlists'")
-            print("   ✅ Columna 'playlist_json' agregada")
+            print("   [OK] Columna 'playlist_json' agregada")
         else:
-            print("   ✅ Columna 'playlist_json' ya existe")
+            print("   [OK] Columna 'playlist_json' ya existe")
         
         # 3. Verificar y agregar caratula_blob a playlists
         print("\n[3/3] Verificando carátula en 'playlists'...")
         if 'caratula_blob' not in columnas_playlists:
-            print("   ⚠️  Columna 'caratula_blob' no existe, agregando...")
+            print("   [WARN]  Columna 'caratula_blob' no existe, agregando...")
             cur.execute("ALTER TABLE playlists ADD COLUMN caratula_blob BLOB")
             cambios_realizados.append("Agregada columna 'caratula_blob' a tabla 'playlists'")
-            print("   ✅ Columna 'caratula_blob' agregada")
+            print("   [OK] Columna 'caratula_blob' agregada")
         else:
-            print("   ✅ Columna 'caratula_blob' ya existe")
+            print("   [OK] Columna 'caratula_blob' ya existe")
         
         # Guardar cambios
         conn.commit()
@@ -78,30 +78,30 @@ def migrar_base_datos():
         # Resumen
         print("\n" + "="*70)
         if cambios_realizados:
-            print("✅ MIGRACIÓN COMPLETADA - Cambios realizados:")
+            print("[OK] MIGRACIÓN COMPLETADA - Cambios realizados:")
             print("="*70)
             for i, cambio in enumerate(cambios_realizados, 1):
                 print(f"   {i}. {cambio}")
         else:
-            print("✅ BASE DE DATOS YA ACTUALIZADA")
+            print("[OK] BASE DE DATOS YA ACTUALIZADA")
             print("="*70)
             print("   No se necesitaron cambios, la BD ya tiene todas las columnas.")
         
-        print("\n📋 Estado de las tablas:")
-        print("   ✅ canciones.caratula_blob (BLOB)")
-        print("   ✅ playlists.playlist_json (TEXT)")
-        print("   ✅ playlists.caratula_blob (BLOB)")
+        print("\n[LIST] Estado de las tablas:")
+        print("   [OK] canciones.caratula_blob (BLOB)")
+        print("   [OK] playlists.playlist_json (TEXT)")
+        print("   [OK] playlists.caratula_blob (BLOB)")
         
-        print("\n💡 Ahora puedes ejecutar:")
+        print("\n[TIP] Ahora puedes ejecutar:")
         print("   python test_playlist_json_completa.py")
         
         return True
         
     except sqlite3.Error as e:
-        print(f"\n❌ Error de SQLite: {e}")
+        print(f"\n[ERR] Error de SQLite: {e}")
         return False
     except Exception as e:
-        print(f"\n❌ Error inesperado: {e}")
+        print(f"\n[ERR] Error inesperado: {e}")
         import traceback
         traceback.print_exc()
         return False
@@ -109,30 +109,30 @@ def migrar_base_datos():
 
 def main():
     """Función principal"""
-    print("\n" + "🎵"*35)
+    print("\n" + "[MUSIC]"*35)
     print("MIGRACIÓN DE BASE DE DATOS - Playlists JSON Completas")
-    print("🎵"*35)
+    print("[MUSIC]"*35)
     
-    print("\n📋 Esta migración agregará las siguientes columnas:")
+    print("\n[LIST] Esta migración agregará las siguientes columnas:")
     print("   - canciones.caratula_blob (BLOB)")
     print("   - playlists.playlist_json (TEXT)")
     print("   - playlists.caratula_blob (BLOB)")
     
-    print("\n⚠️  IMPORTANTE:")
+    print("\n[WARN]  IMPORTANTE:")
     print("   - Esta operación es segura y no elimina datos existentes")
     print("   - El proceso es rápido y no afecta datos existentes")
     
     # Ejecutar directamente sin pedir confirmación
-    print("\n🔄 Iniciando migración...")
+    print("\n[SYNC] Iniciando migración...")
     exito = migrar_base_datos()
     
     if not exito:
-        print("\n⚠️  La migración no se completó correctamente")
+        print("\n[WARN]  La migración no se completó correctamente")
 
 
 if __name__ == '__main__':
     try:
         main()
     except KeyboardInterrupt:
-        print("\n\n⚠️  Operación cancelada por el usuario")
+        print("\n\n[WARN]  Operación cancelada por el usuario")
         sys.exit(0)

@@ -31,44 +31,44 @@ class SpotifyView(BaseView):
     
     def get_user_input(self) -> str:
         """Get Spotify URL from the user"""
-        print("🎵 Ingresa la URL de la pista de Spotify que quieres convertir:")
+        print("[MUSIC] Ingresa la URL de la pista de Spotify que quieres convertir:")
         self.show_supported_formats()
         return self.get_user_input_safe("URL: ")
     
     def show_supported_formats(self) -> None:
         """Show supported URL formats"""
-        print("\n📋 Formatos soportados:")
+        print("\n[LIST] Formatos soportados:")
         print("  • https://open.spotify.com/track/4iV5W9uYEdYUVa79Axb7Rh")
         print("  • https://open.spotify.com/intl-es/track/4iV5W9uYEdYUVa79Axb7Rh")
         print("  • spotify:track:4iV5W9uYEdYUVa79Axb7Rh")
-        print("  💡 URLs con parámetros (?si=...) se manejan automáticamente")
-        print("  🚀 No necesita credenciales - funciona inmediatamente\n")
+        print("  [TIP] URLs con parámetros (?si=...) se manejan automáticamente")
+        print("  [FAST] No necesita credenciales - funciona inmediatamente\n")
     
     def show_conversion_steps(self) -> None:
         """Show conversion process steps"""
         steps = [
-            "🔍 Extraer metadatos de Spotify usando SpotDL",
-            "🔎 Buscar pista correspondiente en YouTube",
-            "⬇️ Descargar audio desde YouTube",
-            "🎵 Convertir a formato MP3",
-            "🏷️ Añadir metadatos y portada",
-            "💾 Guardar archivo final con metadatos"
+            "[SEARCH] Extraer metadatos de Spotify usando SpotDL",
+            "[SEARCH] Buscar pista correspondiente en YouTube",
+            "[DOWN] Descargar audio desde YouTube",
+            "[MUSIC] Convertir a formato MP3",
+            "[TAG] Añadir metadatos y portada",
+            "[SAVE] Guardar archivo final con metadatos"
         ]
         self.show_progress_steps(steps)
     
     def show_system_info(self) -> None:
         """Show simplified system information"""
-        print("💡 SISTEMA SIMPLIFICADO ACTIVADO")
-        print("✅ SpotDL: Metadatos de Spotify + descarga integrada")
-        print("✅ yt-dlp: Búsqueda y descarga desde YouTube")
-        print("✅ moviepy: Conversión de audio optimizada")
-        print("✅ mutagen: Metadatos MP3 precisos")
-        print("✅ Sin múltiples bibliotecas redundantes")
-        print("✅ Arquitectura limpia y eficiente\n")
+        print("[TIP] SISTEMA SIMPLIFICADO ACTIVADO")
+        print("[OK] SpotDL: Metadatos de Spotify + descarga integrada")
+        print("[OK] yt-dlp: Búsqueda y descarga desde YouTube")
+        print("[OK] moviepy: Conversión de audio optimizada")
+        print("[OK] mutagen: Metadatos MP3 precisos")
+        print("[OK] Sin múltiples bibliotecas redundantes")
+        print("[OK] Arquitectura limpia y eficiente\n")
     
     def show_metadata_info(self) -> None:
         """Show information about saved metadata"""
-        print("📝 METADATOS GUARDADOS:")
+        print("[NOTE] METADATOS GUARDADOS:")
         print("  • Título, artista, álbum")
         print("  • Duración, género, fecha")
         print("  • URL de origen, ruta local")
@@ -79,33 +79,33 @@ class SpotifyView(BaseView):
             from model.spotify2mp3_model import Spotify2MP3Converter
             converter = Spotify2MP3Converter()
             metadata_path = converter.info_extractor.get_metadata_file_path()
-            print(f"  📁 Metadatos en: {metadata_path}")
+            print(f"  [FOLDER] Metadatos en: {metadata_path}")
         except:
             pass
     
     def show_setup_info(self) -> None:
         """Show setup and requirements information"""
         instructions = [
-            "🎵 FORMATOS DE URL SOPORTADOS:",
+            "[MUSIC] FORMATOS DE URL SOPORTADOS:",
             "   • https://open.spotify.com/track/ID",
             "   • https://open.spotify.com/intl-XX/track/ID", 
             "   • spotify:track:ID",
             "",
-            "🔧 DEPENDENCIAS REQUERIDAS:",
+            "[TOOL] DEPENDENCIAS REQUERIDAS:",
             "   pip install \"setuptools<81\" pytubefix spotdl yt-dlp moviepy mutagen requests",
             "",
-            "⚙️ FFMPEG REQUERIDO:",
+            "[CONFIG] FFMPEG REQUERIDO:",
             "   Windows: Descargar desde https://ffmpeg.org/",
             "   Linux: sudo apt install ffmpeg",
             "   macOS: brew install ffmpeg",
             "",
-            "🎯 ARQUITECTURA SIMPLIFICADA:",
+            "[TARGET] ARQUITECTURA SIMPLIFICADA:",
             "   • SpotDL maneja metadatos y descarga",
             "   • yt-dlp para búsquedas en YouTube",
             "   • moviepy para conversión de audio",
             "   • mutagen para metadatos MP3",
             "",
-            "⚖️ NOTA LEGAL:",
+            "[SCALE] NOTA LEGAL:",
             "   Este conversor busca contenido en YouTube.",
             "   Respeta derechos de autor y términos de servicio."
         ]
@@ -114,10 +114,10 @@ class SpotifyView(BaseView):
     def show_welcome(self) -> None:
         """Show personalized welcome message"""
         super().show_welcome()
-        print("🎯 FUNCIONALIDADES:")
-        print("  ✅ Extracción de metadatos completos de Spotify")
-        print("  ✅ Búsqueda inteligente en YouTube")
-        print("  ✅ Conversión a MP3 de alta calidad")
-        print("  ✅ Metadatos automáticos con portada")
-        print("  ✅ Guardado en archivo fijo para BD")
-        print("  ✅ Sistema simplificado sin redundancias\n")
+        print("[TARGET] FUNCIONALIDADES:")
+        print("  [OK] Extracción de metadatos completos de Spotify")
+        print("  [OK] Búsqueda inteligente en YouTube")
+        print("  [OK] Conversión a MP3 de alta calidad")
+        print("  [OK] Metadatos automáticos con portada")
+        print("  [OK] Guardado en archivo fijo para BD")
+        print("  [OK] Sistema simplificado sin redundancias\n")

@@ -9,7 +9,7 @@ import re
 import datetime
 from pathlib import Path
 
-# ── Asegurar que src/ esté en el path ──────────────────────────────────────
+# -- Asegurar que src/ esté en el path --------------------------------------
 _src = os.path.dirname(os.path.abspath(__file__))
 if _src not in sys.path:
     sys.path.insert(0, _src)
@@ -20,23 +20,23 @@ except ImportError:
     def _get_music_dir():
         return str(Path(__file__).resolve().parent.parent.parent / "data" / "music")
 
-# ── Adaptador de BD — importación segura ───────────────────────────────────
+# -- Adaptador de BD — importación segura -----------------------------------
 try:
     from model.db_adapter import upsert_cancion, registrar_descarga
     _DB_ADAPTER_OK = True
 except Exception as _db_e:
-    print(f"⚠️ soundcloud2mp3: db_adapter no disponible ({_db_e})")
+    print(f"[WARN] soundcloud2mp3: db_adapter no disponible ({_db_e})")
     _DB_ADAPTER_OK = False
 
-# ── yt-dlp ─────────────────────────────────────────────────────────────────
+# -- yt-dlp -----------------------------------------------------------------
 try:
     import yt_dlp
     _HAS_YTDLP_API = True
 except ImportError:
     _HAS_YTDLP_API = False
-    print("⚠️ yt-dlp no está instalado. Instálalo con: pip install yt-dlp")
+    print("[WARN] yt-dlp no está instalado. Instálalo con: pip install yt-dlp")
 
-# ── Mutagen para metadatos ─────────────────────────────────────────────────
+# -- Mutagen para metadatos -------------------------------------------------
 try:
     from mutagen.mp3 import MP3
     from mutagen.id3 import ID3, ID3NoHeaderError
@@ -45,7 +45,7 @@ try:
 except ImportError:
     _HAS_MUTAGEN = False
 
-# ── Requests para portadas ─────────────────────────────────────────────────
+# -- Requests para portadas -------------------------------------------------
 try:
     import requests as _requests
     _HAS_REQUESTS = True
@@ -74,9 +74,9 @@ class SoundCloudConverter:
         abs_path = str(Path(path).resolve())
         Path(abs_path).mkdir(parents=True, exist_ok=True)
         self.download_folder = abs_path
-        print(f"📁 Carpeta de descarga actualizada: {self.download_folder}")
+        print(f"[FOLDER] Carpeta de descarga actualizada: {self.download_folder}")
 
-    # ── Metadatos ─────────────────────────────────────────────────────────
+    # -- Metadatos ---------------------------------------------------------
 
     def _add_metadata(self, mp3_path: str, title: str, artist: str,
                       cover_url: str = None, album: str = None) -> None:
@@ -108,14 +108,14 @@ class SoundCloudConverter:
                             type=3, desc='Cover', data=resp.content,
                         )
                 except Exception as _ce:
-                    print(f"⚠️ No se pudo descargar portada: {_ce}")
+                    print(f"[WARN] No se pudo descargar portada: {_ce}")
 
             tags.save(mp3_path, v2_version=3)
-            print("✅ Metadatos añadidos correctamente")
+            print("[OK] Metadatos añadidos correctamente")
         except Exception as e:
-            print(f"⚠️ Error al añadir metadatos: {e}")
+            print(f"[WARN] Error al añadir metadatos: {e}")
 
-    # ── Descarga individual ────────────────────────────────────────────────
+    # -- Descarga individual ------------------------------------------------
 
     def convert(self, url: str) -> str:
         """Descarga una pista de SoundCloud y devuelve la ruta del MP3."""
@@ -134,7 +134,7 @@ class SoundCloudConverter:
             with yt_dlp.YoutubeDL(meta_opts) as ydl:
                 track_info = ydl.extract_info(url, download=False) or {}
         except Exception as _me:
-            print(f"⚠️ No se pudo obtener metadatos previos: {_me}")
+            print(f"[WARN] No se pudo obtener metadatos previos: {_me}")
 
         raw_title  = track_info.get('title') or track_info.get('track') or 'Unknown'
         raw_artist = (track_info.get('uploader') or track_info.get('artist') or
@@ -170,7 +170,7 @@ class SoundCloudConverter:
             'no_warnings': True,
             'noplaylist': True,
         }
-        print(f"⬇️  Descargando: {raw_artist} - {raw_title}")
+        print(f"[DOWN]  Descargando: {raw_artist} - {raw_title}")
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ydl.download([url])
 
@@ -186,9 +186,9 @@ class SoundCloudConverter:
             if not candidates:
                 raise FileNotFoundError(f"No se encontró MP3 tras descargar: {url}")
             mp3_path = str(candidates[0])
-            print(f"ℹ️  Usando archivo más reciente: {mp3_path}")
+            print(f"[INFO]  Usando archivo más reciente: {mp3_path}")
 
-        print(f"✅ Archivo: {mp3_path}")
+        print(f"[OK] Archivo: {mp3_path}")
 
         # 4. Metadatos ID3
         self._add_metadata(mp3_path, raw_title, raw_artist,
@@ -217,11 +217,11 @@ class SoundCloudConverter:
                 id_cancion = upsert_cancion(metadata_bd)
                 registrar_descarga(id_cancion, formato='mp3')
             except Exception as _bd_err:
-                print(f"⚠️ No se pudo guardar en BD: {_bd_err}")
+                print(f"[WARN] No se pudo guardar en BD: {_bd_err}")
 
         return mp3_path
 
-    # ── Soporte de playlists / sets ────────────────────────────────────────
+    # -- Soporte de playlists / sets ----------------------------------------
 
     @staticmethod
     def is_playlist_url(url: str) -> bool:
@@ -274,15 +274,15 @@ class SoundCloudConverter:
         - on_progress: callback(actual, total, titulo) llamado tras cada canción
         Devuelve lista de rutas de archivos descargados.
         """
-        print(f'\n🎵 Obteniendo pistas del set: {url}')
+        print(f'\n[MUSIC] Obteniendo pistas del set: {url}')
         pl_info = self.get_playlist_info(url)
         playlist_name = pl_info['nombre']
         cover_url     = pl_info['cover_url']
-        print(f'📋 Set: {playlist_name}')
+        print(f'[LIST] Set: {playlist_name}')
 
         track_urls = self.get_playlist_track_urls(url)
         total = len(track_urls)
-        print(f'📋 {total} pistas encontradas')
+        print(f'[LIST] {total} pistas encontradas')
         if total == 0:
             return []
 
@@ -296,7 +296,7 @@ class SoundCloudConverter:
                 path = self.convert(track_url)
                 if path:
                     results.append(path)
-                    print(f'  ✅ Descargado: {path}')
+                    print(f'  [OK] Descargado: {path}')
                     if _DB_ADAPTER_OK:
                         from model.db_adapter import get_id_cancion_por_ruta
                         id_c = get_id_cancion_por_ruta(path)
@@ -305,7 +305,7 @@ class SoundCloudConverter:
                 else:
                     failed += 1
             except Exception as e:
-                print(f'  ❌ Error: {e}')
+                print(f'  [ERR] Error: {e}')
                 failed += 1
             if on_progress:
                 on_progress(i, total, track_url)
@@ -322,13 +322,13 @@ class SoundCloudConverter:
                     caratula_url=cover_url,
                 )
             except Exception as _pl_err:
-                print(f'⚠️ No se pudo crear la playlist en BD: {_pl_err}')
+                print(f'[WARN] No se pudo crear la playlist en BD: {_pl_err}')
 
-        print(f'\n🎉 Set completado: {len(results)}/{total} exitosas  ·  {failed} fallidas')
+        print(f'\n[DONE] Set completado: {len(results)}/{total} exitosas  ·  {failed} fallidas')
         return results
 
 
-# ── Función de conveniencia ────────────────────────────────────────────────
+# -- Función de conveniencia ------------------------------------------------
 
 def convert_soundcloud(url: str, download_folder: str = "data/music") -> str:
     """

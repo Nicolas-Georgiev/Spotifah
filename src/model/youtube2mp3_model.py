@@ -22,21 +22,21 @@ try:
     from model.db_adapter import upsert_cancion, registrar_descarga
     _DB_ADAPTER_OK = True
 except Exception as _db_e:
-    print(f"⚠️ youtube2mp3_model: db_adapter no disponible ({_db_e})")
+    print(f"[WARN] youtube2mp3_model: db_adapter no disponible ({_db_e})")
     _DB_ADAPTER_OK = False
 
 try:
     from moviepy.editor import AudioFileClip
-    print("✅ Usando moviepy para conversión de audio de YouTube")
+    print("[OK] Usando moviepy para conversión de audio de YouTube")
 except ImportError:
-    print("⚠️ No hay biblioteca de conversión disponibles. Solo cambio de extensión.")
+    print("[WARN] No hay biblioteca de conversión disponibles. Solo cambio de extensión.")
     print("   Instala moviepy: pip install moviepy")
 
 try:
     from mutagen.mp3 import MP3
-    print("✅ Usando mutagen para metadatos de audio de YouTube")
+    print("[OK] Usando mutagen para metadatos de audio de YouTube")
 except ImportError:
-    print("⚠️ Sin biblioteca de metadatos. Las portadas no se incrustarán.")
+    print("[WARN] Sin biblioteca de metadatos. Las portadas no se incrustarán.")
     print("   Instala mutagen: pip install mutagen")
 
 class YouTube2MP3Converter:
@@ -53,7 +53,7 @@ class YouTube2MP3Converter:
         abs_path = os.path.normpath(os.path.abspath(path))
         os.makedirs(abs_path, exist_ok=True)
         self.download_folder = abs_path
-        print(f"📁 Carpeta de descarga actualizada: {self.download_folder}")
+        print(f"[FOLDER] Carpeta de descarga actualizada: {self.download_folder}")
 
     @staticmethod
     def download_video(url, output_path=None):
@@ -125,18 +125,18 @@ class YouTube2MP3Converter:
     def download_thumbnail(thumbnail_url, save_path):
         """Descarga la thumbnail del video"""
         try:
-            print("🖼️ Descargando portada del video...")
+            print("[COVER] Descargando portada del video...")
             response = requests.get(thumbnail_url, timeout=10)
             response.raise_for_status()
             
             with open(save_path, 'wb') as f:
                 f.write(response.content)
             
-            print(f"✅ Portada descargada: {save_path}")
+            print(f"[OK] Portada descargada: {save_path}")
             return True
             
         except Exception as e:
-            print(f"❌ Error descargando portada: {e}")
+            print(f"[ERR] Error descargando portada: {e}")
             return False
 
     @staticmethod
@@ -146,14 +146,14 @@ class YouTube2MP3Converter:
         try:
             # Verificar que el archivo MP3 existe y tiene contenido
             if not os.path.exists(mp3_path):
-                print(f"❌ El archivo MP3 no existe: {mp3_path}")
+                print(f"[ERR] El archivo MP3 no existe: {mp3_path}")
                 return False
                 
             if os.path.getsize(mp3_path) == 0:
-                print(f"❌ El archivo MP3 está vacío: {mp3_path}")
+                print(f"[ERR] El archivo MP3 está vacío: {mp3_path}")
                 return False
 
-            print("🏷️ Añadiendo metadatos al MP3...")
+            print("[TAG] Añadiendo metadatos al MP3...")
             
             # Usar mutagen - con verificación de archivo válido
             from mutagen.mp3 import MP3
@@ -165,14 +165,14 @@ class YouTube2MP3Converter:
                 
                 # Verificar que se pudo cargar correctamente
                 if audio_file.info is None:
-                    print("❌ El archivo MP3 no es válido o está corrupto")
+                    print("[ERR] El archivo MP3 no es válido o está corrupto")
                     return False
                     
-                print(f"📊 Duración del MP3: {audio_file.info.length:.1f} segundos")
+                print(f"[CHART] Duración del MP3: {audio_file.info.length:.1f} segundos")
                 
             except Exception as e:
-                print(f"❌ Error cargando archivo MP3: {e}")
-                print("🔧 Intentando reparar/recrear metadatos...")
+                print(f"[ERR] Error cargando archivo MP3: {e}")
+                print("[TOOL] Intentando reparar/recrear metadatos...")
                 
                 # Intentar crear un objeto MP3 básico
                 try:
@@ -180,7 +180,7 @@ class YouTube2MP3Converter:
                     if audio_file.tags is None:
                         audio_file.add_tags()
                 except Exception as repair_error:
-                    print(f"❌ No se pudo reparar el archivo: {repair_error}")
+                    print(f"[ERR] No se pudo reparar el archivo: {repair_error}")
                     return False
             
             # Añadir ID3 tag si no existe
@@ -220,27 +220,27 @@ class YouTube2MP3Converter:
                                 desc='Cover',
                                 data=image_data
                             ))
-                            print(f"✅ Portada incrustada ({len(image_data)} bytes)")
+                            print(f"[OK] Portada incrustada ({len(image_data)} bytes)")
                         else:
-                            print("⚠️ Archivo de portada vacío")
+                            print("[WARN] Archivo de portada vacío")
                 except Exception as img_error:
-                    print(f"⚠️ Error añadiendo portada: {img_error}")
+                    print(f"[WARN] Error añadiendo portada: {img_error}")
             else:
-                print("ℹ️ No hay portada para añadir")
+                print("[INFO] No hay portada para añadir")
                 
             # Guardar cambios con manejo de errores
             try:
                 audio_file.save()
-                print(f"✅ Metadatos añadidos correctamente (Origen: {origin})")
+                print(f"[OK] Metadatos añadidos correctamente (Origen: {origin})")
                 return True
             except Exception as save_error:
-                print(f"❌ Error guardando metadatos: {save_error}")
+                print(f"[ERR] Error guardando metadatos: {save_error}")
                 return False
             
         except Exception as e:
-            print(f"❌ Error crítico añadiendo metadatos: {e}")
+            print(f"[ERR] Error crítico añadiendo metadatos: {e}")
             import traceback
-            print(f"📋 Detalles: {traceback.format_exc()}")
+            print(f"[LIST] Detalles: {traceback.format_exc()}")
             return False
 
     @staticmethod
@@ -252,22 +252,22 @@ class YouTube2MP3Converter:
             file_ext = os.path.splitext(file_path)[1].lower()
             mp3_path = base_name + ".mp3"
             
-            print(f"🔄 Archivo a convertir: {file_path}")
-            print(f"📁 Extensión detectada: {file_ext}")
-            print(f"🎯 Ruta MP3 objetivo: {mp3_path}")
+            print(f"[SYNC] Archivo a convertir: {file_path}")
+            print(f"[FOLDER] Extensión detectada: {file_ext}")
+            print(f"[TARGET] Ruta MP3 objetivo: {mp3_path}")
             
             # Si ya es MP3, no convertir
             if file_ext == '.mp3':
-                print("✅ El archivo ya es MP3")
+                print("[OK] El archivo ya es MP3")
                 return file_path
             
-            print(f"🔄 Convirtiendo {file_ext} a MP3...")
+            print(f"[SYNC] Convirtiendo {file_ext} a MP3...")
             
             conversion_success = False
             
             # Intentar moviepy primero (más confiable)
             try:
-                print("🎬 Usando moviepy para conversión...")
+                print("[CLIP] Usando moviepy para conversión...")
                 from moviepy.editor import AudioFileClip
                 
                 audio_clip = AudioFileClip(file_path)
@@ -277,34 +277,34 @@ class YouTube2MP3Converter:
                 # Verificar que el archivo se creó correctamente
                 if os.path.exists(mp3_path) and os.path.getsize(mp3_path) > 0:
                     os.remove(file_path)  # Eliminar original
-                    print("✅ Conversión completada con moviepy")
+                    print("[OK] Conversión completada con moviepy")
                     conversion_success = True
                     return mp3_path
                 else:
-                    print("❌ Archivo MP3 no se creó correctamente con moviepy")
+                    print("[ERR] Archivo MP3 no se creó correctamente con moviepy")
                         
             except Exception as e:
-                print(f"❌ Error con moviepy: {e}")
+                print(f"[ERR] Error con moviepy: {e}")
             
             # Si no se pudo convertir con bibliotecas especializadas
             if not conversion_success:
-                print("⚠️ Sin bibliotecas de conversión disponibles o falló la conversión")
-                print("📝 Usando conversión simple (cambio de extensión)")
-                print("💡 Para conversión real, instala: pip install moviepy")
+                print("[WARN] Sin bibliotecas de conversión disponibles o falló la conversión")
+                print("[NOTE] Usando conversión simple (cambio de extensión)")
+                print("[TIP] Para conversión real, instala: pip install moviepy")
                 
                 # Cambio de extensión como fallback
                 if file_path != mp3_path:
                     os.rename(file_path, mp3_path)
-                    print(f"✅ Archivo renombrado a: {mp3_path}")
-                    print("ℹ️ NOTA: Este es solo un cambio de extensión.")
-                    print("ℹ️ Para conversión real del contenido, instala moviepy.")
+                    print(f"[OK] Archivo renombrado a: {mp3_path}")
+                    print("[INFO] NOTA: Este es solo un cambio de extensión.")
+                    print("[INFO] Para conversión real del contenido, instala moviepy.")
                 else:
-                    print("ℹ️ El archivo ya tiene el nombre correcto")
+                    print("[INFO] El archivo ya tiene el nombre correcto")
                 
             return mp3_path
             
         except Exception as e:
-            print(f"❌ Error crítico en la conversión: {e}")
+            print(f"[ERR] Error crítico en la conversión: {e}")
             import traceback
             traceback.print_exc()
             return file_path
@@ -314,19 +314,19 @@ class YouTube2MP3Converter:
     def convert(self, url):
         """Descarga y convierte el video de YouTube a MP3 con portada"""
         try:
-            print(f"🔄 Descargando: {url}")
+            print(f"[SYNC] Descargando: {url}")
             
             # Auto-detect source from URL
             source = "youtube" if "youtube" in url.lower() or "youtu.be" in url.lower() else "unknown"
-            print(f"📍 Fuente detectada: {source}")
+            print(f"[PIN] Fuente detectada: {source}")
             
             video_info = self.download_video(url, self.download_folder)
             video_info['url_origen'] = url  # guardar URL original para metadatos
-            print(f"📁 Archivo descargado: {video_info['file_path']}")
+            print(f"[FOLDER] Archivo descargado: {video_info['file_path']}")
             
-            print(f"🔄 Convirtiendo a MP3...")
+            print(f"[SYNC] Convirtiendo a MP3...")
             mp3_file = self.convert_to_mp3(video_info['file_path'])
-            print(f"🎵 MP3 guardado en: {mp3_file}")
+            print(f"[MUSIC] MP3 guardado en: {mp3_file}")
             
             # Pequeña pausa para asegurar que el archivo esté completamente escrito
             import time
@@ -334,7 +334,7 @@ class YouTube2MP3Converter:
             
             # Verificar que el archivo MP3 se creó correctamente
             if not os.path.exists(mp3_file) or os.path.getsize(mp3_file) == 0:
-                print("❌ Error: El archivo MP3 no se creó correctamente")
+                print("[ERR] Error: El archivo MP3 no se creó correctamente")
                 return mp3_file
 
             # Preparar campos extra para los tags ID3
@@ -346,12 +346,12 @@ class YouTube2MP3Converter:
             comment_str = description[:200] if description else f"Origen: {source}"
 
             try:
-                print("🖼️ Procesando portada...")
+                print("[COVER] Procesando portada...")
                 thumbnail_filename = os.path.splitext(mp3_file)[0] + "_thumbnail.jpg"
                 
                 if self.download_thumbnail(video_info['thumbnail_url'], thumbnail_filename):
                     if os.path.exists(thumbnail_filename) and os.path.getsize(thumbnail_filename) > 0:
-                        print("📸 Portada descargada, añadiendo metadatos...")
+                        print("[PHOTO] Portada descargada, añadiendo metadatos...")
                         success = self.add_metadata_to_mp3(
                             mp3_file,
                             video_info['title'],
@@ -364,38 +364,38 @@ class YouTube2MP3Converter:
                             comment=comment_str,
                         )
                         if success:
-                            print("✅ Metadatos y portada añadidos correctamente")
+                            print("[OK] Metadatos y portada añadidos correctamente")
                         else:
-                            print("⚠️ Metadatos añadidos sin portada")
+                            print("[WARN] Metadatos añadidos sin portada")
                         try:
                             os.remove(thumbnail_filename)
-                            print("🗑️ Thumbnail temporal eliminada")
+                            print("[TRASH] Thumbnail temporal eliminada")
                         except:
                             pass
                     else:
-                        print("❌ Error: Thumbnail descargada pero vacía o inválida")
+                        print("[ERR] Error: Thumbnail descargada pero vacía o inválida")
                         self.add_metadata_to_mp3(
                             mp3_file, video_info['title'], video_info['author'],
                             origin=source, album=video_info.get('author', ''),
                             year=year_str, genre=genre_str, comment=comment_str,
                         )
                 else:
-                    print("❌ No se pudo descargar la portada")
+                    print("[ERR] No se pudo descargar la portada")
                     self.add_metadata_to_mp3(
                         mp3_file, video_info['title'], video_info['author'],
                         origin=source, album=video_info.get('author', ''),
                         year=year_str, genre=genre_str, comment=comment_str,
                     )
             except Exception as e:
-                print(f"⚠️ Error con metadatos/portada: {e}")
-                print("💡 Tip: Instala 'mutagen' para agregar portadas a tus MP3")
+                print(f"[WARN] Error con metadatos/portada: {e}")
+                print("[TIP] Tip: Instala 'mutagen' para agregar portadas a tus MP3")
 
-            # ── Guardar en BD directamente (sin archivo JSON intermedio) ──
+            # -- Guardar en BD directamente (sin archivo JSON intermedio) --
             mp3_abs = os.path.normpath(os.path.abspath(mp3_file))
             
             # Ya NO se llama a _save_metadata_to_json() - todo va directo a BD
             
-            # ── Guardar en BD ──────────────────────────────────────────────
+            # -- Guardar en BD ----------------------------------------------
             if _DB_ADAPTER_OK:
                 try:
                     # Leer duración real del archivo MP3 (fallback: duración de YouTube)
@@ -417,16 +417,16 @@ class YouTube2MP3Converter:
                     id_cancion = upsert_cancion(metadata_bd)
                     registrar_descarga(id_cancion, formato='mp3')
                 except Exception as _bd_err:
-                    print(f"⚠️ No se pudo guardar en BD: {_bd_err}")
-            # ───────────────────────────────────────────────────────────────
+                    print(f"[WARN] No se pudo guardar en BD: {_bd_err}")
+            # ---------------------------------------------------------------
 
             return mp3_file
             
         except Exception as e:
-            print(f"❌ Error en el proceso de conversión: {e}")
+            print(f"[ERR] Error en el proceso de conversión: {e}")
             raise
 
-    # ── Soporte de playlists ────────────────────────────────────────────────────
+    # -- Soporte de playlists ----------------------------------------------------
 
     @staticmethod
     def is_playlist_url(url: str) -> bool:
@@ -493,15 +493,15 @@ class YouTube2MP3Converter:
         - on_progress: callback(actual, total, titulo) llamado tras cada canción
         Devuelve lista de rutas de archivos descargados.
         """
-        print(f'\n🎵 Obteniendo videos de la playlist: {url}')
+        print(f'\n[MUSIC] Obteniendo videos de la playlist: {url}')
         pl_info = self.get_playlist_info(url)
         playlist_name = pl_info['nombre']
         cover_url = pl_info['cover_url']
-        print(f'📋 Playlist: {playlist_name}')
+        print(f'[LIST] Playlist: {playlist_name}')
 
         track_urls = self.get_playlist_track_urls(url)
         total = len(track_urls)
-        print(f'📋 {total} videos encontrados')
+        print(f'[LIST] {total} videos encontrados')
         if total == 0:
             return []
 
@@ -514,7 +514,7 @@ class YouTube2MP3Converter:
                 path = self.convert(track_url)
                 if path:
                     results.append(path)
-                    print(f'  ✅ Descargado: {path}')
+                    print(f'  [OK] Descargado: {path}')
                     if _DB_ADAPTER_OK:
                         from model.db_adapter import get_id_cancion_por_ruta
                         id_c = get_id_cancion_por_ruta(path)
@@ -523,7 +523,7 @@ class YouTube2MP3Converter:
                 else:
                     failed += 1
             except Exception as e:
-                print(f'  ❌ Error: {e}')
+                print(f'  [ERR] Error: {e}')
                 failed += 1
             if on_progress:
                 on_progress(i, total, track_url)
@@ -540,12 +540,12 @@ class YouTube2MP3Converter:
                     caratula_url=cover_url,
                 )
             except Exception as _pl_err:
-                print(f'⚠️ No se pudo crear la playlist en BD: {_pl_err}')
+                print(f'[WARN] No se pudo crear la playlist en BD: {_pl_err}')
 
-        print(f'\n🎉 Playlist completada: {len(results)}/{total} exitosas  ·  {failed} fallidas')
+        print(f'\n[DONE] Playlist completada: {len(results)}/{total} exitosas  ·  {failed} fallidas')
         return results
 
-    # ──────────────────────────────────────────────────────────────────
+    # ------------------------------------------------------------------
 
 
 # ============================================================

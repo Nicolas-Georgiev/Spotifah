@@ -41,7 +41,7 @@ class Spotify2MP3Controller(BaseController):
     def process_conversion(self, spotify_url: str) -> str: 
         """Process Spotify to MP3 conversion"""
         self.view.show_conversion_steps()
-        self.show_progress("🔍 Extrayendo metadatos de Spotify...")
+        self.show_progress("[SEARCH] Extrayendo metadatos de Spotify...")
         return self.model.convert(spotify_url)
     
     def convert_single_track(self) -> bool:
@@ -57,7 +57,7 @@ class Spotify2MP3Controller(BaseController):
                 return False
 
             if self.model.is_playlist_url(url):
-                print("\n📋 Playlist/álbum de Spotify detectado.")
+                print("\n[LIST] Playlist/álbum de Spotify detectado.")
                 print("Obteniendo lista de canciones... (puede tardar unos segundos)")
                 try:
                     songs = self.model.get_playlist_songs(url)
@@ -66,14 +66,14 @@ class Spotify2MP3Controller(BaseController):
                     self.handle_error(e)
                     return False
 
-                print(f"\n🎵 Se encontraron {total} canciones.")
+                print(f"\n[MUSIC] Se encontraron {total} canciones.")
                 confirm = input("\u00bfDescargar todas? [s/N]: ").strip().lower()
                 if confirm not in ('s', 'si', 'yes', 'y'):
-                    print("⏹️  Descarga cancelada.")
+                    print("[STOP]  Descarga cancelada.")
                     return False
 
                 results = self.model.convert_playlist(url)
-                print(f"\n✅ Descargadas {len(results)}/{total} canciones")
+                print(f"\n[OK] Descargadas {len(results)}/{total} canciones")
                 return len(results) > 0
 
             result_path = self.process_conversion(url)
@@ -82,7 +82,7 @@ class Spotify2MP3Controller(BaseController):
             return True
 
         except KeyboardInterrupt:
-            self.show_progress("⏹️  Operación cancelada por el usuario")
+            self.show_progress("[STOP]  Operación cancelada por el usuario")
             return False
         except Exception as e:
             self.handle_error(e)
@@ -106,7 +106,7 @@ class Spotify2MP3Controller(BaseController):
                         break
                         
                 except KeyboardInterrupt:
-                    print("\n⏹️  Programa interrumpido por el usuario")
+                    print("\n[STOP]  Programa interrumpido por el usuario")
                     break
                 except Exception as e:
                     self.handle_error(e)
@@ -116,6 +116,6 @@ class Spotify2MP3Controller(BaseController):
             self.view.show_goodbye()
             
         except KeyboardInterrupt:
-            print("\n⏹️  Programa terminado")
+            print("\n[STOP]  Programa terminado")
         except Exception as e:
             self.handle_error(e)

@@ -37,7 +37,7 @@ class BaseModel:
         abs_path = os.path.normpath(os.path.abspath(path))
         os.makedirs(abs_path, exist_ok=True)
         self.download_folder = abs_path
-        print(f"📁 Carpeta de descarga actualizada: {self.download_folder}")
+        print(f"[FOLDER] Carpeta de descarga actualizada: {self.download_folder}")
     
     def get_standard_metadata(self, title, artist):
         """Retorna metadatos estándares simplificados para cualquier plataforma"""            

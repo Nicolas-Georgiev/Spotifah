@@ -53,21 +53,21 @@ class BaseController(ABC):
         if self.view:
             self.view.show_error(error_msg)
         else:
-            print(f"❌ {error_msg}")
+            print(f"[ERR] {error_msg}")
     
     def handle_success(self, result: str) -> None:
         """Handle success consistently"""
         if self.view:
             self.view.show_result(result)
         else:
-            print(f"✅ Conversión completada: {result}")
+            print(f"[OK] Conversión completada: {result}")
     
     def show_progress(self, message: str) -> None:
         """Show progress to the user"""
         if self.view:
             self.view.show_message(message)
         else:
-            print(f"ℹ️ {message}")
+            print(f"[INFO] {message}")
     
     @abstractmethod
     def run(self) -> None:
@@ -107,16 +107,16 @@ class ConversorController:
     def show_main_menu(self) -> None:
         """Show main menu"""
         print("\n" + "="*70)
-        print("  🎵 EKHO - PLATAFORMA MUSICAL 🎵")
+        print("  [MUSIC] EKHO - PLATAFORMA MUSICAL [MUSIC]")
         print("="*70)
-        print("\n📋 CONVERTIDORES DISPONIBLES:")
-        print("  1️⃣  Spotify a MP3  (pistas, playlists y álbumes)")
-        print("  2️⃣  YouTube a MP3  (vídeos y playlists)")
-        print("  3️⃣  SoundCloud a MP3  (pistas y sets/playlists)")
-        print("\n⚙️  OTRAS OPCIONES:")
-        print("  4️⃣  Estado del sistema")
-        print("  5️⃣  Ver canciones en la base de datos")
-        print("  0️⃣  Salir")
+        print("\n[LIST] CONVERTIDORES DISPONIBLES:")
+        print("  1⃣  Spotify a MP3  (pistas, playlists y álbumes)")
+        print("  2⃣  YouTube a MP3  (vídeos y playlists)")
+        print("  3⃣  SoundCloud a MP3  (pistas y sets/playlists)")
+        print("\n[CONFIG]  OTRAS OPCIONES:")
+        print("  4⃣  Estado del sistema")
+        print("  5⃣  Ver canciones en la base de datos")
+        print("  0⃣  Salir")
         print("="*70)
     
     def get_user_choice(self) -> str:
@@ -132,18 +132,18 @@ class ConversorController:
                     print("\u274c Opción no válida. Por favor selecciona 1, 2, 3, 4, 5 o 0.")
                     
             except EOFError:
-                print("\n❌ EOF detectado - finalizando programa")
+                print("\n[ERR] EOF detectado - finalizando programa")
                 return "0"
             except KeyboardInterrupt:
-                print("\n❌ Operación cancelada por el usuario")
+                print("\n[ERR] Operación cancelada por el usuario")
                 return "0"
             except Exception as e:
-                print(f"\n❌ Error inesperado: {e}")
+                print(f"\n[ERR] Error inesperado: {e}")
                 return "0"
     
     def show_system_status(self) -> None:
         """Show system status"""
-        print("\n🔧 ESTADO DEL SISTEMA:")
+        print("\n[TOOL] ESTADO DEL SISTEMA:")
         
         dependencies = [
             ('spotdl', 'SpotDL para metadatos de Spotify'),
@@ -158,9 +158,9 @@ class ConversorController:
         for dep, description in dependencies:
             try:
                 __import__(dep)
-                print(f"  ✅ {description}")
+                print(f"  [OK] {description}")
             except ImportError:
-                print(f"  ❌ {description} - NO INSTALADO")
+                print(f"  [ERR] {description} - NO INSTALADO")
         
         base_dir = os.path.join(os.path.dirname(__file__), "..", "..")
         directories = [
@@ -169,20 +169,20 @@ class ConversorController:
             ("data/temp", "Directorio temporal")
         ]
         
-        print("\n📁 DIRECTORIOS:")
+        print("\n[FOLDER] DIRECTORIOS:")
         for dir_path, description in directories:
             full_path = os.path.join(base_dir, dir_path)
             if os.path.exists(full_path):
-                print(f"  ✅ {description}: {full_path}")
+                print(f"  [OK] {description}: {full_path}")
             else:
-                print(f"  ❌ {description}: NO EXISTE")
+                print(f"  [ERR] {description}: NO EXISTE")
 
-        print("\n🎬 FFMPEG:")
+        print("\n[CLIP] FFMPEG:")
         if self._is_ffmpeg_available():
-            print("  ✅ FFmpeg disponible")
+            print("  [OK] FFmpeg disponible")
         else:
-            print("  ❌ FFmpeg no encontrado en PATH")
-            print("  💡 Instalar en Windows: winget install Gyan.FFmpeg")
+            print("  [ERR] FFmpeg no encontrado en PATH")
+            print("  [TIP] Instalar en Windows: winget install Gyan.FFmpeg")
 
     @staticmethod
     def _is_ffmpeg_available() -> bool:
@@ -200,39 +200,39 @@ class ConversorController:
                 choice = self.get_user_choice()
                 
                 if choice == '0':
-                    print("\n👋 ¡Gracias por usar Ekho! Hasta luego.")
+                    print("\n[HELLO] ¡Gracias por usar Ekho! Hasta luego.")
                     break
                 elif choice == '1':
-                    print("\n🎵 Iniciando conversor de Spotify...")
+                    print("\n[MUSIC] Iniciando conversor de Spotify...")
                     try:
                         self.controllers['spotify'].run()
                     except Exception as e:
-                        print(f"❌ Error en conversor de Spotify: {e}")
+                        print(f"[ERR] Error en conversor de Spotify: {e}")
                 elif choice == '2':
-                    print("\n🎥 Iniciando conversor de YouTube...")
+                    print("\n[CAM] Iniciando conversor de YouTube...")
                     try:
                         self.controllers['youtube'].run()
                     except Exception as e:
-                        print(f"❌ Error en conversor de YouTube: {e}")
+                        print(f"[ERR] Error en conversor de YouTube: {e}")
                 elif choice == '3':
-                    print("\n☁️ Iniciando conversor de SoundCloud...")
+                    print("\n[CLOUD] Iniciando conversor de SoundCloud...")
                     try:
                         self.controllers['soundcloud'].run()
                     except Exception as e:
-                        print(f"❌ Error en conversor de SoundCloud: {e}")
+                        print(f"[ERR] Error en conversor de SoundCloud: {e}")
                 elif choice == '4':
                     self.show_system_status()
                 elif choice == '5':
                     from run_conversores import show_songs
                     show_songs()
                 
-                print("\n⏸️  Presiona Enter para continuar...", end='', flush=True)
+                print("\n[PAUSE]  Presiona Enter para continuar...", end='', flush=True)
                 try:
                     input()
                 except (EOFError, KeyboardInterrupt):
                     print()
                 
         except KeyboardInterrupt:
-            print("\n\n⏹️  Programa terminado por el usuario. ¡Hasta luego!")
+            print("\n\n[STOP]  Programa terminado por el usuario. ¡Hasta luego!")
         except Exception as e:
-            print(f"\n❌ Error crítico: {str(e)}")
+            print(f"\n[ERR] Error crítico: {str(e)}")

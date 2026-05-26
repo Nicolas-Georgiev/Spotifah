@@ -42,7 +42,7 @@ class YouTube2MP3Controller(BaseController):
         """Process YouTube to MP3 conversion"""
         try:
             self.view.show_conversion_steps()
-            self.show_progress("⬇️ Descargando desde YouTube...")
+            self.show_progress("[DOWN] Descargando desde YouTube...")
             result_path = self.model.convert(youtube_url)
             return result_path
             
@@ -62,7 +62,7 @@ class YouTube2MP3Controller(BaseController):
                 return False
 
             if self.model.is_playlist_url(url):
-                print("\n📋 Playlist de YouTube detectada.")
+                print("\n[LIST] Playlist de YouTube detectada.")
                 print("Obteniendo lista de vídeos... (puede tardar unos segundos)")
                 try:
                     track_urls = self.model.get_playlist_track_urls(url)
@@ -71,14 +71,14 @@ class YouTube2MP3Controller(BaseController):
                     self.handle_error(e)
                     return False
 
-                print(f"\n🎵 Se encontraron {total} vídeos.")
+                print(f"\n[MUSIC] Se encontraron {total} vídeos.")
                 confirm = input("\u00bfDescargar todos? [s/N]: ").strip().lower()
                 if confirm not in ('s', 'si', 'yes', 'y'):
-                    print("⏹️  Descarga cancelada.")
+                    print("[STOP]  Descarga cancelada.")
                     return False
 
                 results = self.model.convert_playlist(url)
-                print(f"\n✅ Descargados {len(results)}/{total} vídeos")
+                print(f"\n[OK] Descargados {len(results)}/{total} vídeos")
                 return len(results) > 0
 
             result_path = self.process_conversion(url)
@@ -87,7 +87,7 @@ class YouTube2MP3Controller(BaseController):
             return True
 
         except KeyboardInterrupt:
-            self.show_progress("⏹️  Operación cancelada por el usuario")
+            self.show_progress("[STOP]  Operación cancelada por el usuario")
             return False
         except Exception as e:
             self.handle_error(e)
@@ -107,7 +107,7 @@ class YouTube2MP3Controller(BaseController):
                         break
                         
                 except KeyboardInterrupt:
-                    print("\n⏹️  Programa interrumpido por el usuario")
+                    print("\n[STOP]  Programa interrumpido por el usuario")
                     break
                 except Exception as e:
                     self.handle_error(e)
@@ -117,6 +117,6 @@ class YouTube2MP3Controller(BaseController):
             self.view.show_goodbye()
             
         except KeyboardInterrupt:
-            print("\n⏹️  Programa terminado")
+            print("\n[STOP]  Programa terminado")
         except Exception as e:
             self.handle_error(e)

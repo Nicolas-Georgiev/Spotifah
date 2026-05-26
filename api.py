@@ -121,7 +121,7 @@ class Api:
         except Exception:
             return None
 
-    # ── Cover extraction & local caching ────────────────────────
+    # -- Cover extraction & local caching ------------------------
 
     def _localize_cover(self, song_id: int, external_url: str) -> str:
         if not external_url or external_url.startswith("/api/covers/"):
@@ -221,7 +221,7 @@ class Api:
 
         return ""
 
-    # ── Validación de dependencias ─────────────────────────────
+    # -- Validación de dependencias -----------------------------
 
     def _check_ffmpeg(self) -> tuple[bool, str]:
         try:
@@ -274,7 +274,7 @@ class Api:
             "o configúralos como variables de entorno."
         )
 
-    # ── YouTube → MP3 ──────────────────────────────────────────
+    # -- YouTube → MP3 ------------------------------------------
 
     def convert_youtube(self, url: str) -> dict:
         ok, msg = self._check_ffmpeg()
@@ -301,7 +301,7 @@ class Api:
                 "log": f.getvalue(),
             }
 
-    # ── Spotify → MP3 ─────────────────────────────────────────
+    # -- Spotify → MP3 -----------------------------------------
 
     def convert_spotify(self, url: str) -> dict:
         ok, msg = self._check_ffmpeg()
@@ -331,7 +331,7 @@ class Api:
                 "log": f.getvalue(),
             }
 
-    # ── SoundCloud → MP3 ───────────────────────────────────────
+    # -- SoundCloud → MP3 ---------------------------------------
 
     def convert_soundcloud(self, url: str) -> dict:
         ok, msg = self._check_ffmpeg()
@@ -359,9 +359,9 @@ class Api:
                 "log": f.getvalue(),
             }
 
-    # ── Importación de playlists ──────────────────────────────
+    # -- Importación de playlists ------------------------------
 
-    # ── Album Preview ────────────────────────────────────────────
+    # -- Album Preview --------------------------------------------
 
     def _cleanup_preview_covers(self):
         import glob
@@ -552,7 +552,7 @@ class Api:
     def import_album(self, url: str) -> dict:
         return self.import_playlist(url)
 
-    # ── Importación de playlists ──────────────────────────────
+    # -- Importación de playlists ------------------------------
 
     def _detect_url_type(self, url: str) -> dict:
         from model.spotify2mp3_model import Spotify2MP3Converter
@@ -700,7 +700,7 @@ class Api:
             primera = get_cancion_json(id_cancion=song_ids[0])
             if primera and primera.get("caratula_url"):
                 cover_url = primera["caratula_url"]
-                print(f"🖼️ Usando portada de la primera canci\u00f3n: {cover_url}")
+                print(f"[COVER] Usando portada de la primera canci\u00f3n: {cover_url}")
 
         self._finalize_import(task, song_ids, cover_url, url, "YouTube")
 
@@ -734,7 +734,7 @@ class Api:
             primera = get_cancion_json(id_cancion=song_ids[0])
             if primera and primera.get("caratula_url"):
                 cover_url = primera["caratula_url"]
-                print(f"🖼️ Usando portada de la primera canci\u00f3n: {cover_url}")
+                print(f"[COVER] Usando portada de la primera canci\u00f3n: {cover_url}")
 
         self._finalize_import(task, song_ids, cover_url, url, "SoundCloud")
 
@@ -777,7 +777,7 @@ class Api:
             },
         }
 
-    # ── Playlists ──────────────────────────────────────────────
+    # -- Playlists ----------------------------------------------
 
     def _playlist_cover_url(self, playlist_id: int) -> str:
         conn = self.db.get_connection()
@@ -1061,7 +1061,7 @@ class Api:
         except Exception as e:
             return {"ok": False, "error": str(e)}
 
-    # ── Playlist CRUD ─────────────────────────────────────────
+    # -- Playlist CRUD -----------------------------------------
 
     def create_playlist(self, name: str, description: str = "") -> dict:
         try:
@@ -1243,7 +1243,7 @@ class Api:
         except Exception:
             return {"ok": True, "data": {"favorite": False}}
 
-    # ── Playback ───────────────────────────────────────────────
+    # -- Playback -----------------------------------------------
 
     def _init_player(self):
         if not self._pygame_inited:
@@ -1458,7 +1458,7 @@ class Api:
         except Exception as e:
             return {"ok": False, "error": str(e)}
 
-    # ── Now Playing / Position / Volume ───────────────────────
+    # -- Now Playing / Position / Volume -----------------------
 
     def get_now_playing(self) -> dict:
         try:
@@ -1642,7 +1642,7 @@ class Api:
         except Exception as e:
             return {"ok": False, "error": str(e)}
 
-    # ── System Status ──────────────────────────────────────────
+    # -- System Status ------------------------------------------
 
     def get_system_status(self) -> dict:
         deps = {}

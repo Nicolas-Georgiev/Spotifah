@@ -24,7 +24,7 @@ try:
     from databaseManager.db import Database
     _DB_AVAILABLE = True
 except Exception as _e:
-    print(f"⚠️ db_adapter: no se pudo importar Database ({_e}). El guardado en BD estará desactivado.")
+    print(f"[WARN] db_adapter: no se pudo importar Database ({_e}). El guardado en BD estará desactivado.")
     _DB_AVAILABLE = False
 
 
@@ -64,7 +64,7 @@ def imagen_url_a_blob(url: str) -> bytes | None:
         response.raise_for_status()
         return response.content
     except Exception as e:
-        print(f"⚠️ Error al descargar imagen desde {url}: {e}")
+        print(f"[WARN] Error al descargar imagen desde {url}: {e}")
         return None
 
 
@@ -85,7 +85,7 @@ def imagen_archivo_a_blob(ruta: str) -> bytes | None:
         with open(ruta, 'rb') as f:
             return f.read()
     except Exception as e:
-        print(f"⚠️ Error al leer imagen desde {ruta}: {e}")
+        print(f"[WARN] Error al leer imagen desde {ruta}: {e}")
         return None
 
 
@@ -105,7 +105,7 @@ def blob_a_base64(blob: bytes) -> str | None:
     try:
         return base64.b64encode(blob).decode('utf-8')
     except Exception as e:
-        print(f"⚠️ Error al convertir BLOB a base64: {e}")
+        print(f"[WARN] Error al convertir BLOB a base64: {e}")
         return None
 
 
@@ -125,7 +125,7 @@ def base64_a_blob(base64_str: str) -> bytes | None:
     try:
         return base64.b64decode(base64_str)
     except Exception as e:
-        print(f"⚠️ Error al convertir base64 a BLOB: {e}")
+        print(f"[WARN] Error al convertir base64 a BLOB: {e}")
         return None
 
 
@@ -147,7 +147,7 @@ def blob_a_data_uri(blob: bytes, mime_type: str = 'image/jpeg') -> str | None:
         base64_str = base64.b64encode(blob).decode('utf-8')
         return f"data:{mime_type};base64,{base64_str}"
     except Exception as e:
-        print(f"⚠️ Error al crear Data URI: {e}")
+        print(f"[WARN] Error al crear Data URI: {e}")
         return None
 
 
@@ -194,11 +194,11 @@ def get_cancion_json(id_cancion: int = None, titulo: str = None,
         dict: JSON con los datos de la canción, o None si no se encuentra
     """
     if not _DB_AVAILABLE:
-        print("⚠️ BD no disponible")
+        print("[WARN] BD no disponible")
         return None
     
     if not id_cancion and not (titulo and artista):
-        print("⚠️ get_cancion_json: se requiere id_cancion o (titulo + artista)")
+        print("[WARN] get_cancion_json: se requiere id_cancion o (titulo + artista)")
         return None
     
     try:
@@ -221,17 +221,17 @@ def get_cancion_json(id_cancion: int = None, titulo: str = None,
             row = cur.fetchone()
             if row:
                 cancion_json = _cancion_row_to_json(row)
-                print(f"📖 BD — canción encontrada: {cancion_json['titulo']} - {cancion_json['artista']}")
+                print(f"[BOOK] BD — canción encontrada: {cancion_json['titulo']} - {cancion_json['artista']}")
                 return cancion_json
             else:
-                print(f"⚠️ BD — canción no encontrada")
+                print(f"[WARN] BD — canción no encontrada")
                 return None
                 
         finally:
             conn.close()
             
     except Exception as e:
-        print(f"⚠️ db_adapter.get_cancion_json error: {e}")
+        print(f"[WARN] db_adapter.get_cancion_json error: {e}")
         return None
 
 
@@ -243,7 +243,7 @@ def get_todas_canciones_json(db_path=None) -> list[dict]:
         list[dict]: Lista de JSONs con los datos de todas las canciones
     """
     if not _DB_AVAILABLE:
-        print("⚠️ BD no disponible")
+        print("[WARN] BD no disponible")
         return []
     
     try:
@@ -255,14 +255,14 @@ def get_todas_canciones_json(db_path=None) -> list[dict]:
             rows = cur.fetchall()
             
             canciones = [_cancion_row_to_json(row) for row in rows]
-            print(f"📖 BD — {len(canciones)} canciones encontradas")
+            print(f"[BOOK] BD — {len(canciones)} canciones encontradas")
             return canciones
                 
         finally:
             conn.close()
             
     except Exception as e:
-        print(f"⚠️ db_adapter.get_todas_canciones_json error: {e}")
+        print(f"[WARN] db_adapter.get_todas_canciones_json error: {e}")
         return []
 
 
@@ -280,7 +280,7 @@ def guardar_cancion_desde_json(cancion_json: dict | str, db_path=None) -> dict |
               o None si falla
     """
     if not _DB_AVAILABLE:
-        print("⚠️ BD no disponible")
+        print("[WARN] BD no disponible")
         return None
     
     # Si recibimos un string JSON, convertirlo a dict
@@ -288,7 +288,7 @@ def guardar_cancion_desde_json(cancion_json: dict | str, db_path=None) -> dict |
         try:
             cancion_json = json.loads(cancion_json)
         except json.JSONDecodeError as e:
-            print(f"⚠️ guardar_cancion_desde_json: JSON inválido ({e})")
+            print(f"[WARN] guardar_cancion_desde_json: JSON inválido ({e})")
             return None
     
     # Usar upsert_cancion que ya maneja la lógica de inserción/actualización
@@ -347,7 +347,7 @@ def upsert_cancion(metadata: dict, db_path=None) -> int | None:
         caratula_blob = imagen_archivo_a_blob(metadata['caratula_path'])
 
     if not titulo:
-        print("⚠️ db_adapter.upsert_cancion: título vacío, se omite el guardado.")
+        print("[WARN] db_adapter.upsert_cancion: título vacío, se omite el guardado.")
         return None
 
     try:
@@ -375,7 +375,7 @@ def upsert_cancion(metadata: dict, db_path=None) -> int | None:
                     (ruta_local, caratula_url, caratula_blob, id_cancion)
                 )
                 conn.commit()
-                print(f"🔄 BD actualizada — canción existente: {titulo} - {artista} (id={id_cancion})")
+                print(f"[SYNC] BD actualizada — canción existente: {titulo} - {artista} (id={id_cancion})")
                 return id_cancion
 
             # Insertar nueva canción
@@ -389,14 +389,14 @@ def upsert_cancion(metadata: dict, db_path=None) -> int | None:
             )
             conn.commit()
             id_cancion = cur.lastrowid
-            print(f"💾 BD — nueva canción guardada: {titulo} - {artista} (id={id_cancion})")
+            print(f"[SAVE] BD — nueva canción guardada: {titulo} - {artista} (id={id_cancion})")
             return id_cancion
 
         finally:
             conn.close()
 
     except Exception as e:
-        print(f"⚠️ db_adapter.upsert_cancion error: {e}")
+        print(f"[WARN] db_adapter.upsert_cancion error: {e}")
         return None
 
 
@@ -438,7 +438,7 @@ def upsert_cancion_json(metadata: dict, db_path=None) -> dict | None:
         # Obtener el JSON completo de la canción guardada
         cancion_json = get_cancion_json(id_cancion=id_cancion, db_path=db_path)
         if cancion_json:
-            print(f"✅ Canción guardada y JSON generado: {cancion_json['titulo']} - {cancion_json['artista']}")
+            print(f"[OK] Canción guardada y JSON generado: {cancion_json['titulo']} - {cancion_json['artista']}")
         return cancion_json
     
     return None
@@ -469,13 +469,13 @@ def registrar_descarga(id_cancion: int, id_usuario: int = 1,
             )
             conn.commit()
             id_descarga = cur.lastrowid
-            print(f"💾 BD — descarga registrada: id_cancion={id_cancion}, formato={formato} (id_descarga={id_descarga})")
+            print(f"[SAVE] BD — descarga registrada: id_cancion={id_cancion}, formato={formato} (id_descarga={id_descarga})")
             return id_descarga
         finally:
             conn.close()
 
     except Exception as e:
-        print(f"⚠️ db_adapter.registrar_descarga error: {e}")
+        print(f"[WARN] db_adapter.registrar_descarga error: {e}")
         return None
 
 
@@ -511,7 +511,7 @@ def get_playlist_json(id_playlist: int, db_path=None) -> dict | None:
         }
     """
     if not _DB_AVAILABLE:
-        print("⚠️ BD no disponible")
+        print("[WARN] BD no disponible")
         return None
     
     try:
@@ -530,7 +530,7 @@ def get_playlist_json(id_playlist: int, db_path=None) -> dict | None:
             
             playlist_row = cur.fetchone()
             if not playlist_row:
-                print(f"⚠️ BD — playlist no encontrada (id={id_playlist})")
+                print(f"[WARN] BD — playlist no encontrada (id={id_playlist})")
                 return None
             
             # Construir el JSON de la playlist
@@ -560,14 +560,14 @@ def get_playlist_json(id_playlist: int, db_path=None) -> dict | None:
                 cancion_json['orden'] = cancion_row['orden']
                 playlist_json['canciones'].append(cancion_json)
             
-            print(f"📖 BD — playlist encontrada: {playlist_json['nombre']} con {len(playlist_json['canciones'])} canciones")
+            print(f"[BOOK] BD — playlist encontrada: {playlist_json['nombre']} con {len(playlist_json['canciones'])} canciones")
             return playlist_json
                 
         finally:
             conn.close()
             
     except Exception as e:
-        print(f"⚠️ db_adapter.get_playlist_json error: {e}")
+        print(f"[WARN] db_adapter.get_playlist_json error: {e}")
         return None
 
 
@@ -584,7 +584,7 @@ def get_todas_playlists_json(id_usuario: int = None, db_path=None) -> list[dict]
         list[dict]: Lista de JSONs con los datos de las playlists (sin canciones detalladas)
     """
     if not _DB_AVAILABLE:
-        print("⚠️ BD no disponible")
+        print("[WARN] BD no disponible")
         return []
     
     try:
@@ -629,14 +629,14 @@ def get_todas_playlists_json(id_usuario: int = None, db_path=None) -> list[dict]
                 }
                 playlists.append(playlist_json)
             
-            print(f"📖 BD — {len(playlists)} playlists encontradas")
+            print(f"[BOOK] BD — {len(playlists)} playlists encontradas")
             return playlists
                 
         finally:
             conn.close()
             
     except Exception as e:
-        print(f"⚠️ db_adapter.get_todas_playlists_json error: {e}")
+        print(f"[WARN] db_adapter.get_todas_playlists_json error: {e}")
         return []
 
 
@@ -664,7 +664,7 @@ def guardar_playlist_json_completa(id_usuario: int, nombre: str, descripcion: st
         dict: JSON completo de la playlist guardada, o None si falla
     """
     if not _DB_AVAILABLE:
-        print("⚠️ BD no disponible")
+        print("[WARN] BD no disponible")
         return None
     
     try:
@@ -744,14 +744,14 @@ def guardar_playlist_json_completa(id_usuario: int, nombre: str, descripcion: st
             if caratula_blob:
                 playlist_json['caratula_base64'] = blob_a_base64(caratula_blob)
             
-            print(f"💾 Playlist guardada completa: {nombre} (ID: {id_playlist}, {len(canciones_completas)} canciones)")
+            print(f"[SAVE] Playlist guardada completa: {nombre} (ID: {id_playlist}, {len(canciones_completas)} canciones)")
             return playlist_json
             
         finally:
             conn.close()
             
     except Exception as e:
-        print(f"⚠️ Error al guardar playlist completa: {e}")
+        print(f"[WARN] Error al guardar playlist completa: {e}")
         import traceback
         traceback.print_exc()
         return None
@@ -770,7 +770,7 @@ def obtener_playlist_json_completa(id_playlist: int, db_path=None) -> dict | Non
         dict: JSON completo de la playlist con todas sus canciones, o None si falla
     """
     if not _DB_AVAILABLE:
-        print("⚠️ BD no disponible")
+        print("[WARN] BD no disponible")
         return None
     
     try:
@@ -789,7 +789,7 @@ def obtener_playlist_json_completa(id_playlist: int, db_path=None) -> dict | Non
             
             row = cur.fetchone()
             if not row:
-                print(f"⚠️ Playlist no encontrada (ID: {id_playlist})")
+                print(f"[WARN] Playlist no encontrada (ID: {id_playlist})")
                 return None
             
             # Si existe playlist_json, usarlo
@@ -804,10 +804,10 @@ def obtener_playlist_json_completa(id_playlist: int, db_path=None) -> dict | Non
                     if row['caratula_blob']:
                         playlist_data['caratula_base64'] = blob_a_base64(row['caratula_blob'])
                     
-                    print(f"📖 Playlist obtenida desde JSON: {playlist_data['nombre']} ({len(playlist_data.get('canciones', []))} canciones)")
+                    print(f"[BOOK] Playlist obtenida desde JSON: {playlist_data['nombre']} ({len(playlist_data.get('canciones', []))} canciones)")
                     return playlist_data
                 except json.JSONDecodeError:
-                    print("⚠️ JSON de playlist corrupto, reconstruyendo desde tablas relacionales...")
+                    print("[WARN] JSON de playlist corrupto, reconstruyendo desde tablas relacionales...")
             
             # Si no hay playlist_json o está corrupto, construir desde tablas relacionales
             playlist_json = {
@@ -843,14 +843,14 @@ def obtener_playlist_json_completa(id_playlist: int, db_path=None) -> dict | Non
             if row['caratula_blob']:
                 playlist_json['caratula_base64'] = blob_a_base64(row['caratula_blob'])
             
-            print(f"📖 Playlist obtenida desde tablas: {playlist_json['nombre']} ({len(playlist_json['canciones'])} canciones)")
+            print(f"[BOOK] Playlist obtenida desde tablas: {playlist_json['nombre']} ({len(playlist_json['canciones'])} canciones)")
             return playlist_json
             
         finally:
             conn.close()
             
     except Exception as e:
-        print(f"⚠️ Error al obtener playlist completa: {e}")
+        print(f"[WARN] Error al obtener playlist completa: {e}")
         import traceback
         traceback.print_exc()
         return None
@@ -877,13 +877,13 @@ def actualizar_playlist_json_completa(id_playlist: int, nombre: str = None,
         dict: JSON completo actualizado, o None si falla
     """
     if not _DB_AVAILABLE:
-        print("⚠️ BD no disponible")
+        print("[WARN] BD no disponible")
         return None
     
     # Primero obtener la playlist actual
     playlist_actual = obtener_playlist_json_completa(id_playlist, db_path)
     if not playlist_actual:
-        print(f"⚠️ No se puede actualizar playlist {id_playlist}: no existe")
+        print(f"[WARN] No se puede actualizar playlist {id_playlist}: no existe")
         return None
     
     try:
@@ -980,14 +980,14 @@ def actualizar_playlist_json_completa(id_playlist: int, nombre: str = None,
             if caratula_blob:
                 playlist_actual['caratula_base64'] = blob_a_base64(caratula_blob)
             
-            print(f"🔄 Playlist actualizada: {playlist_actual['nombre']} (ID: {id_playlist})")
+            print(f"[SYNC] Playlist actualizada: {playlist_actual['nombre']} (ID: {id_playlist})")
             return playlist_actual
             
         finally:
             conn.close()
             
     except Exception as e:
-        print(f"⚠️ Error al actualizar playlist completa: {e}")
+        print(f"[WARN] Error al actualizar playlist completa: {e}")
         import traceback
         traceback.print_exc()
         return None
@@ -1012,5 +1012,5 @@ def get_id_cancion_por_ruta(ruta_local: str, db_path=None) -> int | None:
         finally:
             conn.close()
     except Exception as e:
-        print(f"⚠️ db_adapter.get_id_cancion_por_ruta error: {e}")
+        print(f"[WARN] db_adapter.get_id_cancion_por_ruta error: {e}")
         return None

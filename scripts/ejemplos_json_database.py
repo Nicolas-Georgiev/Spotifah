@@ -42,11 +42,11 @@ def ejemplo_1_guardar_cancion_dict():
         'caratula_url': 'https://example.com/cover.jpg',
     }
     
-    print("\n📥 Guardando canción...")
+    print("\n[INBOX] Guardando canción...")
     cancion_json = upsert_cancion_json(metadata)
     
     if cancion_json:
-        print("\n✅ Canción guardada exitosamente!")
+        print("\n[OK] Canción guardada exitosamente!")
         print(f"   ID: {cancion_json['id_cancion']}")
         print(f"   Título: {cancion_json['titulo']}")
         print(f"   Artista: {cancion_json['artista']}")
@@ -54,12 +54,12 @@ def ejemplo_1_guardar_cancion_dict():
         print(f"   Duración: {cancion_json['duracion_seg']} segundos")
         print(f"   Fecha importación: {cancion_json['fecha_importacion']}")
         
-        print("\n📄 JSON completo:")
+        print("\n[FILE] JSON completo:")
         print(json.dumps(cancion_json, indent=2, ensure_ascii=False))
         
         return cancion_json['id_cancion']
     else:
-        print("❌ Error al guardar la canción")
+        print("[ERR] Error al guardar la canción")
         return None
 
 
@@ -80,17 +80,17 @@ def ejemplo_2_guardar_desde_json_string():
     }
     '''
     
-    print("\n📥 Guardando canción desde JSON string...")
+    print("\n[INBOX] Guardando canción desde JSON string...")
     cancion_json = guardar_cancion_desde_json(json_string)
     
     if cancion_json:
-        print("\n✅ Canción guardada exitosamente!")
+        print("\n[OK] Canción guardada exitosamente!")
         print(f"   ID: {cancion_json['id_cancion']}")
         print(f"   Título: {cancion_json['titulo']}")
         print(f"   Artista: {cancion_json['artista']}")
         return cancion_json['id_cancion']
     else:
-        print("❌ Error al guardar la canción")
+        print("[ERR] Error al guardar la canción")
         return None
 
 
@@ -100,18 +100,18 @@ def ejemplo_3_obtener_cancion_por_id(id_cancion):
     print("EJEMPLO 3: Obtener canción por ID")
     print("="*60)
     
-    print(f"\n🔍 Buscando canción con ID {id_cancion}...")
+    print(f"\n[SEARCH] Buscando canción con ID {id_cancion}...")
     cancion = get_cancion_json(id_cancion=id_cancion)
     
     if cancion:
-        print("\n✅ Canción encontrada!")
+        print("\n[OK] Canción encontrada!")
         print(f"   Título: {cancion['titulo']}")
         print(f"   Artista: {cancion['artista']}")
         print(f"   Álbum: {cancion['album']}")
         print(f"   Plataforma: {cancion['plataforma_origen']}")
         print(f"   Ruta local: {cancion['ruta_local']}")
     else:
-        print("❌ Canción no encontrada")
+        print("[ERR] Canción no encontrada")
 
 
 def ejemplo_4_obtener_cancion_por_titulo_artista():
@@ -123,18 +123,18 @@ def ejemplo_4_obtener_cancion_por_titulo_artista():
     titulo = "Bohemian Rhapsody"
     artista = "Queen"
     
-    print(f"\n🔍 Buscando '{titulo}' de {artista}...")
+    print(f"\n[SEARCH] Buscando '{titulo}' de {artista}...")
     cancion = get_cancion_json(titulo=titulo, artista=artista)
     
     if cancion:
-        print("\n✅ Canción encontrada!")
+        print("\n[OK] Canción encontrada!")
         print(f"   ID: {cancion['id_cancion']}")
         print(f"   Título: {cancion['titulo']}")
         print(f"   Artista: {cancion['artista']}")
         print(f"   Duración: {cancion['duracion_seg']}s")
         print(f"   Género: {cancion['genero']}")
     else:
-        print("❌ Canción no encontrada")
+        print("[ERR] Canción no encontrada")
 
 
 def ejemplo_5_listar_todas_canciones():
@@ -143,10 +143,10 @@ def ejemplo_5_listar_todas_canciones():
     print("EJEMPLO 5: Listar todas las canciones")
     print("="*60)
     
-    print("\n📚 Obteniendo todas las canciones...")
+    print("\n[BOOKS] Obteniendo todas las canciones...")
     canciones = get_todas_canciones_json()
     
-    print(f"\n✅ Se encontraron {len(canciones)} canciones:")
+    print(f"\n[OK] Se encontraron {len(canciones)} canciones:")
     for i, cancion in enumerate(canciones, 1):
         print(f"\n{i}. {cancion['titulo']} - {cancion['artista']}")
         print(f"   ID: {cancion['id_cancion']} | Álbum: {cancion['album'] or 'N/A'}")
@@ -162,23 +162,23 @@ def ejemplo_6_obtener_playlist():
     
     id_playlist = 1  # Playlist de ejemplo de la BD semilla
     
-    print(f"\n🔍 Obteniendo playlist {id_playlist}...")
+    print(f"\n[SEARCH] Obteniendo playlist {id_playlist}...")
     playlist = get_playlist_json(id_playlist=id_playlist)
     
     if playlist:
-        print("\n✅ Playlist encontrada!")
+        print("\n[OK] Playlist encontrada!")
         print(f"   Nombre: {playlist['nombre']}")
         print(f"   Descripción: {playlist['descripcion']}")
         print(f"   Creada por: {playlist['nombre_usuario']}")
         print(f"   Estado: {'Pública' if playlist['publica'] else 'Privada'}")
         print(f"   Fecha creación: {playlist['fecha_creacion']}")
         
-        print(f"\n🎵 Canciones ({len(playlist['canciones'])}):")
+        print(f"\n[MUSIC] Canciones ({len(playlist['canciones'])}):")
         for cancion in playlist['canciones']:
             print(f"   {cancion['orden']}. {cancion['titulo']} - {cancion['artista']}")
             print(f"      Duración: {cancion['duracion_seg']}s | Género: {cancion['genero']}")
     else:
-        print("❌ Playlist no encontrada")
+        print("[ERR] Playlist no encontrada")
 
 
 def ejemplo_7_listar_todas_playlists():
@@ -187,10 +187,10 @@ def ejemplo_7_listar_todas_playlists():
     print("EJEMPLO 7: Listar todas las playlists")
     print("="*60)
     
-    print("\n📚 Obteniendo todas las playlists...")
+    print("\n[BOOKS] Obteniendo todas las playlists...")
     playlists = get_todas_playlists_json()
     
-    print(f"\n✅ Se encontraron {len(playlists)} playlists:")
+    print(f"\n[OK] Se encontraron {len(playlists)} playlists:")
     for playlist in playlists:
         print(f"\n• {playlist['nombre']} (ID: {playlist['id_playlist']})")
         print(f"  Creada por: {playlist['nombre_usuario']}")
@@ -207,15 +207,15 @@ def ejemplo_8_exportar_a_json():
     output_file = os.path.join(os.path.dirname(__file__), 'data', 'temp', 'biblioteca_export.json')
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
     
-    print("\n📚 Obteniendo todas las canciones...")
+    print("\n[BOOKS] Obteniendo todas las canciones...")
     canciones = get_todas_canciones_json()
     
-    print(f"💾 Exportando {len(canciones)} canciones a {output_file}...")
+    print(f"[SAVE] Exportando {len(canciones)} canciones a {output_file}...")
     
     with open(output_file, 'w', encoding='utf-8') as f:
         json.dump(canciones, f, indent=2, ensure_ascii=False)
     
-    print(f"✅ Exportación completada!")
+    print(f"[OK] Exportación completada!")
     print(f"   Archivo: {output_file}")
     print(f"   Tamaño: {os.path.getsize(output_file)} bytes")
 
@@ -233,15 +233,15 @@ def ejemplo_9_actualizar_cancion_existente():
         'plataforma_origen': 'local'
     }
     
-    print("\n📥 Guardando canción inicial...")
+    print("\n[INBOX] Guardando canción inicial...")
     cancion_json = upsert_cancion_json(metadata)
     
     if cancion_json:
-        print(f"✅ Canción guardada con ID {cancion_json['id_cancion']}")
+        print(f"[OK] Canción guardada con ID {cancion_json['id_cancion']}")
         print(f"   Ruta local: {cancion_json['ruta_local']}")
         
         # Actualizar con nueva información
-        print("\n🔄 Actualizando con nueva información...")
+        print("\n[SYNC] Actualizando con nueva información...")
         metadata_actualizado = {
             'titulo': 'Test Song',
             'artista': 'Test Artist',
@@ -252,16 +252,16 @@ def ejemplo_9_actualizar_cancion_existente():
         cancion_actualizada = upsert_cancion_json(metadata_actualizado)
         
         if cancion_actualizada:
-            print(f"✅ Canción actualizada (mismo ID: {cancion_actualizada['id_cancion']})")
+            print(f"[OK] Canción actualizada (mismo ID: {cancion_actualizada['id_cancion']})")
             print(f"   Nueva ruta local: {cancion_actualizada['ruta_local']}")
             print(f"   Nueva carátula: {cancion_actualizada['caratula_url']}")
 
 
 def main():
     """Ejecuta todos los ejemplos"""
-    print("\n" + "🎵"*30)
+    print("\n" + "[MUSIC]"*30)
     print("EJEMPLOS DE USO DE FUNCIONES JSON DE BASE DE DATOS")
-    print("🎵"*30)
+    print("[MUSIC]"*30)
     
     try:
         # Ejemplo 1: Guardar canción desde diccionario
@@ -293,11 +293,11 @@ def main():
         ejemplo_9_actualizar_cancion_existente()
         
         print("\n" + "="*60)
-        print("✅ TODOS LOS EJEMPLOS COMPLETADOS")
+        print("[OK] TODOS LOS EJEMPLOS COMPLETADOS")
         print("="*60)
         
     except Exception as e:
-        print(f"\n❌ Error: {e}")
+        print(f"\n[ERR] Error: {e}")
         import traceback
         traceback.print_exc()
 

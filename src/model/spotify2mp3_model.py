@@ -16,39 +16,39 @@ try:
     from model.db_adapter import upsert_cancion, registrar_descarga
     _DB_ADAPTER_OK = True
 except Exception as _db_e:
-    print(f"⚠️ spotify2mp3_model: db_adapter no disponible ({_db_e})")
+    print(f"[WARN] spotify2mp3_model: db_adapter no disponible ({_db_e})")
     _DB_ADAPTER_OK = False
 
 # Bibliotecas esenciales simplificadas
 try:
     from moviepy.editor import AudioFileClip
-    print("✅ Usando moviepy para conversión de audio de Spotify")
+    print("[OK] Usando moviepy para conversión de audio de Spotify")
 except ImportError:
-    print("⚠️ moviepy no disponible. Instala: pip install moviepy")
+    print("[WARN] moviepy no disponible. Instala: pip install moviepy")
     raise ImportError("moviepy es requerido para conversión")
 
 try:
     from mutagen.mp3 import MP3
     from mutagen.id3 import ID3, APIC, TIT2, TPE1, TALB 
-    print("✅ Usando mutagen para metadatos de audio de Spotify")
+    print("[OK] Usando mutagen para metadatos de audio de Spotify")
 except ImportError:
-    print("⚠️ mutagen no disponible. Instala: pip install mutagen")
+    print("[WARN] mutagen no disponible. Instala: pip install mutagen")
     raise ImportError("mutagen es requerido para metadatos")
 
 # Bibliotecas obligatorias
 try:
     import yt_dlp
-    print("✅ Usando yt-dlp para descargas desde YouTube")
+    print("[OK] Usando yt-dlp para descargas desde YouTube")
 except ImportError:
-    print("⚠️ yt-dlp no disponible. Instala: pip install yt-dlp")
+    print("[WARN] yt-dlp no disponible. Instala: pip install yt-dlp")
     raise ImportError("yt-dlp es requerido para descargas")
 
 try:
     from spotdl import Spotdl
-    print("✅ Usando API legacy de spotdl para metadatos de Spotify")
+    print("[OK] Usando API legacy de spotdl para metadatos de Spotify")
 except ImportError:
-    print("🚨 ERROR: spotdl no disponible - ES OBLIGATORIO")
-    print("   📦 INSTALAR: pip install spotdl")
+    print("[FAIL] ERROR: spotdl no disponible - ES OBLIGATORIO")
+    print("   [PACK] INSTALAR: pip install spotdl")
     raise ImportError("spotdl es requerido para el funcionamiento")
 
 # Singleton de SpotifyInfoExtractor — spotdl usa SpotifyClient global internamente,
@@ -121,10 +121,10 @@ class SpotifyInfoExtractor:
 
                 self.spotdl = _SHARED_SPOTDL
 
-            print("✅ SpotDL configurado exitosamente")
+            print("[OK] SpotDL configurado exitosamente")
             
         except Exception as e:
-            print(f"🚨 Error configurando SpotDL: {e}")
+            print(f"[FAIL] Error configurando SpotDL: {e}")
             raise RuntimeError("SpotDL es obligatorio para el funcionamiento")
 
     @staticmethod
@@ -146,33 +146,33 @@ class SpotifyInfoExtractor:
         # 1. Intentar con SpotDL
         track_info = self._get_info_from_spotdl(spotify_url)
         if track_info and track_info.get('artista') != 'Artista Desconocido':
-            print("✅ Metadatos obtenidos via SpotDL")
+            print("[OK] Metadatos obtenidos via SpotDL")
             return track_info
 
-        print("⚠️ SpotDL falló, intentando métodos alternativos...")
+        print("[WARN] SpotDL falló, intentando métodos alternativos...")
 
         # 2. Intentar extraer de la página principal de Spotify
         track_info = self._get_info_from_main_page(track_id)
         if track_info:
-            print("✅ Metadatos obtenidos via página principal")
+            print("[OK] Metadatos obtenidos via página principal")
             return self._normalize_fallback_info(track_info, spotify_url)
 
         # 3. Intentar con OEmbed
         track_info = self._get_info_from_oembed(track_id)
         if track_info:
-            print("✅ Metadatos obtenidos via OEmbed")
+            print("[OK] Metadatos obtenidos via OEmbed")
             return self._normalize_fallback_info(track_info, spotify_url)
 
         # 4. Intentar con página embed
         track_info = self._get_info_from_embed(track_id)
         if track_info:
-            print("✅ Metadatos obtenidos via embed")
+            print("[OK] Metadatos obtenidos via embed")
             return self._normalize_fallback_info(track_info, spotify_url)
 
         # 5. Intentar con APIs alternativas (iTunes, etc.)
         track_info = self._search_alternative_apis(track_id)
         if track_info:
-            print("✅ Metadatos obtenidos via APIs alternativas")
+            print("[OK] Metadatos obtenidos via APIs alternativas")
             return self._normalize_fallback_info(track_info, spotify_url)
 
         raise RuntimeError(
@@ -211,7 +211,7 @@ class SpotifyInfoExtractor:
         """Método PRINCIPAL: Extraer información usando SpotDL"""
         songs = self.spotdl.search([spotify_url]) 
         if not songs or len(songs) == 0:
-            print("⚠️ SpotDL: No se encontraron resultados")
+            print("[WARN] SpotDL: No se encontraron resultados")
             return None
         song = songs[0]
 
@@ -259,7 +259,7 @@ class SpotifyInfoExtractor:
             len(track_info['artista']) > 1):
             return track_info
         else:
-            print("⚠️ SpotDL: Metadatos incompletos")
+            print("[WARN] SpotDL: Metadatos incompletos")
             return None
 
     @staticmethod
@@ -395,7 +395,7 @@ class SpotifyInfoExtractor:
                                     }
                 
         except Exception as e:
-            print(f"⚠️ Página principal falló: {e}")
+            print(f"[WARN] Página principal falló: {e}")
         return None
     
     @staticmethod
@@ -475,7 +475,7 @@ class SpotifyInfoExtractor:
                         'track_id': track_id
                     }
         except Exception as e:
-            print(f"⚠️ OEmbed falló: {e}")
+            print(f"[WARN] OEmbed falló: {e}")
         return None
 
     def _get_info_from_embed(self, track_id: str):
@@ -677,7 +677,7 @@ class Spotify2MP3Converter(BaseModel):
     def get_track_info(self, spotify_url):
         """Obtiene información de una pista de Spotify"""
         try:
-            print("🔍 Obteniendo información con métodos alternativos...")
+            print("[SEARCH] Obteniendo información con métodos alternativos...")
             raw = self.info_extractor.get_track_info(spotify_url)
 
             if not raw:
@@ -749,7 +749,7 @@ class Spotify2MP3Converter(BaseModel):
         # Probar múltiples consultas de búsqueda
         for search_query in search_queries:
             try:
-                print(f"🔍 Buscando: {search_query}")
+                print(f"[SEARCH] Buscando: {search_query}")
                 
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl: 
                     info = ydl.extract_info(search_query, download=False)
@@ -768,7 +768,7 @@ class Spotify2MP3Converter(BaseModel):
                             }
                             
             except Exception as e:
-                print(f"⚠️ Error en búsqueda '{search_query}': {e}")
+                print(f"[WARN] Error en búsqueda '{search_query}': {e}")
                 continue
         
         raise Exception("No se encontraron resultados en YouTube")
@@ -803,7 +803,7 @@ class Spotify2MP3Converter(BaseModel):
 
             score = 0
 
-            # ── 1. DURACIÓN (criterio más importante) ──────────────────────────
+            # -- 1. DURACIÓN (criterio más importante) --------------------------
             if expected_duration_s > 0 and duration > 0:
                 ratio = duration / expected_duration_s      # 1.0 = perfecto
                 diff  = abs(duration - expected_duration_s)
@@ -825,7 +825,7 @@ class Spotify2MP3Converter(BaseModel):
                 elif 90 <= duration <= 600:
                     score += 5
 
-            # ── 2. TÍTULO / ARTISTA en el nombre del vídeo ────────────────────
+            # -- 2. TÍTULO / ARTISTA en el nombre del vídeo --------------------
             # Coincidencia exacta de palabras individuales (más robusta que substring)
             def word_overlap(text: str, query: str) -> int:
                 if not query:
@@ -841,7 +841,7 @@ class Spotify2MP3Converter(BaseModel):
             score += min(track_words  / total_words,  1.0) * 20   # hasta +20
             score += min(artist_words / artist_total, 1.0) * 15   # hasta +15
 
-            # ── 3. CANAL OFICIAL ───────────────────────────────────────────────
+            # -- 3. CANAL OFICIAL -----------------------------------------------
             uploader_and_channel = uploader + ' ' + channel
             # Canal Topic = subida automática de YouTube Music (suele ser la versión oficial)
             if uploader_and_channel.strip().endswith(' - topic') or ' - topic' in uploader_and_channel:
@@ -858,7 +858,7 @@ class Spotify2MP3Converter(BaseModel):
             if 'auto-generated by youtube' in description:
                 score += 10
 
-            # ── 4. PENALIZACIONES ─────────────────────────────────────────────
+            # -- 4. PENALIZACIONES ---------------------------------------------
             hard_avoid = ['preview', 'teaser', 'snippet', 'clip oficial', 'short clip']
             for kw in hard_avoid:
                 if kw in title:
@@ -885,7 +885,7 @@ class Spotify2MP3Converter(BaseModel):
             best_entry = scored_entries[0][1]
             best_score = scored_entries[0][0]
             print(
-                f"✅ Mejor resultado (score={best_score:.0f}): "
+                f"[OK] Mejor resultado (score={best_score:.0f}): "
                 f"{best_entry.get('title', 'Sin título')} "
                 f"[{best_entry.get('duration', '?')}s]"
             )
@@ -965,13 +965,13 @@ class Spotify2MP3Converter(BaseModel):
             return save_path
             
         except Exception as e:
-            print(f"⚠️ No se pudo descargar la portada: {e}")
+            print(f"[WARN] No se pudo descargar la portada: {e}")
             return None
 
     def add_metadata_to_mp3(self, file_path, track_info, album_art_path=None):
         """Añade metadatos al archivo MP3 usando mutagen"""
         try:
-            print("🏷️ Añadiendo metadatos con mutagen...")
+            print("[TAG] Añadiendo metadatos con mutagen...")
             
             audio = MP3(file_path, ID3=ID3) 
             
@@ -994,13 +994,13 @@ class Spotify2MP3Converter(BaseModel):
                         desc='Cover',
                         data=img.read()
                     ))
-                print("🖼️ Portada agregada")
+                print("[COVER] Portada agregada")
             
             audio.save()
-            print("✅ Metadatos guardados")
+            print("[OK] Metadatos guardados")
                 
         except Exception as e:
-            print(f"⚠️ Error al añadir metadatos: {e}")
+            print(f"[WARN] Error al añadir metadatos: {e}")
 
     def convert(self, spotify_url): 
         """Convierte una URL de Spotify a MP3"""
@@ -1016,40 +1016,40 @@ class Spotify2MP3Converter(BaseModel):
             pass
         
         # 1. Obtener información de la pista de Spotify
-        print("🔍 Obteniendo información de Spotify...")
+        print("[SEARCH] Obteniendo información de Spotify...")
         track_info = self.get_track_info(spotify_url)
         if not track_info:
             raise RuntimeError("No se pudo obtener información de la canción desde Spotify")
         
         titulo_final = track_info.get('titulo', track_info.get('name', 'desconocido'))
         artista_final = track_info.get('artista', track_info.get('artist', 'desconocido'))
-        print(f"📀 Canción: {artista_final} - {titulo_final}")
+        print(f"[DISC] Canción: {artista_final} - {titulo_final}")
         
         # 2. Buscar la pista en YouTube
-        print("🔍 Buscando en YouTube...")
+        print("[SEARCH] Buscando en YouTube...")
         spotify_duration_s = track_info.get('duracion_seg') or track_info.get('duration') or 0
         youtube_info = self.search_on_youtube(titulo_final, artista_final, expected_duration_s=int(spotify_duration_s))
-        print(f"✅ Encontrado en YouTube: {youtube_info['title']}")
+        print(f"[OK] Encontrado en YouTube: {youtube_info['title']}")
         
         # 3. Descargar desde YouTube
         safe_title_pre  = self._sanitize_filename(titulo_final)
         safe_artist_pre = self._sanitize_filename(artista_final)
         _outtmpl = os.path.join(downloads_dir, f"{safe_artist_pre} - {safe_title_pre}.%(ext)s")
 
-        print("⬇️ Descargando desde YouTube...")
+        print("[DOWN] Descargando desde YouTube...")
         mp3_path = self.download_from_youtube(youtube_info['url'], downloads_dir, filename_tmpl=_outtmpl)
-        print(f"✅ Audio descargado: {mp3_path}")
+        print(f"[OK] Audio descargado: {mp3_path}")
         
         # 4. Descargar portada del álbum
         album_art_path = None
         cover_url = track_info.get('caratula_url') or track_info.get('image_url', '')
         if cover_url:
-            print("🖼️ Descargando portada del álbum...")
+            print("[COVER] Descargando portada del álbum...")
             album_art_path = os.path.join(downloads_dir, "temp_cover.jpg")
             album_art_path = self.download_album_art(cover_url, album_art_path)
         
         # 5. Añadir metadatos de Spotify
-        print("🏷️ Añadiendo metadatos...")
+        print("[TAG] Añadiendo metadatos...")
         self.add_metadata_to_mp3(mp3_path, track_info, album_art_path)
         
         # 6. Limpiar archivo temporal de portada
@@ -1072,9 +1072,9 @@ class Spotify2MP3Converter(BaseModel):
             except Exception:
                 pass
         
-        print(f"✅ Conversión completada: {mp3_path}")
+        print(f"[OK] Conversión completada: {mp3_path}")
 
-        # ── Guardar en BD ──────────────────────────────────────────────
+        # -- Guardar en BD ----------------------------------------------
         if _DB_ADAPTER_OK:
             try:
                 _album = track_info.get('album', '')
@@ -1099,12 +1099,12 @@ class Spotify2MP3Converter(BaseModel):
                 id_cancion = upsert_cancion(metadata_bd)
                 registrar_descarga(id_cancion, formato='mp3')
             except Exception as _bd_err:
-                print(f"⚠️ No se pudo guardar en BD: {_bd_err}")
-        # ───────────────────────────────────────────────────────────────
+                print(f"[WARN] No se pudo guardar en BD: {_bd_err}")
+        # ---------------------------------------------------------------
 
         return mp3_path
 
-    # ── Soporte de playlists / álbumes ──────────────────────────────────────
+    # -- Soporte de playlists / álbumes --------------------------------------
 
     @staticmethod
     def _normalize_spotify_url(url: str) -> str:
@@ -1158,16 +1158,16 @@ class Spotify2MP3Converter(BaseModel):
         Devuelve lista de rutas de archivos descargados.
         """
         url = self._normalize_spotify_url(url)
-        print(f'\n🎵 Obteniendo canciones de la playlist: {url}')
+        print(f'\n[MUSIC] Obteniendo canciones de la playlist: {url}')
         songs = self.get_playlist_songs(url)
         total = len(songs)
         if total == 0:
-            print('📋 0 canciones encontradas')
+            print('[LIST] 0 canciones encontradas')
             return []
 
         # Metadatos de playlist
         playlist_name = getattr(songs[0], 'list_name', None) or 'Playlist Spotify'
-        print(f'📋 {total} canciones en "{playlist_name}"')
+        print(f'[LIST] {total} canciones en "{playlist_name}"')
         cover_url = self._get_spotify_playlist_cover(url)
         if not cover_url:
             cover_url = getattr(songs[0], 'cover_url', '') or ''
@@ -1186,13 +1186,13 @@ class Spotify2MP3Converter(BaseModel):
                     song_id = getattr(song, 'song_id', None)
                     track_url = f'https://open.spotify.com/track/{song_id}' if song_id else None
                 if not track_url:
-                    print(f'  ⚠️  Sin URL, omitiendo')
+                    print(f'  [WARN]  Sin URL, omitiendo')
                     failed += 1
                     continue
                 path = self.convert(track_url)
                 if path:
                     results.append(path)
-                    print(f'  ✅ Descargado: {path}')
+                    print(f'  [OK] Descargado: {path}')
                     if _DB_ADAPTER_OK:
                         from model.db_adapter import get_id_cancion_por_ruta
                         id_c = get_id_cancion_por_ruta(path)
@@ -1200,9 +1200,9 @@ class Spotify2MP3Converter(BaseModel):
                             song_ids.append(id_c)
                 else:
                     failed += 1
-                    print(f'  ❌ Falló (sin ruta)')
+                    print(f'  [ERR] Falló (sin ruta)')
             except Exception as e:
-                print(f'  ❌ Error: {e}')
+                print(f'  [ERR] Error: {e}')
                 failed += 1
             if on_progress:
                 on_progress(i, total, titulo)
@@ -1219,19 +1219,19 @@ class Spotify2MP3Converter(BaseModel):
                     caratula_url=cover_url,
                 )
             except Exception as _pl_err:
-                print(f'⚠️ No se pudo crear la playlist en BD: {_pl_err}')
+                print(f'[WARN] No se pudo crear la playlist en BD: {_pl_err}')
 
-        print(f'\n🎉 Playlist completada: {len(results)}/{total} exitosas  ·  {failed} fallidas')
+        print(f'\n[DONE] Playlist completada: {len(results)}/{total} exitosas  ·  {failed} fallidas')
         return results
 
-    # ────────────────────────────────────────────────────────────────────────
+    # ------------------------------------------------------------------------
 
     def _update_metadata_with_local_path(self, track_info, local_path):
         """Actualiza los metadatos con la ruta local del archivo descargado"""
         try:
             filepath = self.info_extractor.get_metadata_file_path()
             if not os.path.exists(filepath):
-                print("⚠️ Archivo de metadatos no encontrado")
+                print("[WARN] Archivo de metadatos no encontrado")
                 return
             
             # Leer archivo existente
@@ -1259,17 +1259,17 @@ class Spotify2MP3Converter(BaseModel):
             with open(filepath, 'w', encoding='utf-8') as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
             
-            print(f"✅ Metadatos actualizados con ruta local: {local_path}")
+            print(f"[OK] Metadatos actualizados con ruta local: {local_path}")
                         
         except Exception as e:
-            print(f"⚠️ Error en actualización de metadatos: {e}")
+            print(f"[WARN] Error en actualización de metadatos: {e}")
     
     def start_download_session(self, is_batch=False):
         """Inicia una nueva sesión de descarga (compatibilidad — ya no gestiona JSON)"""
         if is_batch:
-            print("🎵 Iniciando descarga de álbum/playlist...")
+            print("[MUSIC] Iniciando descarga de álbum/playlist...")
         else:
-            print("🎵 Iniciando descarga de canción individual...")
+            print("[MUSIC] Iniciando descarga de canción individual...")
     
     def finish_download_session(self):
         """Finaliza la sesión de descarga"""

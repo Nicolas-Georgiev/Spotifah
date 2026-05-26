@@ -31,41 +31,41 @@ class YouTubeView(BaseView):
     
     def get_user_input(self) -> str:
         """Get YouTube URL from the user"""
-        print("🎥 Ingresa la URL del video de YouTube que quieres convertir:")
+        print("[CAM] Ingresa la URL del video de YouTube que quieres convertir:")
         self.show_supported_formats()
         return self.get_user_input_safe("URL: ")
     
     def show_supported_formats(self) -> None:
         """Show supported URL formats"""
-        print("\n📋 Formatos soportados:")
+        print("\n[LIST] Formatos soportados:")
         print("  • https://www.youtube.com/watch?v=VIDEO_ID")
         print("  • https://youtu.be/VIDEO_ID")
         print("  • https://m.youtube.com/watch?v=VIDEO_ID")
-        print("  💡 URLs con parámetros adicionales se manejan automáticamente\n")
+        print("  [TIP] URLs con parámetros adicionales se manejan automáticamente\n")
     
     def show_conversion_steps(self) -> None:
         """Show conversion process steps"""
         steps = [
-            "📺 Extraer información del video de YouTube",
-            "⬇️ Descargar audio en máxima calidad",
-            "🎵 Convertir a formato MP3",
-            "🏷️ Añadir metadatos básicos",
-            "💾 Guardar archivo final"
+            "[SCREEN] Extraer información del video de YouTube",
+            "[DOWN] Descargar audio en máxima calidad",
+            "[MUSIC] Convertir a formato MP3",
+            "[TAG] Añadir metadatos básicos",
+            "[SAVE] Guardar archivo final"
         ]
         self.show_progress_steps(steps)
     
     def show_system_info(self) -> None:
         """Show system information"""
-        print("💡 SISTEMA DE CONVERSIÓN DE YOUTUBE")
-        print("✅ PyTubefix: Descarga confiable desde YouTube")
-        print("✅ moviepy: Conversión de audio optimizada")
-        print("✅ mutagen: Metadatos MP3 precisos")
-        print("✅ Soporte para todas las calidades de video")
-        print("✅ Extracción automática de metadatos\n")
+        print("[TIP] SISTEMA DE CONVERSIÓN DE YOUTUBE")
+        print("[OK] PyTubefix: Descarga confiable desde YouTube")
+        print("[OK] moviepy: Conversión de audio optimizada")
+        print("[OK] mutagen: Metadatos MP3 precisos")
+        print("[OK] Soporte para todas las calidades de video")
+        print("[OK] Extracción automática de metadatos\n")
     
     def show_output_info(self) -> None:
         """Show output file information"""
-        print("📝 INFORMACIÓN DEL ARCHIVO:")
+        print("[NOTE] INFORMACIÓN DEL ARCHIVO:")
         print("  • Formato: MP3 de alta calidad")
         print("  • Metadatos: Título, autor, duración extraídos")
         print("  • Ubicación: Carpeta data/music/")
@@ -74,9 +74,9 @@ class YouTubeView(BaseView):
     def show_welcome(self) -> None:
         """Show personalized welcome message"""
         super().show_welcome()
-        print("🎯 FUNCIONALIDADES:")
-        print("  ✅ Descarga directa desde YouTube")
-        print("  ✅ Conversión a MP3 de alta calidad")  
-        print("  ✅ Metadatos automáticos")
-        print("  ✅ Soporte para múltiples calidades")
-        print("  ✅ Interfaz simple e intuitiva\n")
+        print("[TARGET] FUNCIONALIDADES:")
+        print("  [OK] Descarga directa desde YouTube")
+        print("  [OK] Conversión a MP3 de alta calidad")  
+        print("  [OK] Metadatos automáticos")
+        print("  [OK] Soporte para múltiples calidades")
+        print("  [OK] Interfaz simple e intuitiva\n")

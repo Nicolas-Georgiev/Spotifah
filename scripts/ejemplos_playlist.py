@@ -37,7 +37,7 @@ def ejemplo_crear_playlist():
         publica=True
     )
     
-    print(f"✅ {message}")
+    print(f"[OK] {message}")
     if success:
         print(f"ID de la playlist creada: {id_playlist}")
         return id_playlist
@@ -56,9 +56,9 @@ def ejemplo_listar_playlists():
     
     print(f"{message}\n")
     for playlist in playlists:
-        print(f"📋 [{playlist['id_playlist']}] {playlist['nombre']}")
-        print(f"   🎵 {playlist['total_canciones']} canciones")
-        print(f"   {'🌍 Pública' if playlist['publica'] else '🔒 Privada'}")
+        print(f"[LIST] [{playlist['id_playlist']}] {playlist['nombre']}")
+        print(f"   [MUSIC] {playlist['total_canciones']} canciones")
+        print(f"   {'[GLOBE] Pública' if playlist['publica'] else '[LOCK] Privada'}")
 
 
 # ==================== EJEMPLO 3: VER DETALLES DE PLAYLIST ====================
@@ -72,12 +72,12 @@ def ejemplo_ver_detalles_playlist(id_playlist):
     success, message, playlist = controller.get_playlist_details(id_playlist)
     
     if success:
-        print(f"\n📋 {playlist['nombre']}")
-        print(f"📝 {playlist.get('descripcion', 'Sin descripción')}")
-        print(f"👤 Creador: {playlist['nombre_usuario']}")
-        print(f"🎵 Canciones: {playlist['total_canciones']}")
+        print(f"\n[LIST] {playlist['nombre']}")
+        print(f"[NOTE] {playlist.get('descripcion', 'Sin descripción')}")
+        print(f"[USER] Creador: {playlist['nombre_usuario']}")
+        print(f"[MUSIC] Canciones: {playlist['total_canciones']}")
     else:
-        print(f"❌ {message}")
+        print(f"[ERR] {message}")
 
 
 # ==================== EJEMPLO 4: LISTAR CANCIONES ====================
@@ -92,8 +92,8 @@ def ejemplo_listar_canciones():
     
     print(f"{message}\n")
     for cancion in canciones[:5]:  # Mostrar solo las primeras 5
-        print(f"🎵 [{cancion['id_cancion']}] {cancion['titulo']}")
-        print(f"   👤 {cancion['artista']} | 💿 {cancion.get('album', 'N/A')}")
+        print(f"[MUSIC] [{cancion['id_cancion']}] {cancion['titulo']}")
+        print(f"   [USER] {cancion['artista']} | [DISC] {cancion.get('album', 'N/A')}")
 
 
 # ==================== EJEMPLO 5: AÑADIR CANCIÓN A PLAYLIST ====================
@@ -123,7 +123,7 @@ def ejemplo_ver_canciones_playlist(id_playlist):
     print(f"{message}\n")
     for cancion in canciones:
         orden = cancion.get('orden', 0)
-        print(f"[{orden}] 🎵 {cancion['titulo']} - {cancion['artista']}")
+        print(f"[{orden}] [MUSIC] {cancion['titulo']} - {cancion['artista']}")
 
 
 # ==================== EJEMPLO 7: BUSCAR CANCIONES ====================
@@ -138,7 +138,7 @@ def ejemplo_buscar_canciones(query):
     
     print(f"{message}\n")
     for cancion in canciones:
-        print(f"🎵 [{cancion['id_cancion']}] {cancion['titulo']} - {cancion['artista']}")
+        print(f"[MUSIC] [{cancion['id_cancion']}] {cancion['titulo']} - {cancion['artista']}")
 
 
 # ==================== EJEMPLO 8: ELIMINAR CANCIÓN DE PLAYLIST ====================
@@ -183,14 +183,14 @@ def ejemplo_resumen_playlist(id_playlist):
     
     if success:
         playlist = resumen['playlist']
-        print(f"\n📋 {playlist['nombre']}")
-        print(f"📊 Total de canciones: {resumen['total_canciones']}")
-        print(f"⏱️ Duración total: {resumen['duracion_total_min']} minutos")
-        print(f"\n🎶 Canciones:")
+        print(f"\n[LIST] {playlist['nombre']}")
+        print(f"[CHART] Total de canciones: {resumen['total_canciones']}")
+        print(f"[TIMER] Duración total: {resumen['duracion_total_min']} minutos")
+        print(f"\n[MUSIC] Canciones:")
         for cancion in resumen['canciones']:
             print(f"   • {cancion['titulo']} - {cancion['artista']}")
     else:
-        print(f"❌ {message}")
+        print(f"[ERR] {message}")
 
 
 # ==================== EJEMPLO 11: ELIMINAR PLAYLIST ====================
@@ -379,12 +379,12 @@ GUÍA PARA INTEGRAR EN INTERFAZ GRÁFICA (GUI)
 # ==================== EJECUTAR DEMOSTRACIÓN ====================
 
 if __name__ == "__main__":
-    print("\n🎵 Sistema de Gestión de Playlists - Ejemplos de Uso\n")
+    print("\n[MUSIC] Sistema de Gestión de Playlists - Ejemplos de Uso\n")
     
     respuesta = input("¿Deseas ejecutar la demostración completa? (s/n): ").strip().lower()
     
     if respuesta == 's':
         ejecutar_todos_los_ejemplos()
     else:
-        print("\n📚 Revisa los ejemplos en el código para ver cómo usar cada función.")
-        print("💡 Tip: Cada función está documentada y lista para usar en tu GUI.\n")
+        print("\n[BOOKS] Revisa los ejemplos en el código para ver cómo usar cada función.")
+        print("[TIP] Tip: Cada función está documentada y lista para usar en tu GUI.\n")

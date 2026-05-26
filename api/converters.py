@@ -95,7 +95,7 @@ class ConvertersMixin(CoversMixin):
         except Exception as e:
             return {"ok": False, "error": str(e), "log": f.getvalue()}
 
-    # ── Album Preview ────────────────────────────────────────────
+    # -- Album Preview --------------------------------------------
 
     def _get_spotify_album_preview(self, url: str) -> dict:
         from model.spotify2mp3_model import Spotify2MP3Converter
@@ -246,7 +246,7 @@ class ConvertersMixin(CoversMixin):
     def import_album(self, url: str) -> dict:
         return self.import_playlist(url)
 
-    # ── Playlist Import ──────────────────────────────────────────
+    # -- Playlist Import ------------------------------------------
 
     def _detect_url_type(self, url: str) -> dict:
         from model.spotify2mp3_model import Spotify2MP3Converter

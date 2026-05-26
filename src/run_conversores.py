@@ -32,9 +32,9 @@ def show_songs():
             """)
             rows = cur.fetchall()
             if not rows:
-                print("\n📭 No hay canciones en la base de datos.")
+                print("\n[MAIL] No hay canciones en la base de datos.")
                 return
-            print(f"\n🎵 Canciones en la base de datos ({len(rows)} total):")
+            print(f"\n[MUSIC] Canciones en la base de datos ({len(rows)} total):")
             print("-" * 70)
             for r in rows:
                 duration = f"{r['duracion_seg']}s" if r['duracion_seg'] else "-"
@@ -46,13 +46,13 @@ def show_songs():
         finally:
             conn.close()
     except Exception as e:
-        print(f"\n❌ Error al consultar la BD: {e}")
+        print(f"\n[ERR] Error al consultar la BD: {e}")
 
 
 def main():
     """Main function that runs the application"""
-    print(f"\n🎵 Iniciando Ekho Music Converter...")
-    print(f"\n⚙️  Configurando terminal...")
+    print(f"\n[MUSIC] Iniciando Ekho Music Converter...")
+    print(f"\n[CONFIG]  Configurando terminal...")
 
     try:
         from controller.conversor_controller import ConversorController
@@ -61,8 +61,8 @@ def main():
         conversor_controller.run()
         
     except ImportError as e:
-        print(f"\n❌ Error de importación: {e}")
-        print("\n🔧 SOLUCIONES POSIBLES:")
+        print(f"\n[ERR] Error de importación: {e}")
+        print("\n[TOOL] SOLUCIONES POSIBLES:")
         print("1. Verificar que todas las dependencias estén instaladas:")
         print("   python scripts\install_dependencies.py")
         print("\n2. Verificar que FFmpeg esté instalado:")
@@ -71,15 +71,15 @@ def main():
         print("   macOS: brew install ffmpeg")
         
     except KeyboardInterrupt:
-        print("\n\n👋 Programa interrumpido por el usuario. ¡Hasta luego!")
+        print("\n\n[HELLO] Programa interrumpido por el usuario. ¡Hasta luego!")
         
     except Exception as e:
-        print(f"\n❌ Error inesperado: {e}")
-        print("\n🔍 INFORMACIÓN DE DEBUG:")
+        print(f"\n[ERR] Error inesperado: {e}")
+        print("\n[SEARCH] INFORMACIÓN DE DEBUG:")
         import traceback
         traceback.print_exc()
         
-        print("\n💡 CONSEJOS PARA SOLUCIONAR:")
+        print("\n[TIP] CONSEJOS PARA SOLUCIONAR:")
         print("1. Verificar que todas las dependencias estén correctamente instaladas")
         print("2. Ejecutar el instalador de dependencias: python scripts\install_dependencies.py")
         print("3. Verificar que FFmpeg esté disponible en el PATH del sistema")

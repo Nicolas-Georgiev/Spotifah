@@ -18,28 +18,28 @@ def main():
     """
     Función principal que inicializa y ejecuta el gestor de playlists
     """
-    print("🎵 Iniciando Gestor de Playlists...")
+    print("[MUSIC] Iniciando Gestor de Playlists...")
     
     # Inicializar la base de datos
     db = Database()
-    print("✅ Base de datos conectada")
+    print("[OK] Base de datos conectada")
     
     # Inicializar el modelo
     model = PlaylistModel(db)
-    print("✅ Modelo inicializado")
+    print("[OK] Modelo inicializado")
     
     # Inicializar el controlador
     controller = PlaylistController(model)
-    print("✅ Controlador inicializado")
+    print("[OK] Controlador inicializado")
     
     # Establecer usuario por defecto (puedes cambiarlo según tu sistema de login)
     # Por defecto usa el usuario con ID 1 (Juan, según la BD de ejemplo)
     controller.set_current_user(1)
-    print(f"✅ Usuario establecido: ID {controller.current_user_id}")
+    print(f"[OK] Usuario establecido: ID {controller.current_user_id}")
     
     # Inicializar la vista
     view = PlaylistView(controller)
-    print("✅ Vista inicializada")
+    print("[OK] Vista inicializada")
     
     print("\n" + "="*60)
     print("Todo listo! Iniciando interfaz...")
@@ -55,8 +55,8 @@ if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        print("\n\n👋 Programa terminado por el usuario")
+        print("\n\n[HELLO] Programa terminado por el usuario")
     except Exception as e:
-        print(f"\n❌ Error fatal: {e}")
+        print(f"\n[ERR] Error fatal: {e}")
         import traceback
         traceback.print_exc()

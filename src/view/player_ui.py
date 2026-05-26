@@ -3,7 +3,7 @@ class PlayerUI:
         self.controller = controller
 
     def run(self):
-        print("🎧 Reproductor de Música (comandos: play, pause, resume, stop, next, prev, exit)")
+        print("[HEAD] Reproductor de Música (comandos: play, pause, resume, stop, next, prev, exit)")
         while True:
             command = input(">> ").strip().lower()
             if command == "play":
@@ -20,7 +20,7 @@ class PlayerUI:
                 self.controller.previous_track()
             elif command == "exit":
                 self.controller.stop()
-                print("👋 Saliendo del reproductor...")
+                print("[HELLO] Saliendo del reproductor...")
                 break
             else:
-                print("❌ Comando no reconocido.")
+                print("[ERR] Comando no reconocido.")

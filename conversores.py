@@ -19,7 +19,7 @@ def main():
         
         # Verificar que el archivo existe
         if not os.path.exists(run_conversores_path):
-            print("❌ Error: No se encontró el archivo src/run_conversores.py")
+            print("[ERR] Error: No se encontró el archivo src/run_conversores.py")
             print(f"   Ruta buscada: {run_conversores_path}")
             return False
         
@@ -34,14 +34,14 @@ def main():
         return True
         
     except ImportError as e:
-        print(f"❌ Error de importación: {e}")
-        print("\n🔧 SOLUCIONES:")
+        print(f"[ERR] Error de importación: {e}")
+        print("\n[TOOL] SOLUCIONES:")
         print("1. Verificar que src/run_conversores.py existe")
         print("2. Instalar dependencias: pip install -r requirements.txt")
         return False
         
     except Exception as e:
-        print(f"❌ Error inesperado: {e}")
+        print(f"[ERR] Error inesperado: {e}")
         return False
 
 if __name__ == "__main__":

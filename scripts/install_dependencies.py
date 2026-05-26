@@ -26,11 +26,11 @@ def install_ffmpeg():
     """Verifica e instala FFmpeg automáticamente en Windows con winget."""
     
     if check_ffmpeg():
-        print("   ✅ FFmpeg instalado - Máxima calidad de conversión")
+        print("   [OK] FFmpeg instalado - Máxima calidad de conversión")
         return True
 
     if not _command_exists("winget"):
-        print("   ⚠️ winget no está disponible en este sistema")
+        print("   [WARN] winget no está disponible en este sistema")
     else:
         command = [
             "winget",
@@ -45,14 +45,14 @@ def install_ffmpeg():
         try:
             result = subprocess.run(command, capture_output=True, text=True)
             if result.returncode == 0 and check_ffmpeg():
-                print("   ✅ FFmpeg: INSTALADO")
+                print("   [OK] FFmpeg: INSTALADO")
                 return True
 
-            print("   ⚠️ No se pudo instalar FFmpeg con winget")
+            print("   [WARN] No se pudo instalar FFmpeg con winget")
             if result.stderr:
-                print(f"   🔎 Detalle: {result.stderr.strip()}")
+                print(f"   [SEARCH] Detalle: {result.stderr.strip()}")
         except Exception as e:
-            print(f"   ⚠️ Error ejecutando winget: {e}")
+            print(f"   [WARN] Error ejecutando winget: {e}")
     
     return False  # FFmpeg es REQUERIDO
 
@@ -115,9 +115,9 @@ def main():
     # Verificar paquetes existentes
     for package, import_name in packages_to_check:
         if check_package(package, import_name):
-            print(f"   ✅ {package}: INSTALADO")
+            print(f"   [OK] {package}: INSTALADO")
         else:
-            print(f"   ❌ {package}: FALTA")
+            print(f"   [ERR] {package}: FALTA")
             missing_packages.append(package)
     
     # Instalar paquetes faltantes
@@ -126,13 +126,13 @@ def main():
         print(f"\n Instalando {len(missing_packages)} paquete(s) faltante(s):")
         
         for package in missing_packages:
-            print(f"   📦 Instalando {package}...")
+            print(f"   [PACK] Instalando {package}...")
             if install_package(package):
-                print(f"   ✅ {package} instalado exitosamente")
+                print(f"   [OK] {package} instalado exitosamente")
             else:
-                print(f"\n   ❌ Error instalando {package}")
+                print(f"\n   [ERR] Error instalando {package}")
     else:
-        print("\n✅ Todos los paquetes necesarios están instalados")
+        print("\n[OK] Todos los paquetes necesarios están instalados")
     
     # Verificación final
     print("\n3. Verificación final:")
@@ -140,19 +140,19 @@ def main():
     # Test específico de moviepy
     try:
         from moviepy.editor import AudioFileClip
-        print("   ✅ moviepy.editor: FUNCIONAL")
+        print("   [OK] moviepy.editor: FUNCIONAL")
         moviepy_ok = True
     except Exception as e:
-        print(f"   ❌ moviepy.editor: ERROR ({e})")
+        print(f"   [ERR] moviepy.editor: ERROR ({e})")
         moviepy_ok = False
     
     # Test específico de pytubefix
     try:
         from pytubefix import YouTube
-        print("   ✅ pytubefix: FUNCIONAL")
+        print("   [OK] pytubefix: FUNCIONAL")
         pytubefix_ok = True
     except Exception as e:
-        print(f"   ❌ pytubefix: ERROR ({e})")
+        print(f"   [ERR] pytubefix: ERROR ({e})")
         pytubefix_ok = False
     
     # Test específico de mutagen
@@ -160,69 +160,69 @@ def main():
         from mutagen.mp3 import MP3
         from mutagen.id3 import ID3
         from mutagen.id3._frames import APIC
-        print("   ✅ mutagen: FUNCIONAL")
+        print("   [OK] mutagen: FUNCIONAL")
         mutagen_ok = True
     except Exception as e:
-        print(f"   ❌ mutagen: ERROR ({e})")
+        print(f"   [ERR] mutagen: ERROR ({e})")
         mutagen_ok = False
     
     # Test específico de yt-dlp
     try:
         import yt_dlp
-        print("   ✅ yt-dlp: FUNCIONAL")
+        print("   [OK] yt-dlp: FUNCIONAL")
         ytdlp_ok = True
     except Exception as e:
-        print(f"   ❌ yt-dlp: ERROR ({e})")
+        print(f"   [ERR] yt-dlp: ERROR ({e})")
         ytdlp_ok = False
 
     # Test específico de setuptools/pkg_resources (requerido por spotdl)
     try:
         __import__("pkg_resources")
-        print("   ✅ pkg_resources (setuptools): FUNCIONAL")
+        print("   [OK] pkg_resources (setuptools): FUNCIONAL")
         setuptools_ok = True
     except Exception as e:
-        print(f"   ❌ pkg_resources (setuptools): ERROR ({e})")
+        print(f"   [ERR] pkg_resources (setuptools): ERROR ({e})")
         setuptools_ok = False
     
     # Test específico de spotdl (OBLIGATORIO)
     try:
         import spotdl
-        print(f"   ✅ spotdl: FUNCIONAL")
+        print(f"   [OK] spotdl: FUNCIONAL")
         spotdl_ok = True
     except Exception as e:
-        print(f"   ❌ spotdl: FALTA - OBLIGATORIO ({e})")
-        print("   🚨 spotdl es REQUERIDO para metadatos confiables de Spotify")
+        print(f"   [ERR] spotdl: FALTA - OBLIGATORIO ({e})")
+        print("   [FAIL] spotdl es REQUERIDO para metadatos confiables de Spotify")
         spotdl_ok = False
 
     # Test específico de pygame (OBLIGATORIO)
     try:
         import pygame
-        print(f"   ✅ pygame: FUNCIONAL")
+        print(f"   [OK] pygame: FUNCIONAL")
         pygame_ok = True
     except Exception as e:
-        print(f"   ❌ pygame: FALTA - OBLIGATORIO ({e})")
-        print("   🚨 pygame es REQUERIDO para metadatos confiables de Spotify")
+        print(f"   [ERR] pygame: FALTA - OBLIGATORIO ({e})")
+        print("   [FAIL] pygame es REQUERIDO para metadatos confiables de Spotify")
         pygame_ok = False
     
     # Test específico de webview (OBLIGATORIO)
     try:
         import webview
-        print(f"   ✅ webview: FUNCIONAL")
+        print(f"   [OK] webview: FUNCIONAL")
         webview_ok = True
     except Exception as e:
-        print(f"   ❌ webview: FALTA - OBLIGATORIO ({e})")
-        print("   🚨 webview es REQUERIDO para la interfaz gráfica")
+        print(f"   [ERR] webview: FALTA - OBLIGATORIO ({e})")
+        print("   [FAIL] webview es REQUERIDO para la interfaz gráfica")
         webview_ok = False
 
     # Mostrar resultado final
     print("\n=== RESULTADO ===")
     if moviepy_ok and pytubefix_ok and mutagen_ok and ytdlp_ok and setuptools_ok and spotdl_ok and ffmpeg_ok and pygame_ok and webview_ok:
-        print("🎉 ¡TODAS LAS DEPENDENCIAS ESTÁN COMPLETAS!")
+        print("[DONE] ¡TODAS LAS DEPENDENCIAS ESTÁN COMPLETAS!")
     else:
         for package, import_name in packages_to_check:
             if not check_package(package, import_name):
-                print(f"   ❌ {package} - {import_name} FALTA")
-                print(f"   🚨 INSTALAR CON: pip install {package}")
+                print(f"   [ERR] {package} - {import_name} FALTA")
+                print(f"   [FAIL] INSTALAR CON: pip install {package}")
     
 
 if __name__ == "__main__":
