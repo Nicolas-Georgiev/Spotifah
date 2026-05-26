@@ -11,6 +11,7 @@ import sqlite3
 from datetime import datetime
 import re
 from random import Random
+from types import SimpleNamespace
 import requests
 from databaseManager.db import Database
 
@@ -159,6 +160,138 @@ class RecommendationsMixin:
             except Exception:
                 pass
         return value.strip().lower() in {"1", "true", "yes", "on"}
+
+    def _recs_spotify_enabled(self) -> bool:
+        value = os.getenv("RECS_SPOTIFY", "1").strip()
+        try:
+            settings = self._load_settings() if hasattr(self, "_load_settings") else {}
+            if isinstance(settings, dict):
+                value = str(settings.get("recs_spotify", value) or "").strip()
+        except Exception:
+            pass
+        if not value:
+            try:
+                dotenv_path = os.path.join(self._project_root, ".env")
+                if os.path.exists(dotenv_path):
+                    with open(dotenv_path, "r", encoding="utf-8") as f:
+                        for line in f:
+                            line = line.strip()
+                            if not line or line.startswith("#") or "=" not in line:
+                                continue
+                            key, raw = line.split("=", 1)
+                            if key.strip() == "RECS_SPOTIFY":
+                                value = raw.strip().strip('"').strip("'")
+                                break
+            except Exception:
+                pass
+        return value.strip().lower() not in {"0", "false", "no", "off"}
+
+    def _recommendation_rng(self, refresh_key=None) -> Random:
+        if refresh_key is None:
+            refresh_key = time.time_ns()
+        return Random(str(refresh_key))
+
+    def _local_recommendations(
+        self,
+        engine: RecommendationEngine,
+        playlist_id: str,
+        limit: int,
+        refresh_key=None,
+    ) -> list:
+        if playlist_id == "all":
+            recommendations = engine.generate_home_recommendations(top_k=limit)
+        else:
+            seed_songs = self._playlist_seed_songs(playlist_id)
+            recommendations = engine.recommend_from_seed_songs(seed_songs, top_k=limit)
+
+        serialized = [self._serialize_recommendation(item) for item in recommendations]
+        rng = self._recommendation_rng(refresh_key)
+        rng.shuffle(serialized)
+        return self._fill_local_recommendations(
+            engine,
+            serialized,
+            limit,
+            refresh_key=refresh_key,
+        )
+
+    def _song_recommendation_item(self, song, *, score: float, reason: str):
+        return SimpleNamespace(
+            song_id=song.id,
+            title=song.title,
+            artist=song.artist,
+            score=score,
+            reason=reason,
+            source=song.source,
+            metadata={
+                "album": song.album or "",
+                "duration": song.duration or 0,
+                "genre": song.genre or "",
+                "source": song.source,
+                "path": song.path,
+                "cover_url": song.cover_url,
+                "play_count": song.play_count,
+                "added_at": song.added_at or "",
+            },
+        )
+
+    def _fill_local_recommendations(
+        self,
+        engine: RecommendationEngine,
+        items: list[dict],
+        limit: int,
+        refresh_key=None,
+    ) -> list[dict]:
+        if len(items) >= limit:
+            return items[:limit]
+
+        seen_ids = {str(item.get("id", "")) for item in items}
+        seen_pairs = {
+            (
+                self._normalize_recommendation_text(item.get("title", "")),
+                self._normalize_recommendation_text(item.get("artist", "")),
+            )
+            for item in items
+        }
+
+        rng = self._recommendation_rng(refresh_key)
+        songs = list(engine.songs)
+        rng.shuffle(songs)
+        songs.sort(key=lambda song: (song.play_count, str(song.added_at or "")), reverse=True)
+        for song in songs:
+            pair = self._song_identity(song)
+            if str(song.id) in seen_ids or pair in seen_pairs:
+                continue
+
+            item = self._serialize_recommendation(
+                self._song_recommendation_item(
+                    song,
+                    score=0.35,
+                    reason="tambien puede encajar",
+                )
+            )
+            items.append(item)
+            seen_ids.add(str(song.id))
+            seen_pairs.add(pair)
+            if len(items) >= limit:
+                break
+
+        return items[:limit]
+
+    def _spotify_cached_get(self, url: str, params: dict, *, log_errors: bool = False) -> dict:
+        cache = getattr(self, "_spotify_recs_cache", None)
+        if cache is None:
+            cache = {}
+            self._spotify_recs_cache = cache
+
+        key = (url, tuple(sorted((str(k), str(v)) for k, v in params.items())))
+        cached = cache.get(key)
+        if cached and time.time() - cached[0] < 900:
+            return cached[1]
+
+        data = self._spotify_api_get(url, params, log_errors=log_errors)
+        cache[key] = (time.time(), data)
+        return data
+
     def _sanitize_title(self, title: str) -> str:
         if not title:
             return ""
@@ -333,7 +466,7 @@ class RecommendationsMixin:
             return {}
 
         def _do_request(tok: str):
-            return requests.get(url, params=params, headers={"Authorization": f"Bearer {tok}"}, timeout=10)
+            return requests.get(url, params=params, headers={"Authorization": f"Bearer {tok}"}, timeout=4)
 
         try:
             if self._recs_debug_enabled():
@@ -387,7 +520,7 @@ class RecommendationsMixin:
                             if client_token:
                                 if self._recs_debug_enabled():
                                     print("[recs] spotify retrying with client-credentials token", url, params)
-                                r2 = requests.get(url, params=params, headers={"Authorization": f"Bearer {client_token}"}, timeout=10)
+                                r2 = requests.get(url, params=params, headers={"Authorization": f"Bearer {client_token}"}, timeout=4)
                                 if r2.status_code == 200:
                                     return r2.json() or {}
                     except Exception:
@@ -417,8 +550,69 @@ class RecommendationsMixin:
 
     def _clean_youtube_artist(self, artist: str) -> str:
         cleaned = self._clean_search_text(artist)
+        cleaned = re.sub(r"(?i)vevo$", "", cleaned)
         cleaned = re.sub(r"\b(vevo|topic|official|music|records?|channel)\b", " ", cleaned, flags=re.I)
         return re.sub(r"\s+", " ", cleaned).strip(" -_|")
+
+    def _looks_like_youtube_channel(self, value: str) -> bool:
+        value = value or ""
+        normalized = value.casefold()
+        return any(
+            marker in normalized
+            for marker in (
+                "vevo",
+                "official",
+                "topic",
+                "label",
+                "radio",
+                "records",
+                "tv",
+                "fox",
+                "bbc",
+                "grammy",
+                "iheartradio",
+            )
+        )
+
+    def _humanize_artist_name(self, value: str) -> str:
+        value = self._clean_youtube_artist(value)
+        value = re.sub(r"(?<=[a-z])(?=[A-Z])", " ", value)
+        value = re.sub(r"\s+", " ", value).strip(" -_|")
+        return value
+
+    def _artist_candidates_from_song(self, song) -> list[str]:
+        title = getattr(song, "title", "") or ""
+        artist = getattr(song, "artist", "") or ""
+        candidates: list[str] = []
+
+        raw_title = re.sub(r"\s+", " ", title).strip()
+        performs_match = re.match(r"^(.+?)\s+performs\b", raw_title, flags=re.I)
+        if performs_match:
+            possible = self._clean_search_text(performs_match.group(1))
+            if possible:
+                candidates.append(possible)
+
+        found_separator = False
+        for sep in (" - ", " – ", " — ", " | "):
+            if sep in raw_title:
+                left, _ = raw_title.split(sep, 1)
+                left = self._clean_search_text(left)
+                if left:
+                    candidates.append(left)
+                found_separator = True
+                break
+
+        match = None if found_separator else re.match(r"^(.+?)\s*[\(\[]", raw_title)
+        if match:
+            possible = self._clean_search_text(match.group(1))
+            if possible:
+                candidates.append(possible)
+
+        cleaned_artist = self._humanize_artist_name(artist)
+        if cleaned_artist and not self._looks_like_youtube_channel(artist):
+            candidates.append(cleaned_artist)
+
+        return list(dict.fromkeys(candidate for candidate in candidates if candidate))
 
     def _normalize_recommendation_text(self, value: str) -> str:
         cleaned = self._clean_search_text(value)
@@ -745,6 +939,50 @@ class RecommendationsMixin:
                     break
         return tracks
 
+    def _append_spotify_track(
+        self,
+        tracks: list[dict],
+        track: dict,
+        seen_track_ids: set[str],
+        existing_titles: set[str],
+        existing_pairs: set[tuple[str, str]],
+    ) -> None:
+        track_id = track.get("id")
+        title_key, artist_key, _ = self._spotify_track_identity(track)
+        if not track_id or track_id in seen_track_ids:
+            return
+        if title_key in existing_titles or (title_key, artist_key) in existing_pairs:
+            return
+
+        seen_track_ids.add(track_id)
+        tracks.append(track)
+
+    def _spotify_track_to_recommendation(self, track: dict, index: int, limit: int) -> dict:
+        artists = track.get("artists", []) or []
+        album = track.get("album", {}) or {}
+        images = album.get("images", []) or []
+        score = 1.0 - min((index - 1) / max(limit, 1), 0.75)
+
+        return {
+            "id": track.get("id") or f"spotify:{index}",
+            "title": track.get("name") or "",
+            "artist": ", ".join(a.get("name", "") for a in artists if a.get("name")),
+            "album": album.get("name", ""),
+            "duration": int((track.get("duration_ms") or 0) / 1000),
+            "genre": "",
+            "source": "spotify",
+            "path": "",
+            "cover_url": images[0].get("url") if images else "",
+            "score": round(float(score), 3),
+            "reason": "descubrimiento similar",
+            "play_count": 0,
+            "added_at": "",
+            "external_url": "",
+            "external_id": track.get("id") or "",
+            "catalog_source": "spotify",
+            "can_import": False,
+        }
+
     def _spotify_fetch_recommendations(
         self,
         seed_track_ids: list[str],
@@ -780,98 +1018,148 @@ class RecommendationsMixin:
             print("[recs] spotify response tracks:", len(tracks))
         return tracks
 
-    def _spotify_recommendations(self, engine: RecommendationEngine, playlist_id: str, limit: int) -> list[dict] | None:
+    def _spotify_recommendations(
+        self,
+        engine: RecommendationEngine,
+        playlist_id: str,
+        limit: int,
+        refresh_key=None,
+    ) -> list[dict] | None:
         # If there is no spotify token available, return an empty list so the
         # caller can fall back to the local recommendation engine instead of
         # propagating None which may cause callers to return None.
         if not self._get_spotify_token():
             return []
 
-        seed_songs = self._mixed_seed_songs(engine, playlist_id, limit=max(20, limit * 4))
+        rng = self._recommendation_rng(refresh_key)
+        seed_songs = self._mixed_seed_songs(engine, playlist_id, limit=max(8, min(limit * 3, 14)))
         seed_songs = [song for song in seed_songs if song is not None]
+        rng.shuffle(seed_songs)
         if not seed_songs:
             return []
 
         existing_titles, existing_pairs = self._existing_song_identities(engine.songs)
-        seed_track_ids, seed_artist_ids, seed_artist_names = self._spotify_seed_data(seed_songs)
+        seed_artist_names = []
+        for song in seed_songs:
+            for artist in self._artist_candidates_from_song(song):
+                if artist and artist not in seed_artist_names:
+                    seed_artist_names.append(artist)
+                if len(seed_artist_names) >= 6:
+                    break
+            if len(seed_artist_names) >= 6:
+                break
 
-        if self._recs_debug_enabled():
-            print("[recs] market:", self._spotify_market())
-            print("[recs] seed tracks:", seed_track_ids)
-            print("[recs] seed artists:", seed_artist_ids)
-
-        if self._spotify_has_valid_user_token():
-            spotify_tracks = self._spotify_similarity_tracks(seed_songs, limit=limit * 2)
-        else:
-            spotify_tracks = self._spotify_related_artist_tracks(seed_artist_ids, limit * 2)
-        if not spotify_tracks:
-            spotify_tracks = []
-            for artist_name in seed_artist_names:
-                spotify_tracks.extend(self._spotify_artist_tracks_by_name(artist_name, limit * 2 - len(spotify_tracks)))
+        spotify_tracks: list[dict] = []
+        seen_track_ids: set[str] = set()
+        market = self._spotify_market()
+        rng.shuffle(seed_artist_names)
+        for artist_name in seed_artist_names:
+            data = self._spotify_cached_get(
+                "https://api.spotify.com/v1/search",
+                {
+                    "q": f"artist:{artist_name}",
+                    "type": "track",
+                    "limit": max(8, min(limit * 4, 20)),
+                    "market": market,
+                },
+                log_errors=False,
+            )
+            items = list(data.get("tracks", {}).get("items", []) if data else [])
+            rng.shuffle(items)
+            for item in items:
+                self._append_spotify_track(
+                    spotify_tracks,
+                    item,
+                    seen_track_ids,
+                    existing_titles,
+                    existing_pairs,
+                )
                 if len(spotify_tracks) >= limit * 2:
                     break
-        if not spotify_tracks:
-            spotify_tracks = self._spotify_tracks_from_seed_names(seed_songs, limit * 2)
+            if len(spotify_tracks) >= limit * 2:
+                break
+
+        if len(spotify_tracks) < limit:
+            artist_ids = []
+            for artist_name in seed_artist_names[:3]:
+                artist_data = self._spotify_cached_get(
+                    "https://api.spotify.com/v1/search",
+                    {"q": f"artist:{artist_name}", "type": "artist", "limit": 1, "market": market},
+                    log_errors=False,
+                )
+                items = artist_data.get("artists", {}).get("items", []) if artist_data else []
+                if items and items[0].get("id"):
+                    artist_ids.append(items[0]["id"])
+            rng.shuffle(artist_ids)
+
+            related_ids: list[str] = []
+            for artist_id in artist_ids:
+                data = self._spotify_cached_get(
+                    f"https://api.spotify.com/v1/artists/{artist_id}/related-artists",
+                    {},
+                    log_errors=False,
+                )
+                items = list(data.get("artists", []) if data else [])
+                rng.shuffle(items)
+                for item in items:
+                    related_id = item.get("id")
+                    if related_id and related_id not in related_ids:
+                        related_ids.append(related_id)
+                    if len(related_ids) >= limit:
+                        break
+                if len(related_ids) >= limit:
+                    break
+
+            for artist_id in related_ids:
+                data = self._spotify_cached_get(
+                    f"https://api.spotify.com/v1/artists/{artist_id}/top-tracks",
+                    {"market": market},
+                    log_errors=False,
+                )
+                items = list(data.get("tracks", []) if data else [])
+                rng.shuffle(items)
+                for item in items:
+                    self._append_spotify_track(
+                        spotify_tracks,
+                        item,
+                        seen_track_ids,
+                        existing_titles,
+                        existing_pairs,
+                    )
+                    break
+                if len(spotify_tracks) >= limit * 2:
+                    break
+
         spotify_tracks = self._dedupe_spotify_tracks(
             spotify_tracks,
             existing_titles=existing_titles,
             existing_pairs=existing_pairs,
-            limit=limit * 2,
+            limit=max(limit * 4, 12),
             max_per_artist=1,
         )
-        if len(spotify_tracks) < limit:
-            spotify_tracks = self._dedupe_spotify_tracks(
-                spotify_tracks + self._spotify_tracks_from_seed_names(seed_songs, limit * 3),
-                existing_titles=existing_titles,
-                existing_pairs=existing_pairs,
-                limit=limit * 2,
-                max_per_artist=1,
-            )
+        rng.shuffle(spotify_tracks)
 
         results: list[dict] = []
         result_titles: set[str] = set()
         result_pairs: set[tuple[str, str]] = set()
         result_artists: set[str] = set()
         for index, raw_track in enumerate(spotify_tracks, start=1):
-            track = self._spotify_enrich_track_by_name(raw_track)
-            title = track.get("name") or ""
-            artists = track.get("artists", []) or []
-            artist = ", ".join(a.get("name", "") for a in artists if a.get("name"))
+            track = raw_track
             if self._spotify_track_exists_locally(track, existing_titles, existing_pairs):
                 continue
+
             title_key, artist_key, _ = self._spotify_track_identity(track)
             if title_key in result_titles or (title_key, artist_key) in result_pairs:
                 continue
             if artist_key in result_artists:
                 continue
-            album = track.get("album", {}) or {}
-            images = album.get("images", []) or []
-            cover_url = images[0].get("url") if images else ""
-            duration = int((track.get("duration_ms") or 0) / 1000)
-            external_url = track.get("external_urls", {}).get("spotify", "")
-            score = 1.0 - min((index - 1) / max(limit, 1), 0.75)
+
             result_titles.add(title_key)
             result_pairs.add((title_key, artist_key))
             if artist_key:
                 result_artists.add(artist_key)
-            results.append({
-                "id": track.get("id") or external_url or f"spotify:{index}",
-                "title": title,
-                "artist": artist,
-                "album": album.get("name", ""),
-                "duration": duration,
-                "genre": "",
-                "source": "youtube",
-                "path": "",
-                "cover_url": cover_url,
-                "score": round(float(score), 3),
-                "reason": "similar, importado desde YouTube",
-                "play_count": 0,
-                "added_at": "",
-                "external_url": external_url,
-                "external_id": track.get("id") or "",
-                "catalog_source": "spotify",
-            })
+
+            results.append(self._spotify_track_to_recommendation(track, index, limit))
             if len(results) >= limit:
                 break
         return results
@@ -1079,21 +1367,21 @@ class RecommendationsMixin:
             "added_at": str(metadata.get("added_at") or ""),
         }
 
-    def get_recommendations(self, playlist_id: str = "all", limit: int = 8) -> list:
+    def get_recommendations(self, playlist_id: str = "all", limit: int = 8, refresh_key=None) -> list:
         try:
             engine = self._get_recommendation_engine()
-            spotify_items = self._spotify_recommendations(engine, playlist_id, limit)
+            if not self._recs_spotify_enabled():
+                return self._local_recommendations(engine, playlist_id, limit, refresh_key=refresh_key)
+
+            spotify_items = self._spotify_recommendations(engine, playlist_id, limit, refresh_key=refresh_key)
             # If Spotify returned a non-empty list, prefer those. If it returned
             # None (meaning Spotify not available) or an empty list, fall back
             # to the local recommendation engine.
             if spotify_items:
+                if len(spotify_items) < limit:
+                    spotify_items = self._fill_local_recommendations(engine, spotify_items, limit, refresh_key=refresh_key)
                 return spotify_items
-            if playlist_id == "all":
-                recommendations = engine.generate_home_recommendations(top_k=limit)
-            else:
-                seed_songs = self._playlist_seed_songs(playlist_id)
-                recommendations = engine.recommend_from_seed_songs(seed_songs, top_k=limit)
-            return [self._serialize_recommendation(item) for item in recommendations]
+            return self._local_recommendations(engine, playlist_id, limit, refresh_key=refresh_key)
         except Exception:
             return []
 

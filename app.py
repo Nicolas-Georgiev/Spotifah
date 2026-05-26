@@ -14,6 +14,10 @@ SRC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "src")
 if SRC_DIR not in sys.path:
     sys.path.insert(0, SRC_DIR)
 
+from no_console_subprocess import install_no_console_subprocess_patch
+
+install_no_console_subprocess_patch()
+
 from frozen_utils import configure_ffmpeg_env
 import webview
 from api import Api
