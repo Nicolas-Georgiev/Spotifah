@@ -1,44 +1,44 @@
-# === BIBLIOTECAS ESENCIALES ===
+# === BUILD / EMPAQUETADO ===
+setuptools>=70,<81
+wheel
+pyinstaller>=6.0
+pyinstaller-hooks-contrib
 
-# Biblioteca para requests HTTP (descargas, API calls)
-requests
-
-# Capa de analitica y recomendacion local (IA)
-numpy
-scikit-learn
-sentence-transformers
-
-# Compatibilidad spotdl en Python 3.14 (provee pkg_resources)
-setuptools<81
-
-# === CONVERSIÓN DE AUDIO ===
-# Conversión de formatos de audio/video (única biblioteca de conversión)
-moviepy==1.0.3
-
-# Metadatos de audio MP3 (única biblioteca de metadatos)
-mutagen
-
-# === SPOTIFY Y YOUTUBE ===
-# SpotDL: Extracción de metadatos de Spotify y descarga (OBLIGATORIO)
-spotdl
-
-# yt-dlp: Búsqueda y descarga desde YouTube (OBLIGATORIO)
-yt-dlp>=2023.1.0
-
-# === BIBLIOTECAS COMPLEMENTARIAS ===
-# PyTubefix: Para funcionalidades adicionales de YouTube si es necesario
-pytubefix
-
-# === REPRODUCTOR ===
-# PyGame: Reproducción de audio local
+# === UI / APP DESKTOP ===
+pywebview>=5.0
+pythonnet>=3.0; sys_platform == "win32"
 pygame>=2.6.0; python_version < "3.14"
 
-# === DESKTOP APP (PyWebView) ===
-# PyWebView: Ventana nativa para la UI web
-pywebview>=5.0
+# === CORE HTTP / UTILIDADES ===
+requests
+certifi
+urllib3
+click
+babel
 
-# PyInstaller: Empaquetado a ejecutable
-pyinstaller>=6.0
+# === AUDIO / VIDEO ===
+moviepy>=1.0.3,<2.0
+imageio
+imageio-ffmpeg
+mutagen
 
-# === NOTAS ===
-# FFmpeg: Requerido por spotdl y moviepy (instalar: winget install Gyan.FFmpeg)
+# === YOUTUBE / SOUNDCLOUD ===
+yt-dlp>=2024.1.0,<2027
+pytubefix
+ytmusicapi
+
+# === SPOTIFY / SPOTDL ===
+spotdl==4.5.0
+spotipy
+spotipyFree==1.7.2
+spotapi==1.2.7
+tls-client==1.0.1
+pykakasi
+
+# === RECOMENDACIONES ===
+numpy
+
+# Opcionales para recomendaciones mas avanzadas. No son necesarios para que la app funcione
+# y hacen el entorno mucho mas pesado.
+# scikit-learn
+# sentence-transformers

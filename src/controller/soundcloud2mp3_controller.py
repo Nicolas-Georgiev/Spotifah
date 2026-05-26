@@ -70,12 +70,12 @@ class SoundCloud2MP3Controller(BaseController):
         self.model = SoundCloudConverter()
         self.view = SoundCloudView()
 
-    def validate_input(self, url: str) -> bool:  # type: ignore
+    def validate_input(self, url: str) -> bool:  
         if not url or not url.strip():
             return False
         return "soundcloud.com" in url.strip()
 
-    def process_conversion(self, url: str) -> str:  # type: ignore
+    def process_conversion(self, url: str) -> str:  
         self.view.show_conversion_steps()
         self.show_progress("⬇️  Descargando desde SoundCloud...")
         return self.model.convert(url)

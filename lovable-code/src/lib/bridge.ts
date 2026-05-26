@@ -20,6 +20,7 @@ export interface RecommendedSong extends Song {
   added_at?: string;
   external_url?: string;
   external_id?: string;
+  can_import?: boolean;
 }
 
 export interface Playlist {
@@ -216,8 +217,12 @@ export const bridge = {
     return bridge.getPlaylistSongs("all");
   },
 
-  async getRecommendations(playlistId: string = "all", limit: number = 8): Promise<RecommendedSong[]> {
-    const raw = await apiArray<any>("get_recommendations", playlistId, limit);
+  async getRecommendations(
+    playlistId: string = "all",
+    limit: number = 8,
+    refreshKey?: number,
+  ): Promise<RecommendedSong[]> {
+    const raw = await apiArray<any>("get_recommendations", playlistId, limit, refreshKey ?? Date.now());
     return raw.map((item: any) => ({
       id: String(item?.id ?? ""),
       title: item?.title ?? "",
@@ -234,6 +239,7 @@ export const bridge = {
       added_at: item?.added_at ?? "",
       external_url: item?.external_url ?? "",
       external_id: item?.external_id ?? "",
+      can_import: item?.can_import !== false,
     } as RecommendedSong));
   },
 

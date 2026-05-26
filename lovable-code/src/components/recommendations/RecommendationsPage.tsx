@@ -14,6 +14,12 @@ const FALLBACK_PLAYLIST = {
   cover_url: "/portadas/all-songs.svg",
 };
 
+const RECOMMENDATION_LIMIT = 4;
+
+function isSuggestion(song: RecommendedSong) {
+  return song.can_import === false && !song.path;
+}
+
 export function RecommendationsPage() {
   const { playlists, songs, recentSongs, currentPlayingId, setCurrentPlayingId, triggerPlayerRefresh } = useAppData();
   const availablePlaylists = useMemo(() => {
@@ -44,7 +50,7 @@ export function RecommendationsPage() {
       setLoading(true);
       setError(null);
       try {
-        const items = await bridge.getRecommendations(selectedPlaylistId, 8);
+        const items = await bridge.getRecommendations(selectedPlaylistId, RECOMMENDATION_LIMIT, reloadToken);
         if (cancelled) return;
         setRecommendations(items);
       } catch (err: any) {
@@ -198,21 +204,28 @@ export function RecommendationsPage() {
           <GlassCard className="text-sm text-destructive">{error}</GlassCard>
         ) : recommendations.length === 0 ? (
           <GlassCard className="text-sm text-muted-foreground">
-            Todavía no hay suficientes datos para generar recomendaciones. Reproduce o importa algunas canciones y vuelve a intentarlo.
+            {songs.length === 0
+              ? "Necesitas tener canciones en tu biblioteca para buscar similitudes."
+              : "Hacen falta los tokens de Spotify para buscar recomendaciones."}
           </GlassCard>
         ) : (
           <div className="grid gap-5 lg:grid-cols-2">
             {recommendations.map((song) => {
               const isPlaying = currentPlayingId === song.id;
-              const isExternal = song.source?.toLowerCase() !== "local" && !song.path;
+              const suggestion = isSuggestion(song);
+              const isExternal = !suggestion && song.source?.toLowerCase() !== "local" && !song.path;
               const isActionLoading = actionLoadingId === song.id;
               return (
                 <button
                   key={song.id}
                   type="button"
                   onClick={() => handlePlay(song)}
-                  className="group flex min-h-[112px] items-center gap-5 rounded-3xl border border-border/60 bg-background/45 p-4 text-left transition hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-lg hover:shadow-primary/10 sm:p-5"
-                  disabled={isActionLoading}
+                  className={`group flex min-h-[112px] items-center gap-5 rounded-3xl border border-border/60 bg-background/45 p-4 text-left transition sm:p-5 ${
+                    suggestion
+                      ? "cursor-default"
+                      : "hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-lg hover:shadow-primary/10"
+                  }`}
+                  disabled={isActionLoading || suggestion}
                 >
                   <div className="h-20 w-20 shrink-0 overflow-hidden rounded-2xl bg-muted/40 sm:h-24 sm:w-24">
                     <CoverArt src={song.cover_url} alt={song.title} className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.04]" />
@@ -228,7 +241,9 @@ export function RecommendationsPage() {
                     <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground sm:text-sm">
                       <span className="truncate">{song.album || song.genre || "Sin álbum"}</span>
                       <span className={isPlaying ? "text-primary" : ""}>
-                        {isExternal
+                        {suggestion
+                          ? "Sugerencia"
+                          : isExternal
                           ? isActionLoading
                             ? "Importando..."
                             : "Importar"

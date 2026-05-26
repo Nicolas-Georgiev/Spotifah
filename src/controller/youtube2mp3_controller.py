@@ -23,7 +23,7 @@ class YouTube2MP3Controller(BaseController):
         self.model = YouTube2MP3Converter()
         self.view = YouTubeView()
     
-    def validate_input(self, url: str) -> bool: # type: ignore
+    def validate_input(self, url: str) -> bool: 
         """Validate that the URL is from YouTube"""
         if not url or not url.strip():
             return False
@@ -38,7 +38,7 @@ class YouTube2MP3Controller(BaseController):
         
         return any(indicator in url for indicator in youtube_indicators)
     
-    def process_conversion(self, youtube_url: str) -> str:  # type: ignore
+    def process_conversion(self, youtube_url: str) -> str:  
         """Process YouTube to MP3 conversion"""
         try:
             self.view.show_conversion_steps()

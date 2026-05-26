@@ -13,13 +13,18 @@ for %%A in (%*) do (
     if "%%A"=="--installer" set BUILD_INSTALLER=1
 )
 
+set "PYTHON_EXE=python"
+set "PIP_EXE=pip"
+if exist ".venv\Scripts\python.exe" set "PYTHON_EXE=.venv\Scripts\python.exe"
+if exist ".venv\Scripts\pip.exe" set "PIP_EXE=.venv\Scripts\pip.exe"
+
 :: -------------------------------------------------------
 :: Verificar dependencias de build
 :: -------------------------------------------------------
-pip show pyinstaller >nul 2>&1
+"%PIP_EXE%" show pyinstaller >nul 2>&1
 if %errorlevel% neq 0 (
     echo Instalando PyInstaller...
-    pip install pyinstaller
+    "%PIP_EXE%" install pyinstaller
 )
 
 :: -------------------------------------------------------
@@ -51,17 +56,25 @@ if not exist "web\index.html" (
 :: -------------------------------------------------------
 echo [2/3] Construyendo ejecutable...
 
-for /f "delims=" %%i in ('python -c "import site; print(site.getsitepackages()[0])"') do set SITE_PACKAGES=%%i
+for /f "delims=" %%i in ('%PYTHON_EXE% -c "import site; paths=site.getsitepackages(); print(next((p for p in paths if p.lower().endswith('site-packages')), paths[-1]))"') do set "SITE_PACKAGES=%%i"
 echo    site-packages: %SITE_PACKAGES%
 
-for /f "delims=" %%i in ('python -c "import webview, os; print(os.path.join(os.path.dirname(webview.__file__), \"__pyinstaller\"))"') do set WEBVIEW_HOOKS=%%i
+if not exist "%SITE_PACKAGES%\tls_client\dependencies\tls-client-64.dll" (
+    echo ERROR: No se encuentra tls-client-64.dll en:
+    echo        %SITE_PACKAGES%\tls_client\dependencies\tls-client-64.dll
+    echo Instala/reinstala tls-client en este entorno: pip install --force-reinstall tls-client
+    pause
+    exit /b 1
+)
+
+for /f "delims=" %%i in ('%PYTHON_EXE% -c "import webview, os; print(os.path.join(os.path.dirname(webview.__file__), \"__pyinstaller\"))"') do set "WEBVIEW_HOOKS=%%i"
 echo    webview hooks: %WEBVIEW_HOOKS%
 
 :: Limpiar build anterior
 if exist "build\EKHO" rmdir /s /q "build\EKHO"
 if exist "dist\EKHO"  rmdir /s /q "dist\EKHO"
 
-pyinstaller ^
+"%PYTHON_EXE%" -m PyInstaller ^
     --noconfirm ^
     --clean ^
     --onedir ^
@@ -78,53 +91,40 @@ pyinstaller ^
     --collect-all "yt_dlp" ^
     --collect-all "pytubefix" ^
     --collect-all "webview" ^
-    --hidden-import "tls_client" ^
-    --hidden-import "spotapi" ^
-    --hidden-import "SpotipyFree" ^
-    --hidden-import "spotdl" ^
-    --hidden-import "spotdl.search.song_gatherer" ^
-    --hidden-import "pykakasi" ^
+    --collect-all "spotdl" ^
+    --collect-all "pykakasi" ^
+    --collect-all "moviepy" ^
+    --collect-all "imageio" ^
+    --collect-all "imageio-ffmpeg" ^
+    --collect-all "numpy" ^
+    --collect-all "requests" ^
+    --collect-all "babel" ^
+    --collect-all "spotdl" ^
+    --collect-all "spotipy" ^
+    --collect-all "click" ^
+    --collect-all "tls_client" ^
+    --add-binary "%SITE_PACKAGES%\tls_client\dependencies\tls-client-64.dll;tls_client\dependencies" ^
     --hidden-import "moviepy.editor" ^
-    --hidden-import "imageio" ^
+    --hidden-import "imageio.v2" ^
+    --hidden-import "imageio_ffmpeg" ^
     --hidden-import "pygame" ^
     --hidden-import "ytmusicapi" ^
-    --exclude-module "spotdl.web" ^
-    --exclude-module "spotdl.console" ^
-    --exclude-module "torch" ^
-    --exclude-module "transformers" ^
-    --exclude-module "scipy" ^
+    --hidden-import "tls_client" ^
     --hidden-import "model.spotify2mp3_model" ^
     --hidden-import "model.youtube2mp3_model" ^
     --hidden-import "model.soundcloud2mp3" ^
-    --hidden-import "model.music_library" ^
-    --hidden-import "model.conversor_model" ^
-    --hidden-import "model.playlist_model" ^
-    --hidden-import "model.db_adapter" ^
     --hidden-import "controller.music_controller" ^
-    --hidden-import "controller.playlist_controller" ^
-    --hidden-import "controller.conversor_controller" ^
-    --hidden-import "controller.spotify2mp3_controller" ^
-    --hidden-import "controller.youtube2mp3_controller" ^
-    --hidden-import "controller.soundcloud2mp3_controller" ^
     --hidden-import "databaseManager.db" ^
-    --hidden-import "databaseManager.BDD" ^
-    --hidden-import "frozen_utils" ^
-    --hidden-import "mutagen" ^
-    --hidden-import "mutagen.mp3" ^
-    --hidden-import "mutagen.id3" ^
-    --hidden-import "requests" ^
+    --hidden-import "gettext" ^
+    --exclude-module "torch" ^
+    --exclude-module "transformers" ^
+    --exclude-module "scipy" ^
+    --collect-all "moviepy" ^
+    --collect-all "imageio" ^
+    --collect-all "imageio_ffmpeg" ^
     --copy-metadata "imageio" ^
     --copy-metadata "imageio-ffmpeg" ^
     --copy-metadata "moviepy" ^
-    --copy-metadata "mutagen" ^
-    --copy-metadata "requests" ^
-    --copy-metadata "yt-dlp" ^
-    --copy-metadata "spotdl" ^
-    --copy-metadata "tls-client" ^
-    --copy-metadata "pytubefix" ^
-    --copy-metadata "pygame" ^
-    --copy-metadata "pykakasi" ^
-    --copy-metadata "pywebview" ^
     "app.py"
 
 if %errorlevel% neq 0 (
