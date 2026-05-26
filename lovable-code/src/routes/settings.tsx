@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState, useCallback } from "react";
 import { bridge } from "../lib/bridge";
+import { useAppData } from "../lib/app-data";
 import { SettingCard } from "../components/settings/SettingCard";
 import { Toggle } from "../components/settings/Toggle";
 import { BitrateSelect } from "../components/settings/BitrateSelect";
@@ -14,6 +15,8 @@ export const Route = createFileRoute("/settings")({
 
 function SettingsPage() {
   const [settings, setSettings] = useState<Record<string, any>>({});
+  const { setCurrentPlayingId, triggerPlayerRefresh, refreshPlaylists, refreshSongs } = useAppData();
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   useEffect(() => {
     bridge.getSettings().then((s) => {
@@ -24,6 +27,19 @@ function SettingsPage() {
   const update = async (key: string, value: any) => {
     await bridge.updateSettings({ [key]: value });
     setSettings((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleDeleteAll = async () => {
+    const res = await bridge.deleteAllData();
+    if (res.ok) {
+      setCurrentPlayingId(null);
+      triggerPlayerRefresh();
+      await Promise.all([refreshPlaylists(), refreshSongs()]);
+      toast.success("Todos los datos eliminados");
+    } else {
+      toast.error("Error al eliminar datos", { description: res.error });
+    }
+    setDeleteOpen(false);
   };
 
   return (
@@ -64,6 +80,36 @@ function SettingsPage() {
           <span className="text-muted-foreground">Build</span>
           <span>2026.05.11</span>
         </div>
+      </SettingCard>
+
+      <SettingCard title="Eliminar todos los datos" subtitle="Borra todas las canciones y playlists de tu biblioteca">
+        <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+          <AlertDialogTrigger asChild>
+            <Button variant="destructive" className="w-full">
+              <Trash2 className="w-4 h-4" /> Eliminar todo
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogPortal>
+            <AlertDialogOverlay />
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Eliminar todos los datos</AlertDialogTitle>
+                <AlertDialogDescription>
+                  ¿Estás seguro? Se eliminarán todas las canciones, playlists y archivos del disco.
+                  Esta acción no se puede deshacer.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction asChild>
+                  <Button variant="destructive" onClick={handleDeleteAll}>
+                    Eliminar todo
+                  </Button>
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialogPortal>
+        </AlertDialog>
       </SettingCard>
     </div>
   );
