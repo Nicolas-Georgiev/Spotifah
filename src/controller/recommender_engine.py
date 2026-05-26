@@ -31,16 +31,6 @@ def _safe_normalize(values: np.ndarray) -> np.ndarray:
     return values / norm
 
 
-def _cosine_similarity(left: np.ndarray, right: np.ndarray) -> float:
-    left = np.asarray(left, dtype=np.float32)
-    right = np.asarray(right, dtype=np.float32)
-    left_norm = np.linalg.norm(left)
-    right_norm = np.linalg.norm(right)
-    if left_norm == 0.0 or right_norm == 0.0:
-        return 0.0
-    return float(np.dot(left, right) / (left_norm * right_norm))
-
-
 def _genre_overlap(left: list[str], right: list[str]) -> float:
     left_set = {genre.casefold().strip() for genre in left if genre}
     right_set = {genre.casefold().strip() for genre in right if genre}
@@ -144,7 +134,6 @@ class RecommendationEngine:
         artist_vectors: list[np.ndarray] = []
         artist_ids: list[int] = []
         self._artist_by_name = {}
-        self._artist_text_by_name = {}
 
         for artist in self.artists:
             artist_songs = songs_by_artist.get(artist.name.casefold(), [])
@@ -161,7 +150,6 @@ class RecommendationEngine:
             artist_vectors.append(vector)
             artist_ids.append(artist.id)
             self._artist_by_name[artist.name.casefold()] = artist
-            self._artist_text_by_name[artist.name.casefold()] = artist.profile_text(artist_songs)
 
         if artist_vectors:
             self.artist_index.build(artist_ids, np.asarray(artist_vectors, dtype=np.float32))
@@ -178,7 +166,7 @@ class RecommendationEngine:
             return []
 
         matches = self.search_similar(song.embedding, top_k=top_k + 1)
-        return self._decorate_song_matches(matches, excluded_ids={song.id}, reason="similitud musical")
+        return self._rank_candidates(matches, excluded_ids={song.id}, reason="similitud musical")
 
     def get_similar_artists(self, artist_name: str, top_k: int = 10) -> list[RecommendationItem]:
         artist = self._artist_by_name.get(artist_name.casefold())
@@ -350,14 +338,6 @@ class RecommendationEngine:
 
         results.sort(key=lambda item: item.score, reverse=True)
         return results
-
-    def _decorate_song_matches(
-        self,
-        matches: list[tuple[Song, float]],
-        excluded_ids: set[int] | None = None,
-        reason: str = "similitud musical",
-    ) -> list[RecommendationItem]:
-        return self._rank_candidates(matches, excluded_ids=excluded_ids, reason=reason)
 
     def _rank_by_popularity(self, top_k: int, reason: str) -> list[RecommendationItem]:
         matches = sorted(self.songs, key=lambda song: (song.play_count, self._recency_score(song)), reverse=True)

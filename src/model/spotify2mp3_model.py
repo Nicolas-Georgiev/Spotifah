@@ -147,18 +147,13 @@ class SpotifyInfoExtractor:
 
     @staticmethod
     def _get_ffmpeg_path() -> str:
-        ffmpeg = os.environ.get('EKHO_FFMPEG_PATH')
-        if ffmpeg:
-            return ffmpeg
-        if getattr(sys, 'frozen', False):
-            bundled = os.path.join(
-                sys._MEIPASS,
-                'imageio_ffmpeg', 'binaries',
-                'ffmpeg-win-x86_64-v7.1.exe'
-            )
-            if os.path.exists(bundled):
-                return bundled
-        return 'ffmpeg'
+        try:
+            from frozen_utils import configure_ffmpeg_env, resolve_ffmpeg_exe
+            configure_ffmpeg_env()
+            return resolve_ffmpeg_exe()
+        except Exception:
+            ffmpeg = os.environ.get('EKHO_FFMPEG_PATH')
+            return ffmpeg or 'ffmpeg'
 
     def get_track_info(self, spotify_url: str):
         """Obtiene información de una pista usando SpotDL y métodos alternativos como fallback"""
@@ -943,19 +938,16 @@ class Spotify2MP3Converter(BaseModel):
 
         outtmpl = filename_tmpl if filename_tmpl else os.path.join(output_path, '%(title)s.%(ext)s')
 
-        ffmpeg_path = os.environ.get('EKHO_FFMPEG_PATH')
-        if not ffmpeg_path and getattr(sys, 'frozen', False):
-            ffmpeg_path = os.path.join(
-                sys._MEIPASS,
-                'imageio_ffmpeg', 'binaries',
-                'ffmpeg-win-x86_64-v7.1.exe'
-            )
-        if not ffmpeg_path:
-            ffmpeg_path = 'ffmpeg'
+        try:
+            from frozen_utils import configure_ffmpeg_env, resolve_ytdlp_ffmpeg_location
+            configure_ffmpeg_env()
+            ffmpeg_location = resolve_ytdlp_ffmpeg_location()
+        except Exception:
+            ffmpeg_location = os.environ.get('EKHO_FFMPEG_PATH') or 'ffmpeg'
         ydl_opts: Dict[str, Any] = {
             'format': 'bestaudio/best',
             'outtmpl': outtmpl,
-            'ffmpeg_location': ffmpeg_path,
+            'ffmpeg_location': ffmpeg_location,
             'postprocessors': [{
                 'key': 'FFmpegExtractAudio',
                 'preferredcodec': 'mp3',

@@ -106,7 +106,8 @@ def main():
         ("requests", "requests"),
         ("yt-dlp>=2023.1.0", "yt_dlp"),
         ("spotdl", "spotdl"),
-        ("pygame", "pygame")
+        ("pygame", "pygame"),
+        ("webview", "webview")
     ]
     
     missing_packages = []
@@ -193,7 +194,7 @@ def main():
         print("   🚨 spotdl es REQUERIDO para metadatos confiables de Spotify")
         spotdl_ok = False
 
-    # Test específico de spotdl (OBLIGATORIO)
+    # Test específico de pygame (OBLIGATORIO)
     try:
         import pygame
         print(f"   ✅ pygame: FUNCIONAL")
@@ -202,10 +203,20 @@ def main():
         print(f"   ❌ pygame: FALTA - OBLIGATORIO ({e})")
         print("   🚨 pygame es REQUERIDO para metadatos confiables de Spotify")
         pygame_ok = False
+    
+    # Test específico de webview (OBLIGATORIO)
+    try:
+        import webview
+        print(f"   ✅ webview: FUNCIONAL")
+        webview_ok = True
+    except Exception as e:
+        print(f"   ❌ webview: FALTA - OBLIGATORIO ({e})")
+        print("   🚨 webview es REQUERIDO para la interfaz gráfica")
+        webview_ok = False
 
     # Mostrar resultado final
     print("\n=== RESULTADO ===")
-    if moviepy_ok and pytubefix_ok and mutagen_ok and ytdlp_ok and setuptools_ok and spotdl_ok and ffmpeg_ok and pygame_ok:
+    if moviepy_ok and pytubefix_ok and mutagen_ok and ytdlp_ok and setuptools_ok and spotdl_ok and ffmpeg_ok and pygame_ok and webview_ok:
         print("🎉 ¡TODAS LAS DEPENDENCIAS ESTÁN COMPLETAS!")
     else:
         for package, import_name in packages_to_check:

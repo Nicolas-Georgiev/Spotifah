@@ -2,6 +2,12 @@ import os
 import sys
 import time
 import urllib.request
+
+SRC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "src")
+if SRC_DIR not in sys.path:
+    sys.path.insert(0, SRC_DIR)
+
+from frozen_utils import configure_ffmpeg_env
 import webview
 from api import Api
 from server import serve
@@ -40,16 +46,7 @@ def _resolve_data_dir():
     return os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 
 def _set_ffmpeg_env():
-    if not getattr(sys, 'frozen', False):
-        return
-    ffmpeg = os.path.join(
-        sys._MEIPASS,
-        'imageio_ffmpeg', 'binaries',
-        'ffmpeg-win-x86_64-v7.1.exe'
-    )
-    if os.path.isfile(ffmpeg):
-        os.environ['IMAGEIO_FFMPEG_EXE'] = ffmpeg
-        os.environ['EKHO_FFMPEG_PATH'] = ffmpeg
+    configure_ffmpeg_env()
 
 def main():
     _check_web_dir()

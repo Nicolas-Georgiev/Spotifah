@@ -4,6 +4,7 @@ import { bridge, fmtDuration, type RecommendedSong, type Song } from "../../lib/
 import { useAppData } from "../../lib/app-data";
 import { GlassCard } from "../shared/GlassCard";
 import { CoverArt } from "../shared/CoverArt";
+import { SourceBadge } from "../library/SourceBadge";
 
 const FALLBACK_PLAYLIST = {
   id: "all",
@@ -67,7 +68,7 @@ export function RecommendationsPage() {
     const isExternal = song.source?.toLowerCase() !== "local" && !song.path;
     if (isExternal) {
       if (!song.external_url) {
-        setError("No se pudo importar desde Spotify: URL no disponible");
+        setError("No se pudo importar la recomendación: URL no disponible");
         return;
       }
       setActionLoadingId(song.id);
@@ -75,7 +76,7 @@ export function RecommendationsPage() {
       try {
         const result = await bridge.convertSpotify(song.external_url);
         if (!result.ok) {
-          setError(result.error ?? "No se pudo importar desde Spotify");
+          setError(result.error ?? "No se pudo importar la recomendación");
         } else {
           setReloadToken((value) => value + 1);
         }
@@ -200,7 +201,7 @@ export function RecommendationsPage() {
             Todavía no hay suficientes datos para generar recomendaciones. Reproduce o importa algunas canciones y vuelve a intentarlo.
           </GlassCard>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-5 lg:grid-cols-2">
             {recommendations.map((song) => {
               const isPlaying = currentPlayingId === song.id;
               const isExternal = song.source?.toLowerCase() !== "local" && !song.path;
@@ -210,16 +211,21 @@ export function RecommendationsPage() {
                   key={song.id}
                   type="button"
                   onClick={() => handlePlay(song)}
-                  className="group flex items-center gap-4 rounded-3xl border border-border/60 bg-background/40 p-3 text-left transition hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-lg hover:shadow-primary/10"
+                  className="group flex min-h-[112px] items-center gap-5 rounded-3xl border border-border/60 bg-background/45 p-4 text-left transition hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-lg hover:shadow-primary/10 sm:p-5"
                   disabled={isActionLoading}
                 >
-                  <div className="h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-muted/40">
+                  <div className="h-20 w-20 shrink-0 overflow-hidden rounded-2xl bg-muted/40 sm:h-24 sm:w-24">
                     <CoverArt src={song.cover_url} alt={song.title} className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.04]" />
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate font-semibold">{song.title}</div>
-                    <div className="truncate text-sm text-muted-foreground">{song.artist}</div>
-                    <div className="mt-1 flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <div className="flex min-w-0 items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="truncate text-base font-semibold sm:text-lg">{song.title}</div>
+                        <div className="truncate text-sm text-muted-foreground sm:text-base">{song.artist}</div>
+                      </div>
+                      <SourceBadge source={song.source || "local"} />
+                    </div>
+                    <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground sm:text-sm">
                       <span className="truncate">{song.album || song.genre || "Sin álbum"}</span>
                       <span className={isPlaying ? "text-primary" : ""}>
                         {isExternal
@@ -244,7 +250,7 @@ export function RecommendationsPage() {
           <div>
             <h2 className="flex items-center gap-2 text-lg font-semibold">
               <ArrowRight className="h-4 w-4 text-muted-foreground" />
-              Sigue explorando
+              Sigue con tu biblioteca
             </h2>
             <p className="text-xs text-muted-foreground">
               Canciones recientes para acompañar las recomendaciones principales.
@@ -283,11 +289,11 @@ export function RecommendationsPage() {
       </section>
 
       <GlassCard>
-        <h2 className="mb-2 text-lg font-semibold">Cómo se calculan</h2>
+        <h2 className="mb-2 text-lg font-semibold">Cómo se buscan</h2>
         <ul className="list-inside list-disc space-y-1.5 text-sm text-muted-foreground">
-          <li>Se vectorizan títulos, artistas, álbumes y géneros con embeddings locales.</li>
-          <li>La búsqueda mezcla similitud musical, recencia y popularidad con tu historial real.</li>
-          <li>Si eliges una playlist concreta, se usan sus canciones como semilla para el ranking.</li>
+          <li>Se crea una preferencia basada en tu tu historial y tu biblioteca.</li>
+          <li>Se identifican canciones similares por artista y género, haciendo cálculos basados en tu preferencia musical.</li>
+          <li>Cuando se importa una recomendación externa, el audio se resuelve y descarga desde YouTube.</li>
         </ul>
       </GlassCard>
     </div>
