@@ -51,10 +51,10 @@ if not exist "web\index.html" (
 :: -------------------------------------------------------
 echo [2/3] Construyendo ejecutable...
 
-for /f "delims=" %%i in ('py -c "import site; print(site.getsitepackages()[0])"') do set SITE_PACKAGES=%%i
+for /f "delims=" %%i in ('python -c "import site; print(site.getsitepackages()[0])"') do set SITE_PACKAGES=%%i
 echo    site-packages: %SITE_PACKAGES%
 
-for /f "delims=" %%i in ('py -c "import webview, os; print(os.path.join(os.path.dirname(webview.__file__), \"__pyinstaller\"))"') do set WEBVIEW_HOOKS=%%i
+for /f "delims=" %%i in ('python -c "import webview, os; print(os.path.join(os.path.dirname(webview.__file__), \"__pyinstaller\"))"') do set WEBVIEW_HOOKS=%%i
 echo    webview hooks: %WEBVIEW_HOOKS%
 
 :: Limpiar build anterior
@@ -75,18 +75,24 @@ pyinstaller ^
     --add-data "assets\portadas;assets\portadas" ^
     --add-data "data\BDD\ekho.db;data\BDD" ^
     --paths "src" ^
-    --collect-all "tls_client" ^
-    --collect-all "spotapi" ^
-    --collect-all "SpotipyFree" ^
-    --collect-all "spotdl" ^
-    --collect-all "pykakasi" ^
     --collect-all "yt_dlp" ^
     --collect-all "pytubefix" ^
-    --collect-all "moviepy" ^
-    --collect-all "imageio" ^
     --collect-all "webview" ^
-    --collect-all "pygame" ^
-    --collect-all "ytmusicapi" ^
+    --hidden-import "tls_client" ^
+    --hidden-import "spotapi" ^
+    --hidden-import "SpotipyFree" ^
+    --hidden-import "spotdl" ^
+    --hidden-import "spotdl.search.song_gatherer" ^
+    --hidden-import "pykakasi" ^
+    --hidden-import "moviepy.editor" ^
+    --hidden-import "imageio" ^
+    --hidden-import "pygame" ^
+    --hidden-import "ytmusicapi" ^
+    --exclude-module "spotdl.web" ^
+    --exclude-module "spotdl.console" ^
+    --exclude-module "torch" ^
+    --exclude-module "transformers" ^
+    --exclude-module "scipy" ^
     --hidden-import "model.spotify2mp3_model" ^
     --hidden-import "model.youtube2mp3_model" ^
     --hidden-import "model.soundcloud2mp3" ^
