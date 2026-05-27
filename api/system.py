@@ -1,7 +1,7 @@
 import os
 import subprocess
 
-from frozen_utils import configure_ffmpeg_env, resolve_ffmpeg_exe, resolve_ffprobe_exe
+from frozen_utils import configure_ffmpeg_env, resolve_ffmpeg_exe
 
 import contextlib
 import io
@@ -70,7 +70,6 @@ class SystemMixin:
 
     def _check_ffmpeg(self) -> tuple[bool, str]:
         ffmpeg = self._get_ffmpeg_path()
-        ffprobe = resolve_ffprobe_exe()
         try:
             ffmpeg_result = subprocess.run(
                 [ffmpeg, "-version"],
@@ -78,23 +77,17 @@ class SystemMixin:
                 text=True,
                 timeout=5,
             )
-            ffprobe_result = subprocess.run(
-                [ffprobe, "-version"],
-                capture_output=True,
-                text=True,
-                timeout=5,
-            )
-            if ffmpeg_result.returncode == 0 and ffprobe_result.returncode == 0:
+            if ffmpeg_result.returncode == 0:
                 return True, ""
-            return False, "ffmpeg o ffprobe no responden correctamente"
+            return False, "ffmpeg no responde correctamente"
         except FileNotFoundError:
             return False, (
-                "ffmpeg/ffprobe no estan instalados. "
-                "Descargalo desde https://ffmpeg.org/download.html "
-                "y asegurate de que este en el PATH del sistema"
+                "ffmpeg no está instalado en esta máquina. "
+                "Descárgalo desde https://ffmpeg.org/download.html "
+                "y asegúrate de que esté en el PATH del sistema"
             )
         except Exception as e:
-            return False, f"Error al verificar ffmpeg/ffprobe: {e}"
+            return False, f"Error al verificar ffmpeg: {e}"
 
     def _check_spotify_creds(self) -> tuple[bool, str]:
         client_id = os.getenv("SPOTIFY_CLIENT_ID") or os.getenv("SPOTDL_CLIENT_ID")
@@ -139,7 +132,6 @@ class SystemMixin:
             except ImportError:
                 deps[name] = False
         ffmpeg_path = self._get_ffmpeg_path()
-        ffprobe_path = resolve_ffprobe_exe()
         ffmpeg = False
         try:
             ffmpeg_result = subprocess.run(
@@ -148,13 +140,7 @@ class SystemMixin:
                 text=True,
                 timeout=5,
             )
-            ffprobe_result = subprocess.run(
-                [ffprobe_path, "-version"],
-                capture_output=True,
-                text=True,
-                timeout=5,
-            )
-            ffmpeg = ffmpeg_result.returncode == 0 and ffprobe_result.returncode == 0
+            ffmpeg = ffmpeg_result.returncode == 0
         except Exception:
             ffmpeg = False
         return {

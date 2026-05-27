@@ -52,6 +52,17 @@ if not exist "web\index.html" (
 )
 
 :: -------------------------------------------------------
+:: [1.5/3] Empaquetar ffmpeg dentro del ejecutable
+:: -------------------------------------------------------
+echo [1.5/3] Extrayendo ffmpeg para empaquetado interno...
+"%PYTHON_EXE%" "scripts\extract_ffmpeg.py"
+if %errorlevel% neq 0 (
+    echo ERROR: No se pudo extraer ffmpeg desde imageio_ffmpeg
+    pause
+    exit /b 1
+)
+
+:: -------------------------------------------------------
 :: [2/3] Obtener ruta del site-packages de Python
 :: -------------------------------------------------------
 echo [2/3] Construyendo ejecutable...
@@ -103,6 +114,8 @@ if exist "dist\EKHO"  rmdir /s /q "dist\EKHO"
     --collect-all "spotipy" ^
     --collect-all "click" ^
     --collect-all "tls_client" ^
+    --add-binary "assets\ffmpeg\ffmpeg.exe;." ^
+    --add-binary "assets\ffmpeg\ffprobe.exe;." ^
     --add-binary "%SITE_PACKAGES%\tls_client\dependencies\tls-client-64.dll;tls_client\dependencies" ^
     --hidden-import "moviepy.editor" ^
     --hidden-import "imageio.v2" ^

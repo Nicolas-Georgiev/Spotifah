@@ -176,6 +176,12 @@ export function RecommendationsPage() {
         </div>
       </GlassCard>
 
+      {error && (
+        <GlassCard className="border-destructive/50 bg-destructive/10 text-sm text-destructive">
+          {error}
+        </GlassCard>
+      )}
+
       <section className="space-y-4">
         <div className="flex items-center justify-between gap-3">
           <div>
@@ -200,8 +206,6 @@ export function RecommendationsPage() {
 
         {loading ? (
           <GlassCard className="text-sm text-muted-foreground">Calculando recomendaciones...</GlassCard>
-        ) : error ? (
-          <GlassCard className="text-sm text-destructive">{error}</GlassCard>
         ) : recommendations.length === 0 ? (
           <GlassCard className="text-sm text-muted-foreground">
             {songs.length === 0

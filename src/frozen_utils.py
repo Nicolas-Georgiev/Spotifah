@@ -69,6 +69,7 @@ def _candidate_ffmpeg_dirs() -> list[str]:
 
     if getattr(sys, "frozen", False):
         dirs.append(os.path.join(sys._MEIPASS, "imageio_ffmpeg", "binaries"))
+        dirs.append(sys._MEIPASS)
 
     try:
         import imageio_ffmpeg
@@ -107,32 +108,68 @@ def _candidate_ffmpeg_dirs() -> list[str]:
 
 
 def resolve_ffmpeg_exe() -> str:
+    # 1. Scan candidate directories for standard names first
+    #    so ffmpeg.exe at the app root is preferred over imageio_ffmpeg's
+    #    non-standard name (ffmpeg-win-x86_64-*.exe).
     exe_names = ("ffmpeg.exe", "ffmpeg") if sys.platform == "win32" else ("ffmpeg",)
     for directory in _candidate_ffmpeg_dirs():
         for name in exe_names:
             candidate = os.path.join(directory, name)
             if os.path.isfile(candidate):
-                return candidate
+                return os.path.normpath(candidate)
+
+    # 2. Try imageio_ffmpeg's bundled binary (non-standard Windows names)
+    try:
+        import imageio_ffmpeg
+        exe = imageio_ffmpeg.get_ffmpeg_exe()
+        if exe and os.path.isfile(exe):
+            return os.path.normpath(exe)
+    except Exception:
+        pass
+
+    # 3. On Windows, glob for imageio_ffmpeg's platform-specific names
+    if sys.platform == "win32":
+        for directory in _candidate_ffmpeg_dirs():
+            matches = glob.glob(os.path.join(directory, "ffmpeg-win-*.exe"))
+            if matches:
+                return os.path.normpath(matches[0])
+
+    # 4. Fallback
     return shutil.which("ffmpeg") or "ffmpeg"
 
 
 def resolve_ffprobe_exe() -> str:
+    # 1. Look alongside the resolved ffmpeg first
+    ffmpeg = resolve_ffmpeg_exe()
+    ffmpeg_dir = os.path.dirname(ffmpeg)
     exe_names = ("ffprobe.exe", "ffprobe") if sys.platform == "win32" else ("ffprobe",)
+    if ffmpeg_dir and os.path.isdir(ffmpeg_dir):
+        for name in exe_names:
+            candidate = os.path.join(ffmpeg_dir, name)
+            if os.path.isfile(candidate):
+                return os.path.normpath(candidate)
+
+    # 2. Scan candidate directories
     for directory in _candidate_ffmpeg_dirs():
         for name in exe_names:
             candidate = os.path.join(directory, name)
             if os.path.isfile(candidate):
-                return candidate
+                return os.path.normpath(candidate)
+
+    # 3. On Windows, glob for ffprobe-win-* names
+    if sys.platform == "win32":
+        for directory in _candidate_ffmpeg_dirs():
+            matches = glob.glob(os.path.join(directory, "ffprobe-win-*.exe"))
+            if matches:
+                return os.path.normpath(matches[0])
+
+    # 4. Fallback
     return shutil.which("ffprobe") or "ffprobe"
 
 
 def resolve_ytdlp_ffmpeg_location() -> str:
-    for directory in _candidate_ffmpeg_dirs():
-        ffmpeg = os.path.join(directory, "ffmpeg.exe" if sys.platform == "win32" else "ffmpeg")
-        ffprobe = os.path.join(directory, "ffprobe.exe" if sys.platform == "win32" else "ffprobe")
-        if os.path.isfile(ffmpeg) and os.path.isfile(ffprobe):
-            return directory
-    return os.path.dirname(resolve_ffmpeg_exe()) or resolve_ffmpeg_exe()
+    ffmpeg_dir = os.path.dirname(resolve_ffmpeg_exe())
+    return ffmpeg_dir or resolve_ffmpeg_exe()
 
 
 def configure_ffmpeg_env() -> str:

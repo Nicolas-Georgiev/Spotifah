@@ -963,8 +963,10 @@ class RecommendationsMixin:
         images = album.get("images", []) or []
         score = 1.0 - min((index - 1) / max(limit, 1), 0.75)
 
+        track_id = track.get("id") or ""
+        external_urls = track.get("external_urls", {}) or {}
         return {
-            "id": track.get("id") or f"spotify:{index}",
+            "id": track_id or f"spotify:{index}",
             "title": track.get("name") or "",
             "artist": ", ".join(a.get("name", "") for a in artists if a.get("name")),
             "album": album.get("name", ""),
@@ -977,10 +979,14 @@ class RecommendationsMixin:
             "reason": "descubrimiento similar",
             "play_count": 0,
             "added_at": "",
-            "external_url": "",
-            "external_id": track.get("id") or "",
+            "external_url": (
+                external_urls.get("spotify")
+                or f"https://open.spotify.com/track/{track_id}"
+                or ""
+            ),
+            "external_id": track_id,
             "catalog_source": "spotify",
-            "can_import": False,
+            "can_import": True,
         }
 
     def _spotify_fetch_recommendations(

@@ -39,3 +39,4 @@ dist-ssr
 *.sw?
 build/
 /.vs
+assets/ffmpeg/
